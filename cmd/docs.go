@@ -86,7 +86,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if k := msg.String(); k == "ctrl+c" || k == "q" || k == "esc" {
+		if k := msg.String(); k == "ctrl+c" || k == "q" {
 			// If content is not empty, clear it and update viewport & go back to list view
 			if m.selected.content != "" {
 				m.selected.content = ""
@@ -188,13 +188,15 @@ func (m model) headerView(t string) string {
 	}
 	title := titleStyle.Render(t)
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(title)))
-	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
+	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5733"))
+	return style.Render(lipgloss.JoinHorizontal(lipgloss.Center, title, line))
 }
 
 func (m model) footerView() string {
 	info := infoStyle.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)))
-	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
+	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5733"))
+	return style.Render(lipgloss.JoinHorizontal(lipgloss.Center, line, info))
 }
 
 func max(a, b int) int {
@@ -244,9 +246,33 @@ func showDocs(dirFlag string) {
 		return
 	}
 
-	// Show the docs list
-	m := model{list: list.New(items, list.NewDefaultDelegate(), 0, 0), viewport: viewport.New(0, 0)}
+	// Set the docs list & viewport
+	delegate := list.NewDefaultDelegate()
+	delegate.Styles.SelectedTitle = lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder(), false, false, false, true).
+		BorderForeground(lipgloss.Color("#ff5733")).
+		Foreground(lipgloss.Color("#ff5733")).
+		Padding(0, 0, 0, 1)
+	delegate.Styles.SelectedDesc = lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder(), false, false, false, true).
+		BorderForeground(lipgloss.Color("#ff5733")).
+		Foreground(lipgloss.Color("#ff5733")).
+		Padding(0, 0, 0, 1)
+
+	m := model{list: list.New(items, delegate, 0, 0), viewport: viewport.New(0, 0)}
+
 	m.list.Title = "Project Documentation"
+	m.list.Styles.Title = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#ffffff")).
+		Background(lipgloss.Color("#ff5733"))
+	m.list.FilterInput.PromptStyle = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#ff5733"))
+	m.list.FilterInput.Cursor.Style = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#ff5733")).
+		Background(lipgloss.Color("#ff5733"))
 
 	p := tea.NewProgram(
 		m,

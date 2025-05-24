@@ -6,6 +6,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -216,28 +217,42 @@ func isMarkdownFile(filename string) bool {
 }
 
 func showDocs(dirFlag string) {
-	files, err := os.ReadDir(dirFlag)
+	items := []list.Item{}
+	
+	err := filepath.WalkDir(dirFlag, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		
+		// Skip directories and non-markdown files
+		if d.IsDir() || d.Name() == ".DS_Store" || !isMarkdownFile(d.Name()) {
+			return nil
+		}
+		
+		// Create relative path for display
+		relPath, err := filepath.Rel(dirFlag, path)
+		if err != nil {
+			relPath = path
+		}
+		
+		title := strings.Split(d.Name(), ".")[0]
+		// If file is in a subdirectory, include the directory in the title
+		if dir := filepath.Dir(relPath); dir != "." {
+			title = filepath.Join(dir, title)
+		}
+		
+		items = append(items, item{
+			name:     title,
+			path:     path,
+			fileName: d.Name(),
+		})
+		
+		return nil
+	})
+	
 	if err != nil {
 		fmt.Printf("Error: Unable to read directory '%s'.\nPlease check if the directory exists and you have proper permissions.\n", dirFlag)
 		return
-	}
-
-	items := []list.Item{}
-	for _, file := range files {
-		if file.IsDir() {
-			// Skip directories for now
-			continue
-		}
-		// Skip if DS_Store or not markdown file
-		if file.Name() == ".DS_Store" || !isMarkdownFile(file.Name()) {
-			continue
-		}
-		title := strings.Split(file.Name(), ".")[0]
-		items = append(items, item{
-			name:     title,
-			path:     dirFlag + "/" + file.Name(),
-			fileName: file.Name(),
-		})
 	}
 
 	// Check if there are no markdown files

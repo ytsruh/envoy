@@ -1,3 +1,5 @@
 .docs
 .testdocs
 tmp
+node_modules
+.next

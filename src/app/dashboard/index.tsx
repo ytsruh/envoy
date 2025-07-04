@@ -1,21 +1,9 @@
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { FileDown, PlusCircle, Share2 } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileDown, PlusCircle } from "lucide-react";
 import { projects } from "@/lib/data";
 import { VariableTable } from "@/components/dashboard/variable-table";
-import AiAnalysisClient from "@/components/dashboard/ai-analysis-client";
 
 export default function DashboardPage() {
   const project = projects[0]; // For demo purposes, we'll use the first project
@@ -24,13 +12,6 @@ export default function DashboardPage() {
     <>
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold md:text-2xl font-headline">{project.name}</h1>
-        <div className="flex gap-2">
-            <AiAnalysisClient project={project} />
-            <Button size="sm" variant="outline">
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-            </Button>
-        </div>
       </div>
       <Tabs defaultValue="development" className="w-full">
         <div className="flex items-center">

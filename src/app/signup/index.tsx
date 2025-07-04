@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ export default function SignupPage() {
     <div className="flex items-center justify-center min-h-screen">
       <Card className="mx-auto max-w-sm">
         <CardHeader>
-          <Link href="/" className="mb-4">
+          <Link to="/" className="mb-4">
             <Logo />
           </Link>
           <CardTitle className="text-2xl font-headline">Sign Up</CardTitle>
@@ -37,7 +37,7 @@ export default function SignupPage() {
               <Input id="password" type="password" />
             </div>
             <Button type="submit" className="w-full" asChild>
-              <Link href="/dashboard">Create an account</Link>
+              <Link to="/dashboard">Create an account</Link>
             </Button>
             <Button variant="outline" className="w-full">
               Sign up with Google
@@ -45,7 +45,7 @@ export default function SignupPage() {
           </div>
           <div className="mt-4 text-center text-sm">
             Already have an account?{' '}
-            <Link href="/login" className="underline" prefetch={false}>
+            <Link to="/login" className="underline">
               Login
             </Link>
           </div>

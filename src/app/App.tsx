@@ -1,26 +1,65 @@
-import Link from 'next/link';
+import { createBrowserRouter, RouterProvider, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Lock, KeyRound, Share2, BrainCircuit, FileDown } from 'lucide-react';
-import Image from 'next/image';
+import { ArrowRight, Lock, KeyRound, Share2, FileDown } from 'lucide-react';
+import DashboardLayout from './dashboard/layout';
 import { Logo } from '@/components/logo';
+import RootLayout from './RootLayout';
+import DashboardPage from './dashboard/index.tsx';
+import LoginPage from './login/index.tsx';
+import SignupPage from './signup/index.tsx';
 
-export default function LandingPage() {
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <RootLayout />,
+    children: [
+      {
+        path: '/',
+        element: <LandingPage />,
+      },
+      {
+        path: '/dashboard',
+        element: <DashboardLayout />,
+        children: [
+          {
+            index: true,
+            element: <DashboardPage />,
+          },
+        ],
+      },
+      {
+        path: '/login',
+        element: <LoginPage />,
+      },
+      {
+        path: '/signup',
+        element: <SignupPage />,
+      },
+    ],
+  },
+]);
+
+function App() {
+  return <RouterProvider router={router} />;
+}
+
+function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <header className="px-4 lg:px-6 h-14 flex items-center bg-background/80 backdrop-blur-sm sticky top-0 z-50">
-        <Link href="/" className="flex items-center justify-center" prefetch={false}>
+        <Link to="/" className="flex items-center justify-center">
           <Logo />
           <span className="sr-only">Envizo</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6 items-center">
-          <Link href="#features" className="text-sm font-medium hover:underline underline-offset-4" prefetch={false}>
+          <Link to="/#features" className="text-sm font-medium hover:underline underline-offset-4">
             Features
           </Link>
-          <Link href="/login" className="text-sm font-medium hover:underline underline-offset-4" prefetch={false}>
+          <Link to="/login" className="text-sm font-medium hover:underline underline-offset-4">
             Login
           </Link>
           <Button asChild>
-            <Link href="/signup">
+            <Link to="/signup">
               Get Started
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
@@ -42,24 +81,23 @@ export default function LandingPage() {
                 </div>
                 <div className="flex flex-col gap-2 min-[400px]:flex-row">
                   <Button asChild size="lg">
-                    <Link href="/signup">
+                    <Link to="/signup">
                       Sign Up for Free
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
                   <Button asChild variant="secondary" size="lg">
-                    <Link href="/dashboard">
+                    <Link to="/dashboard">
                       View Demo
                     </Link>
                   </Button>
                 </div>
               </div>
-              <Image
+              <img
                 src="https://placehold.co/600x400.png"
                 width="600"
                 height="400"
                 alt="Envizo dashboard screenshot"
-                data-ai-hint="dashboard security"
                 className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last"
               />
             </div>
@@ -93,11 +131,7 @@ export default function LandingPage() {
                 title="Secure Sharing" 
                 description="Share variables securely with team members through granular access controls." 
               />
-              <FeatureCard 
-                icon={<BrainCircuit className="h-8 w-8 text-primary" />} 
-                title="AI Config Insights" 
-                description="Our AI analyzes your configs, flagging suspicious or incorrect values to prevent errors." 
-              />
+              
               <FeatureCard 
                 icon={<FileDown className="h-8 w-8 text-primary" />} 
                 title="Format Export" 
@@ -124,7 +158,7 @@ export default function LandingPage() {
             </div>
             <div className="mx-auto w-full max-w-sm space-y-2">
               <Button asChild size="lg" className="w-full">
-                <Link href="/signup">
+                <Link to="/signup">
                   Sign Up Now
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -136,10 +170,10 @@ export default function LandingPage() {
       <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t">
         <p className="text-xs text-muted-foreground">&copy; 2024 Envizo. All rights reserved.</p>
         <nav className="sm:ml-auto flex gap-4 sm:gap-6">
-          <Link href="#" className="text-xs hover:underline underline-offset-4" prefetch={false}>
+          <Link to="#" className="text-xs hover:underline underline-offset-4">
             Terms of Service
           </Link>
-          <Link href="#" className="text-xs hover:underline underline-offset-4" prefetch={false}>
+          <Link to="#" className="text-xs hover:underline underline-offset-4">
             Privacy
           </Link>
         </nav>
@@ -157,3 +191,5 @@ const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, titl
     </div>
   )
 }
+
+export default App;

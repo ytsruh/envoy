@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen">
       <Card className="mx-auto max-w-sm">
         <CardHeader>
-          <Link href="/" className="mb-4">
+          <Link to="/" className="mb-4">
             <Logo />
           </Link>
           <CardTitle className="text-2xl font-headline">Login</CardTitle>
@@ -25,14 +25,14 @@ export default function LoginPage() {
             <div className="grid gap-2">
               <div className="flex items-center">
                 <Label htmlFor="password">Password</Label>
-                <Link href="#" className="ml-auto inline-block text-sm underline" prefetch={false}>
+                <Link to="#" className="ml-auto inline-block text-sm underline">
                   Forgot your password?
                 </Link>
               </div>
               <Input id="password" type="password" required />
             </div>
             <Button type="submit" className="w-full" asChild>
-              <Link href="/dashboard">Login</Link>
+              <Link to="/dashboard">Login</Link>
             </Button>
             <Button variant="outline" className="w-full">
               Login with Google
@@ -40,7 +40,7 @@ export default function LoginPage() {
           </div>
           <div className="mt-4 text-center text-sm">
             Don&apos;t have an account?{' '}
-            <Link href="/signup" className="underline" prefetch={false}>
+            <Link to="/signup" className="underline">
               Sign up
             </Link>
           </div>

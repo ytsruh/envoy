@@ -55,7 +55,7 @@ export function VariableTable({ variables }: VariableTableProps) {
               <TableCell className="font-medium font-code">{variable.key}</TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  <span className={cn("font-code", !isVisible && "blur-sm select-none")}>
+                  <span className={cn("font-code", !isVisible && "blur-xs select-none")}>
                     {isVisible ? variable.value : "********************"}
                   </span>
                   <Button

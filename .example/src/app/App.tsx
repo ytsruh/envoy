@@ -46,7 +46,7 @@ function App() {
 function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <header className="px-4 lg:px-6 h-14 flex items-center bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+      <header className="px-4 lg:px-6 h-14 flex items-center bg-background/80 backdrop-blur-xs sticky top-0 z-50">
         <Link to="/" className="flex items-center justify-center">
           <Logo />
           <span className="sr-only">Envizo</span>

@@ -16,7 +16,6 @@ func registerMiddleware(next http.Handler) http.Handler {
 	middlewares := []Middleware{
 		RecoveryMiddleware,
 		LoggingMiddleware,
-		TimeoutMiddleware,
 		SecurityHeadersMiddleware,
 		CorsMiddleware,
 	}
@@ -75,7 +74,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		start := time.Now()
 
 		// Create a custom response writer to capture the status code
-		rw := newStatusRecorder(w)
+		rw := NewStatusRecorder(w)
 
 		// Process the request
 		next.ServeHTTP(rw, r)
@@ -146,7 +145,7 @@ type statusRecorder struct {
 	status int
 }
 
-func newStatusRecorder(w http.ResponseWriter) *statusRecorder {
+func NewStatusRecorder(w http.ResponseWriter) *statusRecorder {
 	return &statusRecorder{w, http.StatusOK}
 }
 

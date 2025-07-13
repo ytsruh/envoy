@@ -37,7 +37,6 @@ export function VariableTable({ variables }: VariableTableProps) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[120px]">Status</TableHead>
           <TableHead>Key</TableHead>
           <TableHead>Value</TableHead>
           <TableHead>Comment</TableHead>

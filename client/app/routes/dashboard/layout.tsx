@@ -1,5 +1,5 @@
 import { Button } from "~/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "~/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "~/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { UserNav } from "~/components/dashboard/user-nav";
 import { MainNav } from "~/components/dashboard/main-nav";
@@ -35,6 +35,8 @@ export default function DashboardLayout() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="flex flex-col">
+              <SheetTitle className="sr-only">Navigation</SheetTitle>
+              <SheetDescription className="sr-only">Navigation menu</SheetDescription>
               <nav className="grid gap-2 text-lg font-medium">
                 <Link to="#" className="flex items-center gap-2 text-lg font-semibold mb-4">
                   <Logo />

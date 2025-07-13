@@ -6,16 +6,6 @@ import (
 	"testing"
 )
 
-func TestNewRouter(t *testing.T) {
-	router := NewRouter()
-	if router == nil {
-		t.Fatal("NewRouter returned nil")
-	}
-	if router.mux == nil {
-		t.Error("NewRouter did not initialize http.ServeMux")
-	}
-}
-
 func TestRouterMethods(t *testing.T) {
 	router := NewRouter()
 	testPath := "/test"

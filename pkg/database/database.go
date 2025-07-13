@@ -16,17 +16,16 @@ import (
 
 // Service represents a service that interacts with a database.
 type Service interface {
-	// Health returns a map of health status information.
-	// The keys and values in the map are service-specific.
+	// Health returns a map of health status information. The keys and values in the map are service-specific.
 	Health() map[string]string
 
-	// Close terminates the database connection.
-	// It returns an error if the connection cannot be closed.
+	// Close terminates the database connection.It returns an error if the connection cannot be closed.
 	Close() error
 }
 
 type service struct {
 	db *sql.DB
+	tempDir string
 }
 
 var dbInstance *service
@@ -37,31 +36,27 @@ func New(primaryUrl string, authToken string) Service {
 		return dbInstance
 	}
 
-	dbName := "local.db"
-
 	dir, err := os.MkdirTemp("", "libsql-*")
 	if err != nil {
 		fmt.Println("Error creating temporary directory:", err)
 		os.Exit(1)
 	}
-	defer os.RemoveAll(dir)
-
-	dbPath := filepath.Join(dir, dbName)
+	dbPath := filepath.Join(dir, "local.db")
+	syncInterval := time.Minute
 
 	connector, err := libsql.NewEmbeddedReplicaConnector(dbPath, primaryUrl,
 		libsql.WithAuthToken(authToken),
+		libsql.WithSyncInterval(syncInterval),
 	)
 	if err != nil {
 		fmt.Println("Error creating connector:", err)
 		os.Exit(1)
 	}
-	defer connector.Close()
-
 	db := sql.OpenDB(connector)
-	defer db.Close()
 
 	dbInstance = &service{
 		db: db,
+		tempDir: dir,
 	}
 	return dbInstance
 }
@@ -121,5 +116,9 @@ func (s *service) Health() map[string]string {
 // If the connection is successfully closed, it returns nil. If an error occurs while closing the connection, it returns the error.
 func (s *service) Close() error {
 	log.Println("Disconnected from database")
-	return s.db.Close()
+	err := s.db.Close()
+	if err != nil {
+		return err
+	}
+	return os.RemoveAll(s.tempDir)
 }

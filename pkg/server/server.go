@@ -60,6 +60,7 @@ func (s *Server) Start() {
 	// Run graceful shutdown in a separate goroutine
 	go gracefulShutdown(s.srv, done)
 
+	log.Printf("Server starting on %s", s.srv.Addr)
 	err := s.srv.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
 		panic(fmt.Sprintf("http server error: %s", err))

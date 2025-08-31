@@ -11,7 +11,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	dbService := database.New(env.DB_PATH)
+	dbService := database.NewService(env.DB_PATH)
 	server := server.New(":8080", dbService)
 	server.Start()
 }

@@ -11,6 +11,7 @@ import (
 
 	_ "github.com/joho/godotenv/autoload"
 	_ "modernc.org/sqlite"
+	database "ytsruh.com/envoy/pkg/database/generated"
 )
 
 // Service represents a service that interacts with a database.
@@ -24,12 +25,12 @@ type Service interface {
 
 type service struct {
 	db      *sql.DB
-	tempDir string
+	queries *database.Queries
 }
 
 var dbInstance *service
 
-func New(dbPath string) Service {
+func NewService(dbPath string) Service {
 	// Reuse Connection
 	if dbInstance != nil {
 		return dbInstance
@@ -40,9 +41,11 @@ func New(dbPath string) Service {
 		fmt.Println("Error creating connector:", err)
 		os.Exit(1)
 	}
+	queries := database.New(db)
 
 	dbInstance = &service{
-		db: db,
+		db:      db,
+		queries: queries,
 	}
 	return dbInstance
 }
@@ -106,5 +109,5 @@ func (s *service) Close() error {
 	if err != nil {
 		return err
 	}
-	return os.RemoveAll(s.tempDir)
+	return nil
 }

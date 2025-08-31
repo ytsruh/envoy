@@ -8,7 +8,7 @@ import (
 
 func TestNew(t *testing.T) {
 	addr := ":8080"
-	dbService := database.New("test.db")
+	dbService := database.NewService("test.db")
 
 	s := New(addr, dbService)
 

@@ -14,8 +14,7 @@ var Config *EnvVar
 
 // EnvVar struct holds all environment variables used by the application
 type EnvVar struct {
-	TURSO_DATABASE_URL string
-	TURSO_AUTH_TOKEN   string
+	DB_PATH string
 }
 
 // LoadAndValidateEnv loads environment variables from .env file (in development) or from system environment (in production) and validates that all required variables are set. Returns the loaded environment variables and an error if any required variable is missing
@@ -24,8 +23,7 @@ func LoadAndValidateEnv() (*EnvVar, error) {
 	_ = godotenv.Load()
 
 	env := EnvVar{
-		TURSO_DATABASE_URL: os.Getenv("TURSO_DATABASE_URL"),
-		TURSO_AUTH_TOKEN:   os.Getenv("TURSO_AUTH_TOKEN"),
+		DB_PATH: os.Getenv("DB_PATH"),
 	}
 
 	// Validate that all required environment variables are set

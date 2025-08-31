@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"ytsruh.com/envoy/pkg/database"
 )
 
 // Server holds the dependencies for a HTTP server.
@@ -16,8 +18,10 @@ type Server struct {
 }
 
 // New creates and configures a new Server instance.
-func New(addr string, handler http.Handler) *Server {
-	mux := registerMiddleware(handler)
+func New(addr string, dbService database.Service) *Server {
+	router := NewRouter()
+	RegisterRoutes(router, dbService)
+	mux := registerMiddleware(router)
 	return &Server{
 		srv: &http.Server{
 			Addr:    addr,
@@ -53,7 +57,6 @@ func gracefulShutdown(apiServer *http.Server, done chan bool) {
 
 // Start runs the server and waits for a graceful shutdown.
 func (s *Server) Start() {
-
 	// Create a done channel to signal when the shutdown is complete
 	done := make(chan bool, 1)
 

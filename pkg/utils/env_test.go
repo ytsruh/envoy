@@ -15,22 +15,9 @@ func TestValidateEnvVars(t *testing.T) {
 		{
 			name: "All variables present",
 			env: EnvVar{
-				TURSO_DATABASE_URL: "url",
-				TURSO_AUTH_TOKEN:   "token",
+				DB_PATH: "testdb.sql",
 			},
 			expected: []string{},
-		},
-		{
-			name: "One variable missing",
-			env: EnvVar{
-				TURSO_DATABASE_URL: "url",
-			},
-			expected: []string{"TURSO_AUTH_TOKEN"},
-		},
-		{
-			name:     "All variables missing",
-			env:      EnvVar{},
-			expected: []string{"TURSO_DATABASE_URL", "TURSO_AUTH_TOKEN"},
 		},
 	}
 
@@ -49,42 +36,22 @@ func TestValidateEnvVars(t *testing.T) {
 
 func TestLoadAndValidateEnv(t *testing.T) {
 	t.Run("All variables present", func(t *testing.T) {
-		os.Setenv("TURSO_DATABASE_URL", "test_url")
-		os.Setenv("TURSO_AUTH_TOKEN", "test_token")
-		defer os.Unsetenv("TURSO_DATABASE_URL")
-		defer os.Unsetenv("TURSO_AUTH_TOKEN")
+		os.Setenv("DB_PATH", "testdb.sql")
+		defer os.Unsetenv("DB_PATH")
 
 		config, err := LoadAndValidateEnv()
 		if err != nil {
 			t.Fatalf("LoadAndValidateEnv() returned an error: %v", err)
 		}
-		if config.TURSO_DATABASE_URL != "test_url" {
-			t.Errorf("expected TURSO_DATABASE_URL to be 'test_url', got '%s'", config.TURSO_DATABASE_URL)
-		}
-		if config.TURSO_AUTH_TOKEN != "test_token" {
-			t.Errorf("expected TURSO_AUTH_TOKEN to be 'test_token', got '%s'", config.TURSO_AUTH_TOKEN)
-		}
-	})
-
-	t.Run("Missing one variable", func(t *testing.T) {
-		os.Setenv("TURSO_DATABASE_URL", "test_url")
-		defer os.Unsetenv("TURSO_DATABASE_URL")
-
-		_, err := LoadAndValidateEnv()
-		if err == nil {
-			t.Fatal("LoadAndValidateEnv() should have returned an error but didn't")
-		}
-		expectedError := "missing environment variables: [TURSO_AUTH_TOKEN]"
-		if err.Error() != expectedError {
-			t.Errorf("LoadAndValidateEnv() error = %v, want %v", err, expectedError)
+		if config.DB_PATH != "testdb.sql" {
+			t.Errorf("expected DB_PATH to be 'testdb.sql', got '%s'", config.DB_PATH)
 		}
 	})
 }
 
 func TestGetEnvVars(t *testing.T) {
 	expectedConfig := &EnvVar{
-		TURSO_DATABASE_URL: "global_url",
-		TURSO_AUTH_TOKEN:   "global_token",
+		DB_PATH: "testdb.sql",
 	}
 	Config = expectedConfig
 

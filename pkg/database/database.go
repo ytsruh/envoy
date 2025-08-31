@@ -6,12 +6,11 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strconv"
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
-	"github.com/tursodatabase/go-libsql"
+	_ "modernc.org/sqlite"
 )
 
 // Service represents a service that interacts with a database.
@@ -24,39 +23,26 @@ type Service interface {
 }
 
 type service struct {
-	db *sql.DB
+	db      *sql.DB
 	tempDir string
 }
 
 var dbInstance *service
 
-func New(primaryUrl string, authToken string) Service {
+func New(dbPath string) Service {
 	// Reuse Connection
 	if dbInstance != nil {
 		return dbInstance
 	}
 
-	dir, err := os.MkdirTemp("", "libsql-*")
-	if err != nil {
-		fmt.Println("Error creating temporary directory:", err)
-		os.Exit(1)
-	}
-	dbPath := filepath.Join(dir, "local.db")
-	syncInterval := time.Minute
-
-	connector, err := libsql.NewEmbeddedReplicaConnector(dbPath, primaryUrl,
-		libsql.WithAuthToken(authToken),
-		libsql.WithSyncInterval(syncInterval),
-	)
+	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		fmt.Println("Error creating connector:", err)
 		os.Exit(1)
 	}
-	db := sql.OpenDB(connector)
 
 	dbInstance = &service{
 		db: db,
-		tempDir: dir,
 	}
 	return dbInstance
 }

@@ -1,17 +1,10 @@
-package routes
+package server
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/http"
 )
-
-// Router defines the methods for registering routes that this package needs.
-type Router interface {
-	Get(path string, handler http.HandlerFunc)
-	Post(path string, handler http.HandlerFunc)
-	http.Handler // To allow ServeHTTP for testing
-}
 
 // DBService defines the methods for database interactions that this package needs.
 type DBService interface {

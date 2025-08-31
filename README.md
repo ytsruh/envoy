@@ -1,8 +1,8 @@
-# Envman
+# Envoy
 
 ## Core Features:
 
-- Variable Creation: Securely create and store environment variables using encryption.
+- Variable Creation: Securely store environment variables using encryption.
 - Project and Environment Management: Categorize environment variables into projects and environments (e.g., development, staging, production).
 - Secure Sharing: Share environment variables securely with team members through access controls.
 - AI Configuration Insights: AI-powered tool analyzes the created variables, cross-references them with current environment configurations and provides alerts of suspicious or incorrect values
@@ -18,3 +18,6 @@
 - Use lock and key icons to indicate the status of the environment variable with a color coded circle background.
 - Clean and intuitive dashboard layout for easy variable management.
 - Subtle animations for variable creation and saving confirmations.
+
+## Envinroment Variables
+- DB_PATH

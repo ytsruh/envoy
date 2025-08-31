@@ -1,15 +1,16 @@
 package server
 
 import (
-	"net/http"
 	"testing"
+
+	"ytsruh.com/envoy/pkg/database"
 )
 
 func TestNew(t *testing.T) {
 	addr := ":8080"
-	handler := http.NewServeMux() // Use a simple http.Handler for testing
+	dbService := database.New("test.db")
 
-	s := New(addr, handler)
+	s := New(addr, dbService)
 
 	if s == nil {
 		t.Fatal("New returned nil")

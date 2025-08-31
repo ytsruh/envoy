@@ -1,2 +1,10 @@
-.docs
-.testdocs
+node_modules
+.env
+.DS_Store
+*.db
+
+# Client
+.wrangler
+.react-router/
+build
+dist

@@ -1,31 +1,18 @@
 package server
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
+
+	"ytsruh.com/envoy/pkg/handlers"
 )
 
-// DBService defines the methods for database interactions that this package needs.
-type DBService interface {
-	Health() map[string]string
-}
+// RegisterRoutes sets up all the application routes using Server's dependencies.
+func (s *Server) RegisterRoutes(router Router) {
+	router.Get("/hello", handlers.Hello)
 
-// RegisterRoutes sets up all the application routes.
-func RegisterRoutes(router Router, db DBService) {
-	router.Get("/hello", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Hello, World!")
-	})
+	router.Post("/goodbye", handlers.Goodbye)
 
-	router.Post("/goodbye", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Goodbye, World!")
-	})
-
-	router.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		healthStatus := db.Health()
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(healthStatus)
-	})
+	router.Get("/health", handlers.Health(s.db))
 
 	router.Get("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)

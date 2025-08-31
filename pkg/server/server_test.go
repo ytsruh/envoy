@@ -2,13 +2,11 @@ package server
 
 import (
 	"testing"
-
-	"ytsruh.com/envoy/pkg/database"
 )
 
 func TestNew(t *testing.T) {
 	addr := ":8080"
-	dbService := database.NewService("test.db")
+	dbService := &mockDBService{}
 
 	s := New(addr, dbService)
 

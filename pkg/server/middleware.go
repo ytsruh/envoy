@@ -26,6 +26,14 @@ func registerMiddleware(next http.Handler) http.Handler {
 
 // ApplyMiddleware applies a list of middleware handlers to an http.Handler
 func ApplyMiddleware(h http.Handler, middlewares ...Middleware) http.Handler {
+	// If final handler is nil, replace with explicit 500 handler to avoid typed-nil issues
+	if h == nil {
+		h = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Printf("PANIC: nil final handler passed to ApplyMiddleware\n")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Internal Server Error"))
+		})
+	}
 	// Apply middleware in reverse order (so the first middleware in the slice is the outermost/last to execute)
 	for i := len(middlewares) - 1; i >= 0; i-- {
 		h = middlewares[i](h)
@@ -123,6 +131,16 @@ func TimeoutMiddleware(next http.Handler) http.Handler {
 
 // RecoveryMiddleware recovers from panics and returns a 500 error
 func RecoveryMiddleware(next http.Handler) http.Handler {
+	// make middleware nil-safe: if next is nil, replace with a no-op handler
+	if next == nil {
+		// Return explicit 500 handler when next is nil to make behavior deterministic
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Printf("PANIC: nil handler passed to RecoveryMiddleware\n")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Internal Server Error"))
+		})
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -134,6 +152,14 @@ func RecoveryMiddleware(next http.Handler) http.Handler {
 				w.Write([]byte("Internal Server Error"))
 			}
 		}()
+
+		// Protect against nil next even if earlier check missed typed nil
+		if next == nil {
+			log.Printf("PANIC: nil handler encountered in RecoveryMiddleware during ServeHTTP\n")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Internal Server Error"))
+			return
+		}
 
 		next.ServeHTTP(w, r)
 	})

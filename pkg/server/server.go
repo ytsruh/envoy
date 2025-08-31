@@ -15,22 +15,28 @@ import (
 // Server holds the dependencies for a HTTP server.
 type Server struct {
 	srv *http.Server
+	db  database.Service // TODO: Need to replace with interface to avoid the dependency on the database package
 }
 
 // New creates and configures a new Server instance.
 func New(addr string, dbService database.Service) *Server {
 	router := NewRouter()
-	RegisterRoutes(router, dbService)
+	s := &Server{
+		db: dbService,
+	}
+	// Register routes as method on Server so it can access dependencies directly
+	s.RegisterRoutes(router)
 	mux := registerMiddleware(router)
 	return &Server{
 		srv: &http.Server{
 			Addr:    addr,
 			Handler: mux,
 		},
+		db: dbService,
 	}
 }
 
-func gracefulShutdown(apiServer *http.Server, done chan bool) {
+func gracefulShutdown(server *http.Server, done chan bool) {
 	// Create context that listens for the interrupt signal from the OS.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -45,7 +51,7 @@ func gracefulShutdown(apiServer *http.Server, done chan bool) {
 	// the request it is currently handling
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := apiServer.Shutdown(ctx); err != nil {
+	if err := server.Shutdown(ctx); err != nil {
 		log.Printf("Server forced to shutdown with error: %v", err)
 	}
 

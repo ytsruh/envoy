@@ -47,16 +47,11 @@ func (m *mockRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// mockDBService implements the DBService interface for testing.
-type mockDBService struct{}
-
-func (m *mockDBService) Health() map[string]string {
-	return map[string]string{"status": "ok", "message": "mock health check"}
-}
-
 func TestRegisterRoutes(t *testing.T) {
 	router := newMockRouter()
-	RegisterRoutes(router, &mockDBService{})
+	// create a server instance with a mock DB to call the method
+	s := &Server{db: &mockDBService{}}
+	s.RegisterRoutes(router)
 
 	t.Run("GET /hello", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/hello", nil)

@@ -14,11 +14,14 @@ import (
 	database "ytsruh.com/envoy/pkg/database/generated"
 )
 
-// Service represents a service that interacts with a database.
+// Represents a service that interacts with a database.
 type Service interface {
+	// Return the database connection
+	GetDB() *sql.DB
+	// GetQueries returns the database queries object.
+	GetQueries() *database.Queries
 	// Health returns a map of health status information. The keys and values in the map are service-specific.
 	Health() map[string]string
-
 	// Close terminates the database connection.It returns an error if the connection cannot be closed.
 	Close() error
 }
@@ -48,6 +51,14 @@ func NewService(dbPath string) Service {
 		queries: queries,
 	}
 	return dbInstance
+}
+
+func (s *service) GetDB() *sql.DB {
+	return s.db
+}
+
+func (s *service) GetQueries() *database.Queries {
+	return s.queries
 }
 
 // Health checks the health of the database connection by pinging the database.

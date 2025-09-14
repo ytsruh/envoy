@@ -14,26 +14,14 @@ import (
 	database "ytsruh.com/envoy/pkg/database/generated"
 )
 
-// Represents a service that interacts with a database.
-type Service interface {
-	// Return the database connection
-	GetDB() *sql.DB
-	// GetQueries returns the database queries object.
-	GetQueries() *database.Queries
-	// Health returns a map of health status information. The keys and values in the map are service-specific.
-	Health() map[string]string
-	// Close terminates the database connection.It returns an error if the connection cannot be closed.
-	Close() error
-}
-
-type service struct {
+type Service struct {
 	db      *sql.DB
 	queries *database.Queries
 }
 
-var dbInstance *service
+var dbInstance *Service
 
-func NewService(dbPath string) Service {
+func NewService(dbPath string) *Service {
 	// Reuse Connection
 	if dbInstance != nil {
 		return dbInstance
@@ -46,24 +34,24 @@ func NewService(dbPath string) Service {
 	}
 	queries := database.New(db)
 
-	dbInstance = &service{
+	dbInstance = &Service{
 		db:      db,
 		queries: queries,
 	}
 	return dbInstance
 }
 
-func (s *service) GetDB() *sql.DB {
+func (s *Service) GetDB() *sql.DB {
 	return s.db
 }
 
-func (s *service) GetQueries() *database.Queries {
+func (s *Service) GetQueries() database.Querier {
 	return s.queries
 }
 
 // Health checks the health of the database connection by pinging the database.
 // It returns a map with keys indicating various health statistics.
-func (s *service) Health() map[string]string {
+func (s *Service) Health() map[string]string {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
@@ -114,7 +102,7 @@ func (s *service) Health() map[string]string {
 
 // Close closes the database connection. It logs a message indicating the disconnection from the specific database.
 // If the connection is successfully closed, it returns nil. If an error occurs while closing the connection, it returns the error.
-func (s *service) Close() error {
+func (s *Service) Close() error {
 	log.Println("Disconnected from database")
 	err := s.db.Close()
 	if err != nil {

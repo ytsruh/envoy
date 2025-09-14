@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,31 +10,47 @@ import (
 	"syscall"
 	"time"
 
-	"ytsruh.com/envoy/pkg/database"
+	database "ytsruh.com/envoy/pkg/database/generated"
+	"ytsruh.com/envoy/pkg/handlers"
 )
+
+// Represents a database service
+type DBService interface {
+	// Return the database connection
+	GetDB() *sql.DB
+	// GetQueries returns the database queries object.
+	GetQueries() database.Querier
+	// Health returns a map of health status information. The keys and values in the map are service-specific.
+	Health() map[string]string
+	// Close terminates the database connection.It returns an error if the connection cannot be closed.
+	Close() error
+}
 
 // Server holds the dependencies for a HTTP server.
 type Server struct {
-	srv *http.Server
-	db  database.Service // TODO: Need to replace with interface to avoid the dependency on the database package
+	server    *http.Server
+	dbService DBService
+	router    *Router
 }
 
 // New creates and configures a new Server instance.
-func New(addr string, dbService database.Service) *Server {
+func New(addr string, dbService DBService) *Server {
 	router := NewRouter()
 	s := &Server{
-		db: dbService,
-	}
-	// Register routes as method on Server so it can access dependencies directly
-	s.RegisterRoutes(router)
-	mux := registerMiddleware(router)
-	return &Server{
-		srv: &http.Server{
+		server: &http.Server{
 			Addr:    addr,
-			Handler: mux,
+			Handler: router.mux,
 		},
-		db: dbService,
+		dbService: dbService,
+		router:    &router,
 	}
+	// Register routes & middleware
+	// Create handlers with injected queries
+	h := handlers.New(dbService.GetQueries())
+	s.RegisterRoutes(h)
+	s.RegisterMiddleware()
+
+	return s
 }
 
 func gracefulShutdown(server *http.Server, done chan bool) {
@@ -67,10 +84,10 @@ func (s *Server) Start() {
 	done := make(chan bool, 1)
 
 	// Run graceful shutdown in a separate goroutine
-	go gracefulShutdown(s.srv, done)
+	go gracefulShutdown(s.server, done)
 
-	log.Printf("Server starting on %s", s.srv.Addr)
-	err := s.srv.ListenAndServe()
+	log.Printf("Server starting on %s", s.server.Addr)
+	err := s.server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
 		panic(fmt.Sprintf("http server error: %s", err))
 	}

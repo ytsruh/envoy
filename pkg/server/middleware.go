@@ -11,17 +11,14 @@ import (
 type Middleware func(http.Handler) http.Handler
 
 // RegisterMiddleware chains all middleware together
-func registerMiddleware(next http.Handler) http.Handler {
-	// Define middleware in order of execution (last to first)
+func (s *Server) RegisterMiddleware() http.Handler {
 	middlewares := []Middleware{
 		RecoveryMiddleware,
 		LoggingMiddleware,
 		SecurityHeadersMiddleware,
 		CorsMiddleware,
 	}
-
-	// Apply middleware chain
-	return ApplyMiddleware(next, middlewares...)
+	return ApplyMiddleware(s.server.Handler, middlewares...)
 }
 
 // ApplyMiddleware applies a list of middleware handlers to an http.Handler

@@ -14,7 +14,7 @@ func TestNew(t *testing.T) {
 		t.Fatal("New returned nil")
 	}
 
-	if s.srv.Addr != addr {
-		t.Errorf("Expected server address to be %s, got %s", addr, s.srv.Addr)
+	if s.server.Addr != addr {
+		t.Errorf("Expected server address to be %s, got %s", addr, s.server.Addr)
 	}
 }

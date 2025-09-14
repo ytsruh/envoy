@@ -4,28 +4,36 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	database "ytsruh.com/envoy/pkg/database/generated"
 )
 
-// HealthChecker minimal interface for health endpoint
-type HealthChecker interface {
-	Health() map[string]string
+type Handler struct {
+	queries database.Querier
+}
+
+func New(queries database.Querier) Handler {
+	return Handler{queries: queries}
 }
 
 // Hello handler
-func Hello(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Hello, World!")
+func (h Handler) Hello() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "Hello, World!")
+	}
 }
 
 // Goodbye handler
-func Goodbye(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Goodbye, World!")
+func (h Handler) Goodbye() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "Goodbye, World!")
+	}
 }
 
 // Health handler uses HealthChecker
-func Health(h HealthChecker) http.HandlerFunc {
+func (h Handler) Health() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		healthStatus := h.Health()
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(healthStatus)
+		json.NewEncoder(w).Encode(map[string]string{"health": "ok"})
 	}
 }

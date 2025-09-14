@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 	"time"
 
@@ -19,26 +18,17 @@ type Service struct {
 	queries *database.Queries
 }
 
-var dbInstance *Service
-
-func NewService(dbPath string) *Service {
-	// Reuse Connection
-	if dbInstance != nil {
-		return dbInstance
-	}
-
+func NewService(dbPath string) (*Service, error) {
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
-		fmt.Println("Error creating connector:", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("error creating connector: %w", err)
 	}
 	queries := database.New(db)
 
-	dbInstance = &Service{
+	return &Service{
 		db:      db,
 		queries: queries,
-	}
-	return dbInstance
+	}, nil
 }
 
 func (s *Service) GetDB() *sql.DB {

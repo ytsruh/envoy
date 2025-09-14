@@ -13,7 +13,10 @@ func main() {
 		panic(err)
 	}
 	// Start a database service
-	dbService := database.NewService(env.DB_PATH)
+	dbService, err := database.NewService(env.DB_PATH)
+	if err != nil {
+		panic(err)
+	}
 
 	// Start the cron service
 	cronService := cron.New(dbService.GetDB())

@@ -1,9 +1,0 @@
-CREATE TABLE users (
-  id   text PRIMARY KEY,
-  name text NOT NULL,
-  email text NOT NULL,
-  password text NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  deleted_at TIMESTAMP DEFAULT NULL
-);

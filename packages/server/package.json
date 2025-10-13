@@ -1,0 +1,13 @@
+{
+	"name": "@envoy/server",
+	"scripts": {
+		"dev": "bun run --watch src/index.ts"
+	},
+	"dependencies": {
+		"elysia": "latest"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.2.5",
+		"bun-types": "latest"
+	}
+}

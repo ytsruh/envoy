@@ -1,0 +1,6 @@
+{
+	"name": "@envoy/cli",
+	"scripts": {
+		"dev": "bun run --watch src/index.ts"
+	}
+}

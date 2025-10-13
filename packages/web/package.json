@@ -1,6 +1,5 @@
 {
-  "name": "envman",
-  "private": true,
+  "name": "@envoy/web",
   "type": "module",
   "scripts": {
     "build": "react-router build",

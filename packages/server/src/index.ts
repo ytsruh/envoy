@@ -1,0 +1,27 @@
+import { cors } from "@elysiajs/cors";
+import { Elysia } from "elysia";
+import { initializeDB } from "./db";
+import { envVarCheck } from "./lib/utils";
+import { logger } from "./plugins/logger";
+
+console.log("-----Server setup-----");
+envVarCheck();
+await initializeDB();
+console.log("-----Server setup-----");
+
+new Elysia()
+	.use(cors())
+	.use(logger())
+	.get("/", async () => {
+		return new Response("Hello Envoy!", {
+			headers: { "Content-Type": "text/html" },
+		});
+	})
+	.onError((ctx) => {
+		if (ctx.code === "NOT_FOUND") return ctx.status(404, "Not Found :(");
+		console.log(`Error: ${ctx.code} - ${ctx.status}`);
+		return ctx.status(500, "Internal Server Error");
+	})
+	.listen(3000, (app) => {
+		console.log(`🚀 running on http://${app.hostname}:${app.port}`);
+	});

@@ -2,6 +2,7 @@ import { cors } from "@elysiajs/cors";
 import { Elysia } from "elysia";
 import { initializeDB } from "./db";
 import { envVarCheck } from "./lib/utils";
+import { etag } from "./plugins/etag";
 import { logger } from "./plugins/logger";
 
 console.log("-----Server setup-----");
@@ -12,6 +13,7 @@ console.log("-----Server setup-----");
 new Elysia()
 	.use(cors())
 	.use(logger())
+	.use(etag())
 	.get("/", async () => {
 		return new Response("Hello Envoy!", {
 			headers: { "Content-Type": "text/html" },

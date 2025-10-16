@@ -4,6 +4,7 @@ import { initializeDB } from "./db";
 import { envVarCheck } from "./lib/utils";
 import { etag } from "./plugins/etag";
 import { logger } from "./plugins/logger";
+import { requestID } from "./plugins/requestid";
 
 console.log("-----Server setup-----");
 envVarCheck();
@@ -14,6 +15,7 @@ new Elysia()
 	.use(cors())
 	.use(logger())
 	.use(etag())
+	.use(requestID())
 	.get("/", async () => {
 		return new Response("Hello Envoy!", {
 			headers: { "Content-Type": "text/html" },

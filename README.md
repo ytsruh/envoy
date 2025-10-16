@@ -1,12 +1,5 @@
 # Envoy
 
-## Possible Libraries
-- commander for CLI
-- bun secrets for managing secrets in cli
-- ink for TUI
-- inkui for TUI components
-https://www.alexmchan.com/blog/2023-10-10-cli
-
 ## Core Features:
 
 - Variable Creation: Securely store environment variables using encryption.

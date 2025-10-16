@@ -1,5 +1,0 @@
-{
-  "name": "envoy",
-  "private": true,
-  "workspaces": ["packages/*"]
-}

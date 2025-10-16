@@ -4,10 +4,12 @@ import (
 	"log"
 	"net/http"
 	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"golang.org/x/time/rate"
 )
 
 type SecurityHeadersConfig struct {
@@ -16,6 +18,35 @@ type SecurityHeadersConfig struct {
 	FrameOptions       string
 	ReferrerPolicy     string
 	CSPolicy           string
+}
+
+type RateLimiter struct {
+	limiters map[string]*rate.Limiter
+	mu       sync.RWMutex
+}
+
+func NewRateLimiter() *RateLimiter {
+	return &RateLimiter{
+		limiters: make(map[string]*rate.Limiter),
+	}
+}
+
+func (rl *RateLimiter) GetLimiter(ip string) *rate.Limiter {
+	rl.mu.RLock()
+	limiter, exists := rl.limiters[ip]
+	rl.mu.RUnlock()
+
+	if exists {
+		return limiter
+	}
+
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	limiter = rate.NewLimiter(rate.Limit(10), 10)
+	rl.limiters[ip] = limiter
+
+	return limiter
 }
 
 func DefaultSecurityHeadersConfig() SecurityHeadersConfig {
@@ -35,6 +66,7 @@ func RegisterMiddleware(e *echo.Echo, config SecurityHeadersConfig, timeout time
 	}))
 	e.Use(NewSecurityHeadersMiddleware(config))
 	e.Use(TimeoutMiddleware(timeout))
+	e.Use(RateLimiterMiddleware(NewRateLimiter()))
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
@@ -73,4 +105,21 @@ func TimeoutMiddleware(timeout time.Duration) echo.MiddlewareFunc {
 	return middleware.ContextTimeoutWithConfig(middleware.ContextTimeoutConfig{
 		Timeout: timeout,
 	})
+}
+
+func RateLimiterMiddleware(rl *RateLimiter) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			ip := c.RealIP()
+			limiter := rl.GetLimiter(ip)
+
+			if !limiter.Allow() {
+				return c.JSON(http.StatusTooManyRequests, map[string]string{
+					"error": "Rate limit exceeded",
+				})
+			}
+
+			return next(c)
+		}
+	}
 }

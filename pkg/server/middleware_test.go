@@ -158,3 +158,70 @@ func TestSecurityHeadersMiddleware(t *testing.T) {
 		})
 	}
 }
+
+func TestRateLimiterMiddleware(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		requests      int
+		shouldLimit   bool
+		minSuccessful int
+	}{
+		{
+			name:          "within_rate_limit",
+			requests:      5,
+			shouldLimit:   false,
+			minSuccessful: 5,
+		},
+		{
+			name:          "exceed_rate_limit",
+			requests:      15,
+			shouldLimit:   true,
+			minSuccessful: 10,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			e := echo.New()
+			rl := NewRateLimiter()
+			e.Use(RateLimiterMiddleware(rl))
+
+			e.GET("/test", func(c echo.Context) error {
+				return c.String(http.StatusOK, "OK")
+			})
+
+			successCount := 0
+			limitedCount := 0
+
+			for i := 0; i < tt.requests; i++ {
+				req := httptest.NewRequest(http.MethodGet, "/test", nil)
+				req.RemoteAddr = "127.0.0.1:1234"
+				rec := httptest.NewRecorder()
+
+				e.ServeHTTP(rec, req)
+
+				if rec.Code == http.StatusOK {
+					successCount++
+				} else if rec.Code == http.StatusTooManyRequests {
+					limitedCount++
+				}
+			}
+
+			if successCount < tt.minSuccessful {
+				t.Errorf("Expected at least %d successful requests, got %d", tt.minSuccessful, successCount)
+			}
+
+			if tt.shouldLimit && limitedCount == 0 {
+				t.Errorf("Expected rate limit to be hit, but all requests succeeded")
+			}
+
+			if !tt.shouldLimit && limitedCount > 0 {
+				t.Errorf("Expected no rate limit, but got %d limited requests", limitedCount)
+			}
+		})
+	}
+}

@@ -5,6 +5,8 @@ import (
 )
 
 func TestNew(t *testing.T) {
+	t.Parallel()
+
 	addr := ":8080"
 	dbService := &mockDBService{}
 
@@ -14,7 +16,11 @@ func TestNew(t *testing.T) {
 		t.Fatal("New returned nil")
 	}
 
-	if s.server.Addr != addr {
-		t.Errorf("Expected server address to be %s, got %s", addr, s.server.Addr)
+	if s.addr != addr {
+		t.Errorf("Expected server address to be %s, got %s", addr, s.addr)
+	}
+
+	if s.echo == nil {
+		t.Fatal("Expected echo instance to be initialized")
 	}
 }

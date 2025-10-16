@@ -4,151 +4,127 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/labstack/echo/v4"
 )
 
-// mockRouter implements the Router interface for testing.
-type mockRouter struct {
-	routes map[string]http.HandlerFunc
+type mockHealthHandler struct {
+	called bool
 }
 
-func newMockRouter() *mockRouter {
-	return &mockRouter{
-		routes: make(map[string]http.HandlerFunc),
-	}
+func (m *mockHealthHandler) Health(c echo.Context) error {
+	m.called = true
+	return c.JSON(http.StatusOK, map[string]string{"health": "ok"})
 }
 
-func (m *mockRouter) Get(path string, handler http.HandlerFunc) {
-	m.routes["GET "+path] = handler
+type mockGreetingHandler struct {
+	helloCalled   bool
+	goodbyeCalled bool
 }
 
-func (m *mockRouter) Post(path string, handler http.HandlerFunc) {
-	m.routes["POST "+path] = handler
+func (m *mockGreetingHandler) Hello(c echo.Context) error {
+	m.helloCalled = true
+	return c.String(http.StatusOK, "Hello, World!")
 }
 
-func (m *mockRouter) Put(pattern string, handler http.HandlerFunc) {
-	m.routes["PUT "+pattern] = handler
+func (m *mockGreetingHandler) Goodbye(c echo.Context) error {
+	m.goodbyeCalled = true
+	return c.String(http.StatusOK, "Goodbye, World!")
 }
 
-func (m *mockRouter) Patch(pattern string, handler http.HandlerFunc) {
-	m.routes["PATCH "+pattern] = handler
-}
-
-func (m *mockRouter) Delete(pattern string, handler http.HandlerFunc) {
-	m.routes["DELETE "+pattern] = handler
-}
-
-func (m *mockRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	key := r.Method + " " + r.URL.Path
-	if handler, ok := m.routes[key]; ok {
-		handler.ServeHTTP(w, r)
-	} else {
-		http.NotFound(w, r)
-	}
-}
-
-// testHandlers implements Handlers interface for testing route registration
-type testHandlers struct {
-	hello   func(http.ResponseWriter, *http.Request)
-	goodbye func(http.ResponseWriter, *http.Request)
-	health  func(http.ResponseWriter, *http.Request)
-}
-
-func (t *testHandlers) Hello() http.HandlerFunc {
-	return http.HandlerFunc(t.hello)
-}
-
-func (t *testHandlers) Goodbye() http.HandlerFunc {
-	return http.HandlerFunc(t.goodbye)
-}
-
-func (t *testHandlers) Health() http.HandlerFunc {
-	return http.HandlerFunc(t.health)
-}
-
-func TestRegisterRoutes(t *testing.T) {
-	// create a server instance with a mock DB to call the method
-	dbservice := &mockDBService{}
-	router := NewRouter()
+func TestRegisterHealthHandler(t *testing.T) {
+	t.Parallel()
 	s := &Server{
-		dbService: dbservice,
-		router:    &router,
+		echo:      echo.New(),
+		dbService: &mockDBService{},
+		addr:      ":8080",
 	}
 
-	// Create simple test handlers that just set flags
-	helloCalled := false
-	goodbyeCalled := false
-	healthCalled := false
+	mockHandler := &mockHealthHandler{}
+	s.RegisterHealthHandler(mockHandler)
 
-	testHandler := &testHandlers{
-		hello: func(w http.ResponseWriter, r *http.Request) {
-			helloCalled = true
-			w.WriteHeader(http.StatusOK)
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	rec := httptest.NewRecorder()
+
+	s.echo.ServeHTTP(rec, req)
+
+	if !mockHandler.called {
+		t.Error("Expected health handler to be called")
+	}
+	if rec.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+}
+
+func TestRegisterGreetingHandlers(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		method         string
+		path           string
+		expectedStatus int
+		handlerCheck   func(*mockGreetingHandler) bool
+	}{
+		{
+			name:           "hello",
+			method:         http.MethodGet,
+			path:           "/hello",
+			expectedStatus: http.StatusOK,
+			handlerCheck:   func(m *mockGreetingHandler) bool { return m.helloCalled },
 		},
-		goodbye: func(w http.ResponseWriter, r *http.Request) {
-			goodbyeCalled = true
-			w.WriteHeader(http.StatusOK)
-		},
-		health: func(w http.ResponseWriter, r *http.Request) {
-			healthCalled = true
-			w.WriteHeader(http.StatusOK)
+		{
+			name:           "goodbye",
+			method:         http.MethodPost,
+			path:           "/goodbye",
+			expectedStatus: http.StatusOK,
+			handlerCheck:   func(m *mockGreetingHandler) bool { return m.goodbyeCalled },
 		},
 	}
 
-	s.RegisterRoutes(testHandler)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			s := &Server{
+				echo:      echo.New(),
+				dbService: &mockDBService{},
+				addr:      ":8080",
+			}
 
-	t.Run("GET /hello", func(t *testing.T) {
-		helloCalled = false
-		req := httptest.NewRequest(http.MethodGet, "/hello", nil)
-		rec := httptest.NewRecorder()
+			mockHandler := &mockGreetingHandler{}
+			s.RegisterGreetingHandlers(mockHandler)
 
-		s.router.ServeHTTP(rec, req)
+			req := httptest.NewRequest(tt.method, tt.path, nil)
+			rec := httptest.NewRecorder()
 
-		if !helloCalled {
-			t.Errorf("Expected hello handler to be called")
-		}
-		if rec.Code != http.StatusOK {
-			t.Errorf("Expected status %d for /hello, got %d", http.StatusOK, rec.Code)
-		}
-	})
+			s.echo.ServeHTTP(rec, req)
 
-	t.Run("POST /goodbye", func(t *testing.T) {
-		goodbyeCalled = false
-		req := httptest.NewRequest(http.MethodPost, "/goodbye", nil)
-		rec := httptest.NewRecorder()
+			if !tt.handlerCheck(mockHandler) {
+				t.Error("Expected handler to be called")
+			}
+			if rec.Code != tt.expectedStatus {
+				t.Errorf("Expected status %d, got %d", tt.expectedStatus, rec.Code)
+			}
+		})
+	}
+}
 
-		s.router.ServeHTTP(rec, req)
+func TestRegisterFaviconHandler(t *testing.T) {
+	t.Parallel()
+	s := &Server{
+		echo:      echo.New(),
+		dbService: &mockDBService{},
+		addr:      ":8080",
+	}
 
-		if !goodbyeCalled {
-			t.Errorf("Expected goodbye handler to be called")
-		}
-		if rec.Code != http.StatusOK {
-			t.Errorf("Expected status %d for /goodbye, got %d", http.StatusOK, rec.Code)
-		}
-	})
+	s.RegisterFaviconHandler()
 
-	t.Run("GET /health", func(t *testing.T) {
-		healthCalled = false
-		req := httptest.NewRequest(http.MethodGet, "/health", nil)
-		rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
+	rec := httptest.NewRecorder()
 
-		s.router.ServeHTTP(rec, req)
+	s.echo.ServeHTTP(rec, req)
 
-		if !healthCalled {
-			t.Errorf("Expected health handler to be called")
-		}
-		if rec.Code != http.StatusOK {
-			t.Errorf("Expected status %d for /health, got %d", http.StatusOK, rec.Code)
-		}
-	})
-
-	t.Run("GET /favicon.ico", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
-		rec := httptest.NewRecorder()
-
-		s.router.ServeHTTP(rec, req)
-
-		if rec.Code != http.StatusNoContent {
-			t.Errorf("Expected status %d for /favicon.ico, got %d", http.StatusNoContent, rec.Code)
-		}
-	})
+	if rec.Code != http.StatusNoContent {
+		t.Errorf("Expected status %d, got %d", http.StatusNoContent, rec.Code)
+	}
 }

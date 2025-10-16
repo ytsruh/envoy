@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"ytsruh.com/envoy/pkg/cron"
 	"ytsruh.com/envoy/pkg/database"
 	"ytsruh.com/envoy/pkg/server"
@@ -12,16 +14,19 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// Start a database service
+
 	dbService, err := database.NewService(env.DB_PATH)
 	if err != nil {
 		panic(err)
 	}
 
-	// Start the cron service
 	cronService := cron.New(dbService.GetDB())
 	cronService.Start()
 
-	server := server.New(":8080", dbService)
-	server.Start()
+	srv, err := server.NewBuilder(":8080", dbService).Build()
+	if err != nil {
+		log.Fatalf("failed to build server: %v", err)
+	}
+
+	srv.Start()
 }

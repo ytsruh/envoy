@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/labstack/echo/v4"
 	database "ytsruh.com/envoy/pkg/database/generated"
 )
 
@@ -37,75 +38,108 @@ func (m mockQuerier) UpdateUser(ctx context.Context, arg database.UpdateUserPara
 	return database.User{}, nil
 }
 
-func TestHelloHandler(t *testing.T) {
-	handler := New(mockQuerier{})
+func TestGreetingHandler(t *testing.T) {
+	t.Parallel()
 
-	req := httptest.NewRequest("GET", "/", nil)
-	w := httptest.NewRecorder()
-
-	handler.Hello()(w, req)
-
-	resp := w.Result()
-	body, _ := io.ReadAll(resp.Body)
-
-	expected := "Hello, World!\n"
-	if string(body) != expected {
-		t.Errorf("Expected %q, got %q", expected, string(body))
+	tests := []struct {
+		name           string
+		method         string
+		handlerFunc    func(GreetingHandler) echo.HandlerFunc
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "hello",
+			method:         http.MethodGet,
+			handlerFunc:    func(h GreetingHandler) echo.HandlerFunc { return h.Hello },
+			expectedStatus: http.StatusOK,
+			expectedBody:   "Hello, World!",
+		},
+		{
+			name:           "goodbye",
+			method:         http.MethodPost,
+			handlerFunc:    func(h GreetingHandler) echo.HandlerFunc { return h.Goodbye },
+			expectedStatus: http.StatusOK,
+			expectedBody:   "Goodbye, World!",
+		},
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status %d, got %d", http.StatusOK, resp.StatusCode)
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			e := echo.New()
+			req := httptest.NewRequest(tt.method, "/", nil)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
 
-func TestGoodbyeHandler(t *testing.T) {
-	handler := New(mockQuerier{})
+			handler := NewGreetingHandler(mockQuerier{})
+			err := tt.handlerFunc(handler)(c)
 
-	req := httptest.NewRequest("GET", "/", nil)
-	w := httptest.NewRecorder()
+			if err != nil {
+				t.Errorf("Handler returned error: %v", err)
+			}
 
-	handler.Goodbye()(w, req)
+			if rec.Code != tt.expectedStatus {
+				t.Errorf("Expected status %d, got %d", tt.expectedStatus, rec.Code)
+			}
 
-	resp := w.Result()
-	body, _ := io.ReadAll(resp.Body)
-
-	expected := "Goodbye, World!\n"
-	if string(body) != expected {
-		t.Errorf("Expected %q, got %q", expected, string(body))
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status %d, got %d", http.StatusOK, resp.StatusCode)
+			if rec.Body.String() != tt.expectedBody {
+				t.Errorf("Expected %q, got %q", tt.expectedBody, rec.Body.String())
+			}
+		})
 	}
 }
 
 func TestHealthHandler(t *testing.T) {
-	handler := New(mockQuerier{})
+	t.Parallel()
 
-	req := httptest.NewRequest("GET", "/health", nil)
-	w := httptest.NewRecorder()
-
-	handler.Health()(w, req)
-
-	resp := w.Result()
-	body, _ := io.ReadAll(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status %d, got %d", http.StatusOK, resp.StatusCode)
+	tests := []struct {
+		name           string
+		expectedStatus int
+		expectedKey    string
+		expectedValue  string
+	}{
+		{
+			name:           "health_ok",
+			expectedStatus: http.StatusOK,
+			expectedKey:    "health",
+			expectedValue:  "ok",
+		},
 	}
 
-	contentType := resp.Header.Get("Content-Type")
-	expectedContentType := "application/json"
-	if contentType != expectedContentType {
-		t.Errorf("Expected Content-Type %q, got %q", expectedContentType, contentType)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			e := echo.New()
+			req := httptest.NewRequest(http.MethodGet, "/health", nil)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
 
-	var result map[string]string
-	if err := json.Unmarshal(body, &result); err != nil {
-		t.Errorf("Failed to unmarshal JSON: %v", err)
-	}
+			handler := NewHealthHandler(mockQuerier{})
+			err := handler.Health(c)
 
-	if health, ok := result["health"]; !ok || health != "ok" {
-		t.Errorf("Expected health status 'ok', got %v", result)
+			if err != nil {
+				t.Errorf("Handler returned error: %v", err)
+			}
+
+			if rec.Code != tt.expectedStatus {
+				t.Errorf("Expected status %d, got %d", tt.expectedStatus, rec.Code)
+			}
+
+			contentType := rec.Header().Get("Content-Type")
+			if contentType != "application/json" {
+				t.Errorf("Expected Content-Type application/json, got %s", contentType)
+			}
+
+			body, _ := io.ReadAll(rec.Body)
+			var result map[string]string
+			if err := json.Unmarshal(body, &result); err != nil {
+				t.Errorf("Failed to unmarshal JSON: %v", err)
+			}
+
+			if health, ok := result[tt.expectedKey]; !ok || health != tt.expectedValue {
+				t.Errorf("Expected %s=%q, got %v", tt.expectedKey, tt.expectedValue, result)
+			}
+		})
 	}
 }

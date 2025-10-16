@@ -110,16 +110,20 @@ func TestHealth(t *testing.T) {
 
 			stats := service.Health()
 
-			if stats["status"] != tt.want {
-				t.Errorf("Health() status = %v, want %v", stats["status"], tt.want)
+			if stats.Status != tt.want {
+				t.Errorf("Health() status = %v, want %v", stats.Status, tt.want)
 			}
 
-			// Verify required fields are present
-			requiredFields := []string{"status", "open_connections", "in_use", "idle"}
-			for _, field := range requiredFields {
-				if _, exists := stats[field]; !exists {
-					t.Errorf("Health() missing required field: %s", field)
-				}
+			if stats.OpenConnections < 0 {
+				t.Error("Health() OpenConnections should not be negative")
+			}
+
+			if stats.InUse < 0 {
+				t.Error("Health() InUse should not be negative")
+			}
+
+			if stats.Idle < 0 {
+				t.Error("Health() Idle should not be negative")
 			}
 
 			// Cleanup
@@ -135,25 +139,24 @@ func TestHealth_Statistics(t *testing.T) {
 
 	stats := service.Health()
 
-	// Verify statistics are properly formatted
-	if stats["open_connections"] == "" {
-		t.Error("open_connections should not be empty")
+	if stats.OpenConnections < 0 {
+		t.Error("OpenConnections should not be negative")
 	}
 
-	if stats["in_use"] == "" {
-		t.Error("in_use should not be empty")
+	if stats.InUse < 0 {
+		t.Error("InUse should not be negative")
 	}
 
-	if stats["idle"] == "" {
-		t.Error("idle should not be empty")
+	if stats.Idle < 0 {
+		t.Error("Idle should not be negative")
 	}
 
-	if stats["wait_count"] == "" {
-		t.Error("wait_count should not be empty")
+	if stats.WaitCount < 0 {
+		t.Error("WaitCount should not be negative")
 	}
 
-	if stats["wait_duration"] == "" {
-		t.Error("wait_duration should not be empty")
+	if stats.WaitDuration < 0 {
+		t.Error("WaitDuration should not be negative")
 	}
 
 	service.Close()
@@ -255,10 +258,9 @@ func TestService_WithFileDatabase(t *testing.T) {
 		t.Fatalf("NewService() error = %v", err)
 	}
 
-	// Verify the service works
 	stats := service.Health()
-	if stats["status"] != "up" {
-		t.Errorf("Expected database to be up, got status: %s", stats["status"])
+	if stats.Status != "up" {
+		t.Errorf("Expected database to be up, got status: %s", stats.Status)
 	}
 
 	err = service.Close()

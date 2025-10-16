@@ -1,40 +1,160 @@
 package server
 
 import (
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/labstack/echo/v4"
 )
 
 func TestRecoveryMiddleware(t *testing.T) {
-	// explicit handler that panics
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		panic("test panic")
-	})
+	t.Parallel()
 
-	// Silence global logger for this test
-	old := log.Writer()
-	log.SetOutput(io.Discard)
-	defer log.SetOutput(old)
-
-	// Create a new recorder to capture the response
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/", nil)
-
-	// Apply the middleware directly to the handler under test
-	wrapped := RecoveryMiddleware(handler)
-	wrapped.ServeHTTP(rec, req)
-
-	// Check the status code
-	if rec.Code != http.StatusInternalServerError {
-		t.Errorf("Expected status %d, got %d", http.StatusInternalServerError, rec.Code)
+	tests := []struct {
+		name              string
+		shouldPanic       bool
+		expectedStatus    int
+		expectedBodyKey   string
+		expectedBodyValue string
+	}{
+		{
+			name:              "panic_recovery",
+			shouldPanic:       true,
+			expectedStatus:    http.StatusInternalServerError,
+			expectedBodyKey:   "error",
+			expectedBodyValue: "Internal Server Error",
+		},
 	}
 
-	// Check the response body
-	expectedBody := "Internal Server Error"
-	if rec.Body.String() != expectedBody {
-		t.Errorf("Expected body %q, got %q", expectedBody, rec.Body.String())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			e := echo.New()
+
+			old := log.Writer()
+			log.SetOutput(io.Discard)
+			defer log.SetOutput(old)
+
+			e.Use(RecoveryMiddleware())
+
+			if tt.shouldPanic {
+				e.GET("/panic", func(c echo.Context) error {
+					panic("test panic")
+				})
+			}
+
+			path := "/panic"
+			if !tt.shouldPanic {
+				e.GET("/ok", func(c echo.Context) error {
+					return c.String(http.StatusOK, "OK")
+				})
+				path = "/ok"
+			}
+
+			req := httptest.NewRequest(http.MethodGet, path, nil)
+			rec := httptest.NewRecorder()
+
+			e.ServeHTTP(rec, req)
+
+			if rec.Code != tt.expectedStatus {
+				t.Errorf("Expected status %d, got %d", tt.expectedStatus, rec.Code)
+			}
+
+			if tt.shouldPanic {
+				var result map[string]string
+				body, _ := io.ReadAll(rec.Body)
+				if err := json.Unmarshal(body, &result); err != nil {
+					t.Errorf("Failed to unmarshal JSON: %v", err)
+				}
+				if value, ok := result[tt.expectedBodyKey]; !ok || value != tt.expectedBodyValue {
+					t.Errorf("Expected %s=%q, got %v", tt.expectedBodyKey, tt.expectedBodyValue, result)
+				}
+			}
+		})
+	}
+}
+
+func TestSecurityHeadersMiddleware(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		config        SecurityHeadersConfig
+		headerKey     string
+		expectedValue string
+	}{
+		{
+			name:          "xss_protection_header",
+			config:        DefaultSecurityHeadersConfig(),
+			headerKey:     "X-XSS-Protection",
+			expectedValue: "1; mode=block",
+		},
+		{
+			name:          "content_type_options_header",
+			config:        DefaultSecurityHeadersConfig(),
+			headerKey:     "X-Content-Type-Options",
+			expectedValue: "nosniff",
+		},
+		{
+			name:          "frame_options_header",
+			config:        DefaultSecurityHeadersConfig(),
+			headerKey:     "X-Frame-Options",
+			expectedValue: "DENY",
+		},
+		{
+			name:          "referrer_policy_header",
+			config:        DefaultSecurityHeadersConfig(),
+			headerKey:     "Referrer-Policy",
+			expectedValue: "strict-origin-when-cross-origin",
+		},
+		{
+			name:          "csp_header",
+			config:        DefaultSecurityHeadersConfig(),
+			headerKey:     "Content-Security-Policy",
+			expectedValue: "default-src 'self'",
+		},
+		{
+			name: "custom_security_config",
+			config: SecurityHeadersConfig{
+				XSSProtection:      "0",
+				ContentTypeOptions: "custom-value",
+				FrameOptions:       "SAMEORIGIN",
+				ReferrerPolicy:     "no-referrer",
+				CSPolicy:           "unsafe-inline",
+			},
+			headerKey:     "X-Frame-Options",
+			expectedValue: "SAMEORIGIN",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			e := echo.New()
+			e.Use(NewSecurityHeadersMiddleware(tt.config))
+
+			e.GET("/test", func(c echo.Context) error {
+				return c.String(http.StatusOK, "OK")
+			})
+
+			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			rec := httptest.NewRecorder()
+
+			e.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Errorf("Expected status 200, got %d", rec.Code)
+			}
+
+			value := rec.Header().Get(tt.headerKey)
+			if value != tt.expectedValue {
+				t.Errorf("Expected header %s=%q, got %q", tt.headerKey, tt.expectedValue, value)
+			}
+		})
 	}
 }

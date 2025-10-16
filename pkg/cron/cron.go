@@ -3,51 +3,40 @@ package cron
 import (
 	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/robfig/cron"
 )
 
-// Represents a cron service
+type Job func() error
+
 type Service interface {
-	// Starts the cron job
 	Start()
-	// Terminates the cron jobs
 	Stop()
-	// Inspect returns a string representation of the service.
 	Inspect() string
+	AddJob(schedule string, job Job) error
 }
 
 type service struct {
 	scheduler *cron.Cron
 	db        *sql.DB
+	logger    *log.Logger
 }
 
-var cronService *service
-
-// New creates a new cron service with jobs
-func New(db *sql.DB) Service {
-	// Reuse existing cron scheduler
-	if cronService != nil {
-		return cronService
-	}
-
-	c := cron.New()
-
-	cronService = &service{
-		scheduler: c,
+func New(db *sql.DB, logger *log.Logger) Service {
+	return &service{
+		scheduler: cron.New(),
 		db:        db,
+		logger:    logger,
 	}
+}
 
-	// Add jobs to cron service
-	c.AddFunc("*/30 * * * * *", func() {
-		err := cronService.db.Ping()
-		if err != nil {
-			fmt.Println("Error pinging database:", err)
+func (s *service) AddJob(schedule string, job Job) error {
+	return s.scheduler.AddFunc(schedule, func() {
+		if err := job(); err != nil {
+			s.logger.Printf("cron job failed: %v", err)
 		}
-		fmt.Println("Example Cron Job with access to DB")
 	})
-
-	return cronService
 }
 
 func (s *service) Start() {
@@ -60,8 +49,19 @@ func (s *service) Stop() {
 
 func (s *service) Inspect() string {
 	entries := s.scheduler.Entries()
+	var result string
 	for i, entry := range entries {
-		fmt.Printf("Cron Job: %d, Schedule: %T, Next: %s\n", i, entry.Schedule, entry.Next)
+		result += fmt.Sprintf("Cron Job: %d, Schedule: %T, Next: %s\n", i, entry.Schedule, entry.Next)
 	}
-	return fmt.Sprintf("cron scheduler: %+v", s.scheduler)
+	return result
+}
+
+func DatabaseHealthCheck(db *sql.DB, logger *log.Logger) Job {
+	return func() error {
+		if err := db.Ping(); err != nil {
+			return fmt.Errorf("database ping: %w", err)
+		}
+		logger.Println("database health check passed")
+		return nil
+	}
 }

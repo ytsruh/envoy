@@ -20,7 +20,9 @@ func main() {
 		panic(err)
 	}
 
-	cronService := cron.New(dbService.GetDB())
+	logger := log.New(log.Writer(), "", log.LstdFlags)
+	cronService := cron.New(dbService.GetDB(), logger)
+	cronService.AddJob("*/30 * * * * *", cron.DatabaseHealthCheck(dbService.GetDB(), logger))
 	cronService.Start()
 
 	srv, err := server.NewBuilder(":8080", dbService).Build()

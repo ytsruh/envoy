@@ -11,8 +11,8 @@ import (
 
 type mockDBService struct{}
 
-func (m *mockDBService) Health() *dbpkg.HealthStatus {
-	return &dbpkg.HealthStatus{Status: "ok", Message: "mock health check"}
+func (m *mockDBService) Health() (*dbpkg.HealthStatus, error) {
+	return &dbpkg.HealthStatus{Status: "ok", Message: "mock health check"}, nil
 }
 func (m *mockDBService) GetDB() *sql.DB          { return nil }
 func (m *mockDBService) GetQueries() gen.Querier { return nil }

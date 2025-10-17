@@ -16,7 +16,7 @@ import (
 type DBService interface {
 	GetDB() *sql.DB
 	GetQueries() database.Querier
-	Health() *dbpkg.HealthStatus
+	Health() (*dbpkg.HealthStatus, error)
 	Close() error
 }
 

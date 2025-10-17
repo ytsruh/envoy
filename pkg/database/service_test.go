@@ -23,15 +23,7 @@ func createTestService(t *testing.T) *Service {
 }
 
 func initializeTestSchema(db *sql.DB) error {
-	// Create basic schema for testing
-	_, err := db.Exec(`
-		CREATE TABLE IF NOT EXISTS users (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			email TEXT UNIQUE NOT NULL,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		);
-	`)
-	return err
+	return nil
 }
 
 func TestNewService(t *testing.T) {
@@ -98,17 +90,15 @@ func TestHealth(t *testing.T) {
 			// Setup test conditions
 			tt.setup(service)
 
-			// Capture log output to prevent os.Exit from terminating tests
-			// Note: In a real scenario, you might want to mock log.Fatal
-			if tt.wantErr {
-				defer func() {
-					if r := recover(); r == nil {
-						t.Error("Expected Health() to panic on database down")
-					}
-				}()
+			stats, err := service.Health()
+
+			if tt.wantErr && err == nil {
+				t.Error("Expected Health() to return an error")
 			}
 
-			stats := service.Health()
+			if !tt.wantErr && err != nil {
+				t.Errorf("Expected no error but got: %v", err)
+			}
 
 			if stats.Status != tt.want {
 				t.Errorf("Health() status = %v, want %v", stats.Status, tt.want)
@@ -137,7 +127,10 @@ func TestHealth(t *testing.T) {
 func TestHealth_Statistics(t *testing.T) {
 	service := createTestService(t)
 
-	stats := service.Health()
+	stats, err := service.Health()
+	if err != nil {
+		t.Fatalf("Health() error = %v", err)
+	}
 
 	if stats.OpenConnections < 0 {
 		t.Error("OpenConnections should not be negative")
@@ -222,7 +215,7 @@ func TestService_ConcurrentAccess(t *testing.T) {
 				t.Errorf("Failed to create service: %v", err)
 			}
 			services[index] = service
-			_ = service.Health()
+			_, _ = service.Health()
 			done <- true
 		}(i)
 	}
@@ -258,7 +251,10 @@ func TestService_WithFileDatabase(t *testing.T) {
 		t.Fatalf("NewService() error = %v", err)
 	}
 
-	stats := service.Health()
+	stats, err := service.Health()
+	if err != nil {
+		t.Fatalf("Health() error = %v", err)
+	}
 	if stats.Status != "up" {
 		t.Errorf("Expected database to be up, got status: %s", stats.Status)
 	}

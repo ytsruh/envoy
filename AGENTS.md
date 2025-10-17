@@ -1,7 +1,7 @@
 AGENTS.md
 
 Overview
-A Go server built using the standard library, SQLite, SQLC library, and internal packages.
+A Go server built using the standard library, SQLite, SQLC library, Goose for database migrations, and internal packages.
 Frontend is a React application built using TypeScript and React within the /client directory. Frontend toolchain uses Bun and does not have access to Node, NPM or NodeJS.
 
 Code style & conventions

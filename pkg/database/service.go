@@ -34,6 +34,11 @@ func NewService(dbPath string) (*Service, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error creating connector: %w", err)
 	}
+
+	if err := runMigrations(db); err != nil {
+		return nil, fmt.Errorf("failed to run migrations: %w", err)
+	}
+
 	queries := database.New(db)
 
 	return &Service{
@@ -50,7 +55,7 @@ func (s *Service) GetQueries() database.Querier {
 	return s.queries
 }
 
-func (s *Service) Health() *HealthStatus {
+func (s *Service) Health() (*HealthStatus, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
@@ -60,8 +65,7 @@ func (s *Service) Health() *HealthStatus {
 	if err != nil {
 		status.Status = "down"
 		status.Message = fmt.Sprintf("db down: %v", err)
-		log.Fatalf("db down: %v", err)
-		return status
+		return status, fmt.Errorf("database health check failed: %w", err)
 	}
 
 	status.Status = "up"
@@ -92,7 +96,7 @@ func (s *Service) Health() *HealthStatus {
 		status.Message = "Many connections are being closed due to max lifetime, consider increasing max lifetime or revising the connection usage pattern."
 	}
 
-	return status
+	return status, nil
 }
 
 // Close closes the database connection. It logs a message indicating the disconnection from the specific database.

@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -30,6 +32,12 @@ type Service struct {
 }
 
 func NewService(dbPath string) (*Service, error) {
+	// Ensure the data directory exists
+	dataDir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create data directory: %w", err)
+	}
+	// Open the database connection
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("error creating connector: %w", err)

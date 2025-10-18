@@ -9,7 +9,7 @@
 - Format Export: Export environment variables in various formats (e.g., .env, JSON, YAML) for easy integration.
 - Secure Access: User authentication with JWT-based password encryption.
 
-## Style Guidelines:
+## Client Style Guidelines:
 
 - Primary color: Strong blue (#2979FF) for trust and security.
 - Background color: Light blue (#E3F2FD), very desaturated, complementing the primary.
@@ -21,16 +21,24 @@
 
 ## API Endpoints
 
-### Authentication
-- `POST /auth/register` - Register a new user
+### Public Endpoints
+- `GET /health` - Health check endpoint
+
+### Authentication (Public)
+- `POST /auth/register` - Register a new user and receive JWT token
 - `POST /auth/login` - Login and receive JWT token
 - Tokens expire in 7 days
 - See [AUTH_API.md](docs/AUTH_API.md) for detailed documentation
 
-### Other Endpoints
-- `GET /health` - Health check endpoint
-- `GET /hello` - Test greeting endpoint
-- `POST /goodbye` - Test farewell endpoint
+### Protected Endpoints (Require JWT Authentication)
+- `GET /profile` - Get authenticated user's profile from JWT
+- `GET /hello` - Protected greeting endpoint
+- `POST /goodbye` - Protected farewell endpoint
+
+All protected endpoints require a valid JWT token in the Authorization header:
+```
+Authorization: Bearer <your-jwt-token>
+```
 
 ## Environment Variables
 

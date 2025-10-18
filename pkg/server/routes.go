@@ -8,14 +8,16 @@ import (
 )
 
 func (s *Server) RegisterRoutes() {
+	// Public routes
 	healthHandler := handlers.NewHealthHandler(s.dbService.GetQueries())
 	s.RegisterHealthHandler(healthHandler)
 
-	greetingHandler := handlers.NewGreetingHandler(s.dbService.GetQueries())
-	s.RegisterGreetingHandlers(greetingHandler)
-
 	authHandler := handlers.NewAuthHandler(s.dbService.GetQueries(), s.jwtSecret)
 	s.RegisterAuthHandlers(authHandler)
+
+	// Protected routes (require JWT authentication)
+	greetingHandler := handlers.NewGreetingHandler(s.dbService.GetQueries())
+	s.RegisterGreetingHandlers(greetingHandler)
 
 	s.RegisterFaviconHandler()
 }
@@ -25,6 +27,11 @@ func (s *Server) RegisterHealthHandler(h handlers.HealthHandler) {
 }
 
 func (s *Server) RegisterGreetingHandlers(h handlers.GreetingHandler) {
+	// Create JWT middleware
+	authMiddleware := JWTAuthMiddleware(s.jwtSecret)
+	s.echo.Use(authMiddleware)
+
+	// Protected greeting routes
 	s.echo.GET("/hello", h.Hello)
 	s.echo.POST("/goodbye", h.Goodbye)
 }
@@ -32,6 +39,8 @@ func (s *Server) RegisterGreetingHandlers(h handlers.GreetingHandler) {
 func (s *Server) RegisterAuthHandlers(h handlers.AuthHandler) {
 	s.echo.POST("/auth/register", h.Register)
 	s.echo.POST("/auth/login", h.Login)
+	authMiddleware := JWTAuthMiddleware(s.jwtSecret)
+	s.echo.GET("/auth/profile", h.GetProfile, authMiddleware)
 }
 
 func (s *Server) RegisterFaviconHandler() {

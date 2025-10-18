@@ -15,6 +15,7 @@ import (
 type AuthHandler interface {
 	Register(c echo.Context) error
 	Login(c echo.Context) error
+	GetProfile(c echo.Context) error
 }
 
 type AuthHandlerImpl struct {
@@ -164,6 +165,43 @@ func (h *AuthHandlerImpl) Login(c echo.Context) error {
 			Email:     user.Email,
 			CreatedAt: user.CreatedAt.Time,
 		},
+	}
+
+	return c.JSON(http.StatusOK, response)
+}
+
+type ProfileHandler interface {
+	GetProfile(c echo.Context) error
+}
+
+type ProfileResponse struct {
+	UserID string `json:"user_id"`
+	Email  string `json:"email"`
+	Iat    int64  `json:"issued_at"`
+	Exp    int64  `json:"expires_at"`
+}
+
+func (h *AuthHandlerImpl) GetProfile(c echo.Context) error {
+	// Get user claims from context (set by JWT middleware)
+	user := c.Get("user")
+	if user == nil {
+		return c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Error: "Unauthorized",
+		})
+	}
+
+	claims, ok := user.(*utils.JWTClaims)
+	if !ok {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{
+			Error: "Failed to parse user claims",
+		})
+	}
+
+	response := ProfileResponse{
+		UserID: claims.UserID,
+		Email:  claims.Email,
+		Iat:    claims.Iat,
+		Exp:    claims.Exp,
 	}
 
 	return c.JSON(http.StatusOK, response)

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
+	"ytsruh.com/envoy/pkg/utils"
 )
 
 type mockHealthHandler struct {
@@ -59,6 +60,16 @@ func TestRegisterHealthHandler(t *testing.T) {
 func TestRegisterGreetingHandlers(t *testing.T) {
 	t.Parallel()
 
+	jwtSecret := "test-secret-for-greeting-handlers"
+	userID := "test-user-123"
+	email := "test@example.com"
+
+	// Generate a valid JWT token
+	token, err := utils.GenerateJWT(userID, email, jwtSecret)
+	if err != nil {
+		t.Fatalf("Failed to generate JWT token: %v", err)
+	}
+
 	tests := []struct {
 		name           string
 		method         string
@@ -89,12 +100,16 @@ func TestRegisterGreetingHandlers(t *testing.T) {
 				echo:      echo.New(),
 				dbService: &mockDBService{},
 				addr:      ":8080",
+				jwtSecret: jwtSecret,
 			}
 
 			mockHandler := &mockGreetingHandler{}
 			s.RegisterGreetingHandlers(mockHandler)
 
 			req := httptest.NewRequest(tt.method, tt.path, nil)
+			// Add JWT token to Authorization header
+			req.Header.Set("Authorization", "Bearer "+token)
+
 			rec := httptest.NewRecorder()
 
 			s.echo.ServeHTTP(rec, req)

@@ -478,3 +478,322 @@ func TestLoginTokenValidation(t *testing.T) {
 		t.Errorf("Token expiration not set to 7 days")
 	}
 }
+
+func TestGetProfile(t *testing.T) {
+	jwtSecret := "test-secret"
+	hashedPassword, _ := utils.HashPassword("password123")
+	tests := []struct {
+		name           string
+		mockQuerier    *MockQuerier
+		setupContext   func(*echo.Context)
+		expectedStatus int
+		checkResponse  func(t *testing.T, body []byte)
+	}{
+		{
+			name: "successful profile retrieval",
+			setupContext: func(c *echo.Context) {
+				claims := &utils.JWTClaims{
+					UserID: "user-123",
+					Email:  "test@example.com",
+					Iat:    time.Now().Unix(),
+					Exp:    time.Now().Add(7 * 24 * time.Hour).Unix(),
+				}
+				(*c).Set("user", claims)
+			},
+			mockQuerier: &MockQuerier{
+				getUserByEmailFunc: func(ctx context.Context, email string) (database.User, error) {
+					return database.User{
+						ID:        "user-123",
+						Name:      "Test User",
+						Email:     email,
+						Password:  hashedPassword,
+						CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
+						UpdatedAt: time.Now(),
+						DeletedAt: sql.NullTime{Valid: false},
+					}, nil
+				},
+			},
+			expectedStatus: http.StatusOK,
+			checkResponse: func(t *testing.T, body []byte) {
+				var resp ProfileResponse
+				if err := json.Unmarshal(body, &resp); err != nil {
+					t.Fatalf("Failed to unmarshal response: %v", err)
+				}
+				if resp.UserID != "user-123" {
+					t.Errorf("Expected user ID user-123, got %s", resp.UserID)
+				}
+				if resp.Email != "test@example.com" {
+					t.Errorf("Expected email test@example.com, got %s", resp.Email)
+				}
+				if resp.Iat == 0 {
+					t.Error("Expected issued_at timestamp to be set")
+				}
+				if resp.Exp == 0 {
+					t.Error("Expected expires_at timestamp to be set")
+				}
+			},
+		},
+		{
+			name: "missing user in context",
+			setupContext: func(c *echo.Context) {
+				// Don't set user in context
+			},
+			expectedStatus: http.StatusUnauthorized,
+			mockQuerier: &MockQuerier{
+				getUserByEmailFunc: func(ctx context.Context, email string) (database.User, error) {
+					return database.User{
+						ID:        "user-123",
+						Name:      "Test User",
+						Email:     email,
+						Password:  hashedPassword,
+						CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
+						UpdatedAt: time.Now(),
+						DeletedAt: sql.NullTime{Valid: false},
+					}, nil
+				},
+			},
+			checkResponse: func(t *testing.T, body []byte) {
+				var resp ErrorResponse
+				if err := json.Unmarshal(body, &resp); err != nil {
+					t.Fatalf("Failed to unmarshal response: %v", err)
+				}
+				if resp.Error != "Unauthorized" {
+					t.Errorf("Expected Unauthorized error, got: %s", resp.Error)
+				}
+			},
+		},
+		{
+			name: "invalid type in context",
+			setupContext: func(c *echo.Context) {
+				(*c).Set("user", "not-a-claims-object")
+			},
+			expectedStatus: http.StatusInternalServerError,
+			mockQuerier: &MockQuerier{
+				getUserByEmailFunc: func(ctx context.Context, email string) (database.User, error) {
+					return database.User{
+						ID:        "user-123",
+						Name:      "Test User",
+						Email:     email,
+						Password:  hashedPassword,
+						CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
+						UpdatedAt: time.Now(),
+						DeletedAt: sql.NullTime{Valid: false},
+					}, nil
+				},
+			},
+			checkResponse: func(t *testing.T, body []byte) {
+				var resp ErrorResponse
+				if err := json.Unmarshal(body, &resp); err != nil {
+					t.Fatalf("Failed to unmarshal response: %v", err)
+				}
+				if resp.Error != "Failed to parse user claims" {
+					t.Errorf("Expected parse error, got: %s", resp.Error)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := echo.New()
+			req := httptest.NewRequest(http.MethodGet, "/profile", nil)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+
+			// Setup context
+			if tt.setupContext != nil {
+				tt.setupContext(&c)
+			}
+
+			handler := NewAuthHandler(tt.mockQuerier, jwtSecret)
+			err := handler.GetProfile(c)
+
+			if err != nil {
+				t.Fatalf("Handler returned error: %v", err)
+			}
+
+			if rec.Code != tt.expectedStatus {
+				t.Errorf("Expected status %d, got %d", tt.expectedStatus, rec.Code)
+			}
+
+			if tt.checkResponse != nil {
+				tt.checkResponse(t, rec.Body.Bytes())
+			}
+		})
+	}
+}
+
+func TestProfileResponseStructure(t *testing.T) {
+	jwtSecret := "test-secret"
+	hashedPassword, _ := utils.HashPassword("password123")
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/profile", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	now := time.Now().Unix()
+	exp := time.Now().Add(7 * 24 * time.Hour).Unix()
+
+	claims := &utils.JWTClaims{
+		UserID: "test-user-id",
+		Email:  "user@example.com",
+		Iat:    now,
+		Exp:    exp,
+	}
+	c.Set("user", claims)
+
+	mockQuerier := &MockQuerier{
+		getUserByEmailFunc: func(ctx context.Context, email string) (database.User, error) {
+			return database.User{
+				ID:        "user-123",
+				Name:      "Test User",
+				Email:     email,
+				Password:  hashedPassword,
+				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
+				UpdatedAt: time.Now(),
+				DeletedAt: sql.NullTime{Valid: false},
+			}, nil
+		},
+	}
+	handler := NewAuthHandler(mockQuerier, jwtSecret)
+	err := handler.GetProfile(c)
+
+	if err != nil {
+		t.Fatalf("Handler returned error: %v", err)
+	}
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", rec.Code)
+	}
+
+	var resp ProfileResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	// Verify all fields are present
+	if resp.UserID != "test-user-id" {
+		t.Errorf("UserID = %s, want test-user-id", resp.UserID)
+	}
+
+	if resp.Email != "user@example.com" {
+		t.Errorf("Email = %s, want user@example.com", resp.Email)
+	}
+
+	if resp.Iat != now {
+		t.Errorf("Iat = %d, want %d", resp.Iat, now)
+	}
+
+	if resp.Exp != exp {
+		t.Errorf("Exp = %d, want %d", resp.Exp, exp)
+	}
+}
+
+func TestProfileHandlerWithDifferentUserData(t *testing.T) {
+	jwtSecret := "test-secret"
+	hashedPassword, _ := utils.HashPassword("password123")
+
+	testCases := []struct {
+		name        string
+		userID      string
+		email       string
+		mockQuerier *MockQuerier
+	}{
+		{
+			name:   "user with UUID",
+			userID: "550e8400-e29b-41d4-a716-446655440000",
+			email:  "uuid@example.com",
+			mockQuerier: &MockQuerier{
+				getUserByEmailFunc: func(ctx context.Context, email string) (database.User, error) {
+					return database.User{
+						ID:        "user-123",
+						Name:      "Test User",
+						Email:     email,
+						Password:  hashedPassword,
+						CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
+						UpdatedAt: time.Now(),
+						DeletedAt: sql.NullTime{Valid: false},
+					}, nil
+				},
+			},
+		},
+		{
+			name:   "user with special email",
+			userID: "user-456",
+			email:  "user+tag@example.com",
+			mockQuerier: &MockQuerier{
+				getUserByEmailFunc: func(ctx context.Context, email string) (database.User, error) {
+					return database.User{
+						ID:        "user-123",
+						Name:      "Test User",
+						Email:     email,
+						Password:  hashedPassword,
+						CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
+						UpdatedAt: time.Now(),
+						DeletedAt: sql.NullTime{Valid: false},
+					}, nil
+				},
+			},
+		},
+		{
+			name:   "user with long ID",
+			userID: "very-long-user-id-with-many-characters-1234567890",
+			email:  "longid@example.com",
+			mockQuerier: &MockQuerier{
+				getUserByEmailFunc: func(ctx context.Context, email string) (database.User, error) {
+					return database.User{
+						ID:        "user-123",
+						Name:      "Test User",
+						Email:     email,
+						Password:  hashedPassword,
+						CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
+						UpdatedAt: time.Now(),
+						DeletedAt: sql.NullTime{Valid: false},
+					}, nil
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := echo.New()
+			req := httptest.NewRequest(http.MethodGet, "/profile", nil)
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+
+			claims := &utils.JWTClaims{
+				UserID: tc.userID,
+				Email:  tc.email,
+				Iat:    time.Now().Unix(),
+				Exp:    time.Now().Add(7 * 24 * time.Hour).Unix(),
+			}
+			c.Set("user", claims)
+
+			handler := NewAuthHandler(tc.mockQuerier, jwtSecret)
+			err := handler.GetProfile(c)
+
+			if err != nil {
+				t.Fatalf("Handler returned error: %v", err)
+			}
+
+			if rec.Code != http.StatusOK {
+				t.Errorf("Expected status 200, got %d", rec.Code)
+			}
+
+			var resp ProfileResponse
+			if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+				t.Fatalf("Failed to unmarshal response: %v", err)
+			}
+
+			if resp.UserID != tc.userID {
+				t.Errorf("Expected user ID %s, got %s", tc.userID, resp.UserID)
+			}
+
+			if resp.Email != tc.email {
+				t.Errorf("Expected email %s, got %s", tc.email, resp.Email)
+			}
+		})
+	}
+}

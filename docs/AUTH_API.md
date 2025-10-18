@@ -10,6 +10,8 @@ The authentication system provides JWT-based authentication with the following f
 - JWT tokens with 7-day expiration
 - Password hashing using bcrypt
 - Token returned directly in JSON response body
+- Protected endpoints that require authentication
+- Profile endpoint to retrieve JWT token data
 
 ## Environment Configuration
 
@@ -164,6 +166,128 @@ curl -X POST http://localhost:8080/auth/login \
 
 ---
 
+### 3. Get Profile
+
+Retrieves the authenticated user's profile information from their JWT token.
+
+**Endpoint:** `GET /profile`
+
+**Authentication:** Required - Bearer token in Authorization header
+
+**Request Headers:**
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "john.doe@example.com",
+  "issued_at": 1642243800,
+  "expires_at": 1642848600
+}
+```
+
+**Response Fields:**
+- `user_id` (string): The unique identifier for the user
+- `email` (string): User's email address
+- `issued_at` (integer): Token issuance timestamp (Unix epoch)
+- `expires_at` (integer): Token expiration timestamp (Unix epoch)
+
+**Error Responses:**
+
+- **401 Unauthorized** - Missing or invalid token
+```json
+{
+  "error": "Missing authorization header"
+}
+```
+
+```json
+{
+  "error": "Invalid token"
+}
+```
+
+```json
+{
+  "error": "Token has expired"
+}
+```
+
+**Example cURL:**
+```bash
+curl -X GET http://localhost:8080/profile \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+---
+
+## Protected Endpoints
+
+The following endpoints require JWT authentication. Include the token in the `Authorization` header as a Bearer token.
+
+### GET /hello
+
+A protected greeting endpoint that requires authentication.
+
+**Authentication:** Required
+
+**Request Headers:**
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Success Response (200 OK):**
+```
+Hello, World!
+```
+
+**Error Response (401 Unauthorized):**
+```json
+{
+  "error": "Missing authorization header"
+}
+```
+
+**Example cURL:**
+```bash
+curl -X GET http://localhost:8080/hello \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+### POST /goodbye
+
+A protected farewell endpoint that requires authentication.
+
+**Authentication:** Required
+
+**Request Headers:**
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Success Response (200 OK):**
+```
+Goodbye, World!
+```
+
+**Error Response (401 Unauthorized):**
+```json
+{
+  "error": "Invalid authorization header format. Expected: Bearer <token>"
+}
+```
+
+**Example cURL:**
+```bash
+curl -X POST http://localhost:8080/goodbye \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkjXVCJ9..."
+```
+
+---
+
 ## JWT Token Details
 
 ### Token Structure
@@ -197,12 +321,28 @@ Tokens expire **7 days** (604,800 seconds) after issuance. After expiration, use
 
 ### Using the Token
 
-Include the JWT token in the `Authorization` header for authenticated requests:
+Include the JWT token in the `Authorization` header for authenticated requests using the Bearer scheme:
 
 ```bash
-curl -X GET http://localhost:8080/protected-endpoint \
+curl -X GET http://localhost:8080/profile \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
+
+The server will:
+1. Extract the token from the Authorization header
+2. Validate the token signature
+3. Check the token expiration
+4. Add user information to the request context
+5. Allow access to the protected resource
+
+### Authorization Header Format
+
+The Authorization header must follow this format:
+```
+Authorization: Bearer <token>
+```
+
+Where `<token>` is the JWT string received from the login or register endpoints.
 
 ---
 
@@ -235,7 +375,7 @@ curl -X GET http://localhost:8080/protected-endpoint \
 
 ## Testing
 
-Example test using the authentication flow:
+Example test using the complete authentication flow:
 
 ```bash
 # 1. Register a new user
@@ -250,9 +390,35 @@ RESPONSE=$(curl -s -X POST http://localhost:8080/auth/register \
 # 2. Extract the token
 TOKEN=$(echo $RESPONSE | jq -r '.token')
 
-# 3. Use the token for authenticated requests
-curl -X GET http://localhost:8080/protected-endpoint \
+# 3. View your profile
+curl -X GET http://localhost:8080/profile \
   -H "Authorization: Bearer $TOKEN"
+
+# 4. Access protected greeting endpoints
+curl -X GET http://localhost:8080/hello \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -X POST http://localhost:8080/goodbye \
+  -H "Authorization: Bearer $TOKEN"
+
+# 5. Test with expired/invalid token (should return 401)
+curl -X GET http://localhost:8080/profile \
+  -H "Authorization: Bearer invalid-token-here"
+```
+
+### Testing Authentication Failures
+
+```bash
+# Missing Authorization header
+curl -X GET http://localhost:8080/profile
+
+# Invalid header format
+curl -X GET http://localhost:8080/profile \
+  -H "Authorization: InvalidFormat token"
+
+# Expired or invalid token
+curl -X GET http://localhost:8080/profile \
+  -H "Authorization: Bearer expired.or.invalid.token"
 ```
 
 ---
@@ -268,10 +434,23 @@ All error responses follow a consistent format:
 ```
 
 HTTP status codes indicate the type of error:
+- `200` - Success
+- `201` - Resource created successfully (registration)
 - `400` - Client error (invalid input, validation failure)
-- `401` - Authentication error (invalid credentials)
+- `401` - Authentication error (invalid credentials, missing/invalid token)
 - `409` - Conflict (duplicate resource)
 - `500` - Server error (internal failure)
+
+### Common Authentication Errors
+
+**401 Unauthorized** responses can occur for several reasons:
+- Missing Authorization header
+- Invalid header format (not "Bearer <token>")
+- Invalid token signature
+- Expired token
+- Malformed token
+
+Always check the `error` field in the response for specific details.
 
 ---
 
@@ -280,5 +459,8 @@ HTTP status codes indicate the type of error:
 - The authentication system uses the standard library with Echo framework
 - Database queries are handled through SQLC-generated code
 - JWT implementation is custom, using HMAC SHA256 for signing
-- User IDs are UUIIDv4
-- Timestamps use RFC 3339 format in JSON responses
+- User IDs are UUIDv4
+- Timestamps use RFC 3339 format in JSON responses for auth endpoints
+- Timestamps use Unix epoch format for profile endpoint
+- JWT middleware adds user claims to the request context for use by handlers
+- Protected routes automatically validate JWT before calling the handler

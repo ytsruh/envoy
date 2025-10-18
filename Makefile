@@ -43,11 +43,16 @@ start: build
 		@echo "Starting $(BINARY)..."
 		./$(BINARY)
 
+# Generate SQL Queries
+generate:
+	@command sqlc generate
+
 # Help
 help:
-	@echo "Makefile targets:"
+	@echo "Makefile commands:"
 	@echo "  make run          - run the program"
 	@echo "  make dev          - run with air (live reload)"
 	@echo "  make test         - run all tests (go test ./...)"
 	@echo "  make test-ci      - run all tests with race detector and coverage"
 	@echo "  make start        - build and run the binary"
+	@echo "  make generate     - generate SQL queries"

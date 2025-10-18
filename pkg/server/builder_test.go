@@ -25,33 +25,6 @@ func TestBuilderDefaults(t *testing.T) {
 	if builder.timeoutDuration != 30*time.Second {
 		t.Errorf("Expected default timeout 30s, got %v", builder.timeoutDuration)
 	}
-
-	if builder.securityConfig.XSSProtection != "1; mode=block" {
-		t.Error("Expected default security headers config")
-	}
-}
-
-func TestBuilderWithSecurityHeaders(t *testing.T) {
-	t.Parallel()
-
-	customConfig := SecurityHeadersConfig{
-		XSSProtection:      "0",
-		ContentTypeOptions: "custom",
-		FrameOptions:       "SAMEORIGIN",
-		ReferrerPolicy:     "no-referrer",
-		CSPolicy:           "unsafe-inline",
-	}
-
-	builder := NewBuilder(":8080", &mockDBService{}, "test-secret").
-		WithSecurityHeaders(customConfig)
-
-	if builder.securityConfig.XSSProtection != "0" {
-		t.Error("Expected custom XSSProtection")
-	}
-
-	if builder.securityConfig.FrameOptions != "SAMEORIGIN" {
-		t.Error("Expected custom FrameOptions")
-	}
 }
 
 func TestBuilderWithTimeout(t *testing.T) {
@@ -95,7 +68,6 @@ func TestBuilderChaining(t *testing.T) {
 
 	builder := NewBuilder(":8080", &mockDBService{}, "test-secret").
 		WithTimeout(60 * time.Second).
-		WithSecurityHeaders(CustomSecurityHeadersConfig()).
 		WithMiddleware(func(next echo.HandlerFunc) echo.HandlerFunc {
 			return next
 		})
@@ -135,9 +107,7 @@ func TestBuilderBuild(t *testing.T) {
 func TestBuilderBuildWithCustomConfiguration(t *testing.T) {
 	t.Parallel()
 
-	customConfig := CustomSecurityHeadersConfig()
 	builder := NewBuilder(":9000", &mockDBService{}, "test-secret").
-		WithSecurityHeaders(customConfig).
 		WithTimeout(45 * time.Second)
 
 	server, err := builder.Build()
@@ -157,15 +127,5 @@ func TestBuilderBuildWithCustomConfiguration(t *testing.T) {
 
 	if rec.Code == http.StatusNotFound {
 		t.Error("Routes should be registered")
-	}
-}
-
-func CustomSecurityHeadersConfig() SecurityHeadersConfig {
-	return SecurityHeadersConfig{
-		XSSProtection:      "0",
-		ContentTypeOptions: "custom",
-		FrameOptions:       "SAMEORIGIN",
-		ReferrerPolicy:     "no-referrer",
-		CSPolicy:           "unsafe-inline",
 	}
 }

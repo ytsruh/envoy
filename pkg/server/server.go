@@ -34,7 +34,7 @@ func New(addr string, dbService DBService) *Server {
 		dbService: dbService,
 		addr:      addr,
 	}
-	RegisterMiddleware(e, DefaultSecurityHeadersConfig(), 30*time.Second)
+	RegisterMiddleware(e, 30*time.Second)
 	s.RegisterRoutes()
 
 	return s

@@ -1,14 +1,18 @@
 package server
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 func TestRecoveryMiddleware(t *testing.T) {
@@ -78,87 +82,6 @@ func TestRecoveryMiddleware(t *testing.T) {
 	}
 }
 
-func TestSecurityHeadersMiddleware(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name          string
-		config        SecurityHeadersConfig
-		headerKey     string
-		expectedValue string
-	}{
-		{
-			name:          "xss_protection_header",
-			config:        DefaultSecurityHeadersConfig(),
-			headerKey:     "X-XSS-Protection",
-			expectedValue: "1; mode=block",
-		},
-		{
-			name:          "content_type_options_header",
-			config:        DefaultSecurityHeadersConfig(),
-			headerKey:     "X-Content-Type-Options",
-			expectedValue: "nosniff",
-		},
-		{
-			name:          "frame_options_header",
-			config:        DefaultSecurityHeadersConfig(),
-			headerKey:     "X-Frame-Options",
-			expectedValue: "DENY",
-		},
-		{
-			name:          "referrer_policy_header",
-			config:        DefaultSecurityHeadersConfig(),
-			headerKey:     "Referrer-Policy",
-			expectedValue: "strict-origin-when-cross-origin",
-		},
-		{
-			name:          "csp_header",
-			config:        DefaultSecurityHeadersConfig(),
-			headerKey:     "Content-Security-Policy",
-			expectedValue: "default-src 'self'",
-		},
-		{
-			name: "custom_security_config",
-			config: SecurityHeadersConfig{
-				XSSProtection:      "0",
-				ContentTypeOptions: "custom-value",
-				FrameOptions:       "SAMEORIGIN",
-				ReferrerPolicy:     "no-referrer",
-				CSPolicy:           "unsafe-inline",
-			},
-			headerKey:     "X-Frame-Options",
-			expectedValue: "SAMEORIGIN",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			e := echo.New()
-			e.Use(NewSecurityHeadersMiddleware(tt.config))
-
-			e.GET("/test", func(c echo.Context) error {
-				return c.String(http.StatusOK, "OK")
-			})
-
-			req := httptest.NewRequest(http.MethodGet, "/test", nil)
-			rec := httptest.NewRecorder()
-
-			e.ServeHTTP(rec, req)
-
-			if rec.Code != http.StatusOK {
-				t.Errorf("Expected status 200, got %d", rec.Code)
-			}
-
-			value := rec.Header().Get(tt.headerKey)
-			if value != tt.expectedValue {
-				t.Errorf("Expected header %s=%q, got %q", tt.headerKey, tt.expectedValue, value)
-			}
-		})
-	}
-}
-
 func TestRateLimiterMiddleware(t *testing.T) {
 	t.Parallel()
 
@@ -221,6 +144,212 @@ func TestRateLimiterMiddleware(t *testing.T) {
 
 			if !tt.shouldLimit && limitedCount > 0 {
 				t.Errorf("Expected no rate limit, but got %d limited requests", limitedCount)
+			}
+		})
+	}
+}
+
+func TestGzipMiddleware(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		acceptEncoding string
+		expectGzip     bool
+	}{
+		{
+			name:           "with_gzip_support",
+			acceptEncoding: "gzip",
+			expectGzip:     true,
+		},
+		{
+			name:           "without_gzip_support",
+			acceptEncoding: "",
+			expectGzip:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			e := echo.New()
+			e.Use(middleware.Gzip())
+
+			e.GET("/test", func(c echo.Context) error {
+				return c.String(http.StatusOK, strings.Repeat("Hello World ", 100))
+			})
+
+			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			if tt.acceptEncoding != "" {
+				req.Header.Set("Accept-Encoding", tt.acceptEncoding)
+			}
+			rec := httptest.NewRecorder()
+
+			e.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Errorf("Expected status 200, got %d", rec.Code)
+			}
+
+			hasGzipEncoding := rec.Header().Get("Content-Encoding") == "gzip"
+			if tt.expectGzip && !hasGzipEncoding {
+				t.Error("Expected gzip encoding, but not found")
+			}
+			if !tt.expectGzip && hasGzipEncoding {
+				t.Error("Expected no gzip encoding, but found it")
+			}
+		})
+	}
+}
+
+func TestSecureMiddleware(t *testing.T) {
+	t.Parallel()
+
+	e := echo.New()
+	e.Use(middleware.Secure())
+
+	e.GET("/test", func(c echo.Context) error {
+		return c.String(http.StatusOK, "OK")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	rec := httptest.NewRecorder()
+
+	e.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", rec.Code)
+	}
+
+	// Test that Secure middleware adds expected built-in headers
+	// Note: These are the actual defaults from Echo's Secure middleware
+	expectedHeaders := map[string]string{
+		"X-Content-Type-Options": "nosniff",
+		"X-Frame-Options":        "SAMEORIGIN", // Echo's default is SAMEORIGIN, not DENY
+		"X-XSS-Protection":       "1; mode=block",
+	}
+
+	for header, expectedValue := range expectedHeaders {
+		actualValue := rec.Header().Get(header)
+		if actualValue != expectedValue {
+			t.Errorf("Expected header %s=%q, got %q", header, expectedValue, actualValue)
+		}
+	}
+
+	// Strict-Transport-Security is only set for HTTPS requests
+	// so we don't test it here since we're using HTTP
+}
+
+func TestBodyLimitMiddleware(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		bodySize       int
+		expectedStatus int
+	}{
+		{
+			name:           "within_limit",
+			bodySize:       1024, // 1KB
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "exceeds_limit",
+			bodySize:       3 * 1024 * 1024, // 3MB (exceeds 2MB limit)
+			expectedStatus: http.StatusRequestEntityTooLarge,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			e := echo.New()
+			e.Use(middleware.BodyLimit("2M"))
+
+			e.POST("/test", func(c echo.Context) error {
+				return c.String(http.StatusOK, "OK")
+			})
+
+			body := bytes.Repeat([]byte("a"), tt.bodySize)
+			req := httptest.NewRequest(http.MethodPost, "/test", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/octet-stream")
+			rec := httptest.NewRecorder()
+
+			e.ServeHTTP(rec, req)
+
+			if rec.Code != tt.expectedStatus {
+				t.Errorf("Expected status %d, got %d", tt.expectedStatus, rec.Code)
+			}
+		})
+	}
+}
+
+func TestDecompressMiddleware(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		compressBody bool
+		expectStatus int
+	}{
+		{
+			name:         "gzip_compressed_body",
+			compressBody: true,
+			expectStatus: http.StatusOK,
+		},
+		{
+			name:         "uncompressed_body",
+			compressBody: false,
+			expectStatus: http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			e := echo.New()
+			e.Use(middleware.Decompress())
+
+			e.POST("/test", func(c echo.Context) error {
+				body, err := io.ReadAll(c.Request().Body)
+				if err != nil {
+					return err
+				}
+				return c.String(http.StatusOK, string(body))
+			})
+
+			var body io.Reader
+			req := httptest.NewRequest(http.MethodPost, "/test", nil)
+
+			if tt.compressBody {
+				var buf bytes.Buffer
+				gz := gzip.NewWriter(&buf)
+				gz.Write([]byte("Hello World"))
+				gz.Close()
+				body = &buf
+				req.Header.Set("Content-Encoding", "gzip")
+			} else {
+				body = strings.NewReader("Hello World")
+			}
+
+			req.Body = io.NopCloser(body)
+			req.Header.Set("Content-Type", "text/plain")
+			rec := httptest.NewRecorder()
+
+			e.ServeHTTP(rec, req)
+
+			if rec.Code != tt.expectStatus {
+				t.Errorf("Expected status %d, got %d", tt.expectStatus, rec.Code)
+			}
+
+			if rec.Code == http.StatusOK {
+				responseBody := rec.Body.String()
+				if responseBody != "Hello World" {
+					t.Errorf("Expected response body 'Hello World', got %q", responseBody)
+				}
 			}
 		})
 	}

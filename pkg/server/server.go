@@ -24,6 +24,7 @@ type Server struct {
 	echo      *echo.Echo
 	dbService DBService
 	addr      string
+	jwtSecret string
 }
 
 func New(addr string, dbService DBService) *Server {

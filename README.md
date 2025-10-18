@@ -7,7 +7,7 @@
 - Secure Sharing: Share environment variables securely with team members through access controls.
 - AI Configuration Insights: AI-powered tool analyzes the created variables, cross-references them with current environment configurations and provides alerts of suspicious or incorrect values
 - Format Export: Export environment variables in various formats (e.g., .env, JSON, YAML) for easy integration.
-- Secure Access: User authentication with password encryption.
+- Secure Access: User authentication with JWT-based password encryption.
 
 ## Style Guidelines:
 
@@ -19,5 +19,20 @@
 - Clean and intuitive dashboard layout for easy variable management.
 - Subtle animations for variable creation and saving confirmations.
 
-## Envinroment Variables
-- DB_PATH
+## API Endpoints
+
+### Authentication
+- `POST /auth/register` - Register a new user
+- `POST /auth/login` - Login and receive JWT token
+- Tokens expire in 7 days
+- See [AUTH_API.md](docs/AUTH_API.md) for detailed documentation
+
+### Other Endpoints
+- `GET /health` - Health check endpoint
+- `GET /hello` - Test greeting endpoint
+- `POST /goodbye` - Test farewell endpoint
+
+## Environment Variables
+
+- `DB_PATH` - Path to SQLite database file
+- `JWT_SECRET` - Secret key for JWT token signing (use a strong random string in production)

@@ -13,15 +13,17 @@ type ServerBuilder struct {
 	middlewares     []echo.MiddlewareFunc
 	securityConfig  SecurityHeadersConfig
 	timeoutDuration time.Duration
+	jwtSecret       string
 }
 
-func NewBuilder(addr string, dbService DBService) *ServerBuilder {
+func NewBuilder(addr string, dbService DBService, jwtSecret string) *ServerBuilder {
 	return &ServerBuilder{
 		echo:            echo.New(),
 		addr:            addr,
 		dbService:       dbService,
 		securityConfig:  DefaultSecurityHeadersConfig(),
 		timeoutDuration: 30 * time.Second,
+		jwtSecret:       jwtSecret,
 	}
 }
 
@@ -45,6 +47,7 @@ func (b *ServerBuilder) Build() (*Server, error) {
 		echo:      b.echo,
 		dbService: b.dbService,
 		addr:      b.addr,
+		jwtSecret: b.jwtSecret,
 	}
 
 	RegisterMiddleware(b.echo, b.securityConfig, b.timeoutDuration)

@@ -14,6 +14,9 @@ func (s *Server) RegisterRoutes() {
 	greetingHandler := handlers.NewGreetingHandler(s.dbService.GetQueries())
 	s.RegisterGreetingHandlers(greetingHandler)
 
+	authHandler := handlers.NewAuthHandler(s.dbService.GetQueries(), s.jwtSecret)
+	s.RegisterAuthHandlers(authHandler)
+
 	s.RegisterFaviconHandler()
 }
 
@@ -24,6 +27,11 @@ func (s *Server) RegisterHealthHandler(h handlers.HealthHandler) {
 func (s *Server) RegisterGreetingHandlers(h handlers.GreetingHandler) {
 	s.echo.GET("/hello", h.Hello)
 	s.echo.POST("/goodbye", h.Goodbye)
+}
+
+func (s *Server) RegisterAuthHandlers(h handlers.AuthHandler) {
+	s.echo.POST("/auth/register", h.Register)
+	s.echo.POST("/auth/login", h.Login)
 }
 
 func (s *Server) RegisterFaviconHandler() {

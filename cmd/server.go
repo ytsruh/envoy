@@ -25,7 +25,7 @@ func main() {
 	cronService.AddJob("*/30 * * * * *", cron.DatabaseHealthCheck(dbService.GetDB(), logger))
 	cronService.Start()
 
-	srv, err := server.NewBuilder(":8080", dbService).Build()
+	srv, err := server.NewBuilder(":8080", dbService, env.JWT_SECRET).Build()
 	if err != nil {
 		log.Fatalf("failed to build server: %v", err)
 	}

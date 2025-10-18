@@ -26,6 +26,10 @@ func (m mockQuerier) GetUser(ctx context.Context, id string) (database.User, err
 	return database.User{}, nil
 }
 
+func (m mockQuerier) GetUserByEmail(ctx context.Context, email string) (database.User, error) {
+	return database.User{}, nil
+}
+
 func (m mockQuerier) HardDeleteUser(ctx context.Context, id string) error {
 	return nil
 }

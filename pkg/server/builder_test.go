@@ -12,7 +12,7 @@ import (
 func TestBuilderDefaults(t *testing.T) {
 	t.Parallel()
 
-	builder := NewBuilder(":8080", &mockDBService{})
+	builder := NewBuilder(":8080", &mockDBService{}, "test-secret")
 
 	if builder.addr != ":8080" {
 		t.Errorf("Expected address :8080, got %s", builder.addr)
@@ -42,7 +42,7 @@ func TestBuilderWithSecurityHeaders(t *testing.T) {
 		CSPolicy:           "unsafe-inline",
 	}
 
-	builder := NewBuilder(":8080", &mockDBService{}).
+	builder := NewBuilder(":8080", &mockDBService{}, "test-secret").
 		WithSecurityHeaders(customConfig)
 
 	if builder.securityConfig.XSSProtection != "0" {
@@ -58,7 +58,7 @@ func TestBuilderWithTimeout(t *testing.T) {
 	t.Parallel()
 
 	timeout := 60 * time.Second
-	builder := NewBuilder(":8080", &mockDBService{}).
+	builder := NewBuilder(":8080", &mockDBService{}, "test-secret").
 		WithTimeout(timeout)
 
 	if builder.timeoutDuration != timeout {
@@ -81,7 +81,7 @@ func TestBuilderWithMiddleware(t *testing.T) {
 		}
 	}
 
-	builder := NewBuilder(":8080", &mockDBService{}).
+	builder := NewBuilder(":8080", &mockDBService{}, "test-secret").
 		WithMiddleware(mw1).
 		WithMiddleware(mw2)
 
@@ -93,7 +93,7 @@ func TestBuilderWithMiddleware(t *testing.T) {
 func TestBuilderChaining(t *testing.T) {
 	t.Parallel()
 
-	builder := NewBuilder(":8080", &mockDBService{}).
+	builder := NewBuilder(":8080", &mockDBService{}, "test-secret").
 		WithTimeout(60 * time.Second).
 		WithSecurityHeaders(CustomSecurityHeadersConfig()).
 		WithMiddleware(func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -112,7 +112,7 @@ func TestBuilderChaining(t *testing.T) {
 func TestBuilderBuild(t *testing.T) {
 	t.Parallel()
 
-	builder := NewBuilder(":8080", &mockDBService{})
+	builder := NewBuilder(":8080", &mockDBService{}, "test-secret")
 	server, err := builder.Build()
 
 	if err != nil {
@@ -136,7 +136,7 @@ func TestBuilderBuildWithCustomConfiguration(t *testing.T) {
 	t.Parallel()
 
 	customConfig := CustomSecurityHeadersConfig()
-	builder := NewBuilder(":9000", &mockDBService{}).
+	builder := NewBuilder(":9000", &mockDBService{}, "test-secret").
 		WithSecurityHeaders(customConfig).
 		WithTimeout(45 * time.Second)
 

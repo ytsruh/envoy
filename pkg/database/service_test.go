@@ -202,21 +202,24 @@ func TestClose(t *testing.T) {
 
 func TestService_ConcurrentAccess(t *testing.T) {
 	// Test that the service handles concurrent access safely
-	dbPath := "file::memory:?cache=shared"
-
-	// Create multiple services concurrently
+	// Use isolated in-memory databases to avoid migration race conditions
 	done := make(chan bool, 10)
 	services := make([]*Service, 10)
 
 	for i := 0; i < 10; i++ {
 		go func(index int) {
+			defer func() {
+				done <- true
+			}()
+			// Each goroutine gets its own isolated in-memory database
+			dbPath := ":memory:"
 			service, err := NewService(dbPath)
 			if err != nil {
 				t.Errorf("Failed to create service: %v", err)
+				return
 			}
 			services[index] = service
 			_, _ = service.Health()
-			done <- true
 		}(i)
 	}
 

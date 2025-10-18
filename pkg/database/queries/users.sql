@@ -2,6 +2,10 @@
 SELECT * FROM users
 WHERE id = ? LIMIT 1;
 
+-- name: GetUserByEmail :one
+SELECT * FROM users
+WHERE email = ? AND deleted_at IS NULL LIMIT 1;
+
 -- name: ListUsers :many
 SELECT * FROM users
 WHERE deleted_at IS NULL

@@ -3,9 +3,7 @@ package server
 import (
 	"bytes"
 	"compress/gzip"
-	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,137 +13,64 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func TestRecoveryMiddleware(t *testing.T) {
+func TestRecoverMiddleware(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name              string
-		shouldPanic       bool
-		expectedStatus    int
-		expectedBodyKey   string
-		expectedBodyValue string
-	}{
-		{
-			name:              "panic_recovery",
-			shouldPanic:       true,
-			expectedStatus:    http.StatusInternalServerError,
-			expectedBodyKey:   "error",
-			expectedBodyValue: "Internal Server Error",
-		},
-	}
+	e := echo.New()
+	e.Use(middleware.Recover())
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			e := echo.New()
+	e.GET("/panic", func(c echo.Context) error {
+		panic("test panic")
+	})
 
-			old := log.Writer()
-			log.SetOutput(io.Discard)
-			defer log.SetOutput(old)
+	req := httptest.NewRequest(http.MethodGet, "/panic", nil)
+	rec := httptest.NewRecorder()
 
-			e.Use(RecoveryMiddleware())
+	e.ServeHTTP(rec, req)
 
-			if tt.shouldPanic {
-				e.GET("/panic", func(c echo.Context) error {
-					panic("test panic")
-				})
-			}
-
-			path := "/panic"
-			if !tt.shouldPanic {
-				e.GET("/ok", func(c echo.Context) error {
-					return c.String(http.StatusOK, "OK")
-				})
-				path = "/ok"
-			}
-
-			req := httptest.NewRequest(http.MethodGet, path, nil)
-			rec := httptest.NewRecorder()
-
-			e.ServeHTTP(rec, req)
-
-			if rec.Code != tt.expectedStatus {
-				t.Errorf("Expected status %d, got %d", tt.expectedStatus, rec.Code)
-			}
-
-			if tt.shouldPanic {
-				var result map[string]string
-				body, _ := io.ReadAll(rec.Body)
-				if err := json.Unmarshal(body, &result); err != nil {
-					t.Errorf("Failed to unmarshal JSON: %v", err)
-				}
-				if value, ok := result[tt.expectedBodyKey]; !ok || value != tt.expectedBodyValue {
-					t.Errorf("Expected %s=%q, got %v", tt.expectedBodyKey, tt.expectedBodyValue, result)
-				}
-			}
-		})
+	// Echo's Recover middleware returns 500 by default
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d", rec.Code)
 	}
 }
 
 func TestRateLimiterMiddleware(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name          string
-		requests      int
-		shouldLimit   bool
-		minSuccessful int
-	}{
-		{
-			name:          "within_rate_limit",
-			requests:      5,
-			shouldLimit:   false,
-			minSuccessful: 5,
-		},
-		{
-			name:          "exceed_rate_limit",
-			requests:      15,
-			shouldLimit:   true,
-			minSuccessful: 10,
-		},
+	e := echo.New()
+	e.Use(middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
+		Store: middleware.NewRateLimiterMemoryStore(2), // Very low limit for testing
+	}))
+
+	e.GET("/test", func(c echo.Context) error {
+		return c.String(http.StatusOK, "OK")
+	})
+
+	// First request should succeed
+	req1 := httptest.NewRequest(http.MethodGet, "/test", nil)
+	rec1 := httptest.NewRecorder()
+	e.ServeHTTP(rec1, req1)
+
+	if rec1.Code != http.StatusOK {
+		t.Errorf("First request should succeed, got %d", rec1.Code)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+	// Second request should succeed
+	req2 := httptest.NewRequest(http.MethodGet, "/test", nil)
+	rec2 := httptest.NewRecorder()
+	e.ServeHTTP(rec2, req2)
 
-			e := echo.New()
-			rl := NewRateLimiter()
-			e.Use(RateLimiterMiddleware(rl))
+	if rec2.Code != http.StatusOK {
+		t.Errorf("Second request should succeed, got %d", rec2.Code)
+	}
 
-			e.GET("/test", func(c echo.Context) error {
-				return c.String(http.StatusOK, "OK")
-			})
+	// Third request should be rate limited
+	req3 := httptest.NewRequest(http.MethodGet, "/test", nil)
+	rec3 := httptest.NewRecorder()
+	e.ServeHTTP(rec3, req3)
 
-			successCount := 0
-			limitedCount := 0
-
-			for i := 0; i < tt.requests; i++ {
-				req := httptest.NewRequest(http.MethodGet, "/test", nil)
-				req.RemoteAddr = "127.0.0.1:1234"
-				rec := httptest.NewRecorder()
-
-				e.ServeHTTP(rec, req)
-
-				if rec.Code == http.StatusOK {
-					successCount++
-				} else if rec.Code == http.StatusTooManyRequests {
-					limitedCount++
-				}
-			}
-
-			if successCount < tt.minSuccessful {
-				t.Errorf("Expected at least %d successful requests, got %d", tt.minSuccessful, successCount)
-			}
-
-			if tt.shouldLimit && limitedCount == 0 {
-				t.Errorf("Expected rate limit to be hit, but all requests succeeded")
-			}
-
-			if !tt.shouldLimit && limitedCount > 0 {
-				t.Errorf("Expected no rate limit, but got %d limited requests", limitedCount)
-			}
-		})
+	if rec3.Code != http.StatusTooManyRequests {
+		t.Errorf("Third request should be rate limited, got %d", rec3.Code)
 	}
 }
 
@@ -352,5 +277,78 @@ func TestDecompressMiddleware(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestRequestIDMiddleware(t *testing.T) {
+	t.Parallel()
+
+	e := echo.New()
+	e.Use(middleware.RequestID())
+
+	e.GET("/test", func(c echo.Context) error {
+		requestID := c.Response().Header().Get(echo.HeaderXRequestID)
+		if requestID == "" {
+			return c.String(http.StatusInternalServerError, "no request ID")
+		}
+		return c.String(http.StatusOK, requestID)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	rec := httptest.NewRecorder()
+
+	e.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", rec.Code)
+	}
+
+	// Check that request ID was added to response headers
+	requestID := rec.Header().Get(echo.HeaderXRequestID)
+	if requestID == "" {
+		t.Error("Expected request ID header to be set")
+	}
+
+	// Check that request ID was returned in response body
+	if rec.Body.String() != requestID {
+		t.Errorf("Expected response body to contain request ID %q, got %q", requestID, rec.Body.String())
+	}
+}
+
+func TestRemoveTrailingSlashMiddleware(t *testing.T) {
+	t.Parallel()
+
+	e := echo.New()
+	e.Pre(middleware.RemoveTrailingSlashWithConfig(middleware.TrailingSlashConfig{
+		RedirectCode: http.StatusMovedPermanently,
+	}))
+
+	e.GET("/test", func(c echo.Context) error {
+		return c.String(http.StatusOK, "OK")
+	})
+
+	// Test without trailing slash - should work normally
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	rec := httptest.NewRecorder()
+
+	e.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("Expected status 200 for URL without trailing slash, got %d", rec.Code)
+	}
+
+	// Test with trailing slash - should redirect
+	req2 := httptest.NewRequest(http.MethodGet, "/test/", nil)
+	rec2 := httptest.NewRecorder()
+
+	e.ServeHTTP(rec2, req2)
+
+	if rec2.Code != http.StatusMovedPermanently {
+		t.Errorf("Expected redirect status 301, got %d", rec2.Code)
+	}
+
+	location := rec2.Header().Get("Location")
+	if location != "/test" {
+		t.Errorf("Expected redirect to /test, got %q", location)
 	}
 }

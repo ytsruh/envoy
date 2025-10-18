@@ -43,6 +43,11 @@ func NewService(dbPath string) (*Service, error) {
 		return nil, fmt.Errorf("error creating connector: %w", err)
 	}
 
+	// Enable WAL mode for better concurrency
+	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		return nil, fmt.Errorf("failed to enable WAL mode: %w", err)
+	}
+
 	if err := runMigrations(db); err != nil {
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}

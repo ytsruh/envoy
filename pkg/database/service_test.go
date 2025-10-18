@@ -267,3 +267,29 @@ func TestService_WithFileDatabase(t *testing.T) {
 		t.Errorf("Close() error = %v", err)
 	}
 }
+
+func TestService_WALMode(t *testing.T) {
+	// Test that WAL mode is enabled
+	tmpFile, err := os.CreateTemp("", "test-wal-*.db")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+	tmpFile.Close()
+
+	service, err := NewService(tmpFile.Name())
+	if err != nil {
+		t.Fatalf("NewService() error = %v", err)
+	}
+	defer service.Close()
+
+	var journalMode string
+	err = service.db.QueryRow("PRAGMA journal_mode").Scan(&journalMode)
+	if err != nil {
+		t.Fatalf("Failed to query journal mode: %v", err)
+	}
+
+	if journalMode != "wal" {
+		t.Errorf("Expected journal mode to be 'wal', got '%s'", journalMode)
+	}
+}

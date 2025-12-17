@@ -1,9 +1,9 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 
-	"github.com/labstack/echo/v4"
 	database "ytsruh.com/envoy/pkg/database/generated"
 )
 
@@ -15,6 +15,8 @@ func NewHealthHandler(queries database.Querier) HealthHandler {
 	return &HealthHandlerImpl{queries: queries}
 }
 
-func (h *HealthHandlerImpl) Health(c echo.Context) error {
-	return c.JSON(http.StatusOK, map[string]string{"health": "ok"})
+func (h *HealthHandlerImpl) Health(w http.ResponseWriter, r *http.Request) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	return json.NewEncoder(w).Encode(map[string]string{"health": "ok"})
 }

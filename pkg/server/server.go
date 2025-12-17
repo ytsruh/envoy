@@ -21,7 +21,7 @@ type DBService interface {
 }
 
 type Server struct {
-	echo      *echo.Echo
+	router    *echo.Echo
 	dbService DBService
 	addr      string
 	jwtSecret string
@@ -30,7 +30,7 @@ type Server struct {
 func New(addr string, dbService DBService) *Server {
 	e := echo.New()
 	s := &Server{
-		echo:      e,
+		router:    e,
 		dbService: dbService,
 		addr:      addr,
 	}
@@ -62,10 +62,10 @@ func gracefulShutdown(e *echo.Echo, done chan bool) {
 func (s *Server) Start() {
 	done := make(chan bool, 1)
 
-	go gracefulShutdown(s.echo, done)
+	go gracefulShutdown(s.router, done)
 
 	log.Printf("Server starting on %s", s.addr)
-	err := s.echo.Start(s.addr)
+	err := s.router.Start(s.addr)
 	if err != nil && err.Error() != "http: Server closed" {
 		panic(err)
 	}

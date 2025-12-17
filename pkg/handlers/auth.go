@@ -3,19 +3,19 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
 	database "ytsruh.com/envoy/pkg/database/generated"
 	"ytsruh.com/envoy/pkg/utils"
 )
 
 type AuthHandler interface {
-	Register(c echo.Context) error
-	Login(c echo.Context) error
-	GetProfile(c echo.Context) error
+	Register(w http.ResponseWriter, r *http.Request) error
+	Login(w http.ResponseWriter, r *http.Request) error
+	GetProfile(w http.ResponseWriter, r *http.Request) error
 }
 
 type AuthHandlerImpl struct {
@@ -57,19 +57,22 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
-func (h *AuthHandlerImpl) Register(c echo.Context) error {
+func (h *AuthHandlerImpl) Register(w http.ResponseWriter, r *http.Request) error {
 	var req RegisterRequest
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, ErrorResponse{Error: "Invalid request body"}.Error, http.StatusBadRequest)
+		return nil
 	}
 
 	// Basic validation
 	if req.Name == "" || req.Email == "" || req.Password == "" {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Name, email, and password are required"})
+		http.Error(w, ErrorResponse{Error: "Name, email, and password are required"}.Error, http.StatusBadRequest)
+		return nil
 	}
 
 	if len(req.Password) < 8 {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Password must be at least 8 characters"})
+		http.Error(w, ErrorResponse{Error: "Password must be at least 8 characters"}.Error, http.StatusBadRequest)
+		return nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -78,15 +81,18 @@ func (h *AuthHandlerImpl) Register(c echo.Context) error {
 	// Check if user already exists
 	_, err := h.queries.GetUserByEmail(ctx, req.Email)
 	if err == nil {
-		return c.JSON(http.StatusConflict, ErrorResponse{Error: "User with this email already exists"})
+		http.Error(w, ErrorResponse{Error: "User with this email already exists"}.Error, http.StatusConflict)
+		return nil
 	} else if err != sql.ErrNoRows {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to check existing user"})
+		http.Error(w, ErrorResponse{Error: "Failed to check existing user"}.Error, http.StatusInternalServerError)
+		return nil
 	}
 
 	// Hash password
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to hash password"})
+		http.Error(w, ErrorResponse{Error: "Failed to hash password"}.Error, http.StatusInternalServerError)
+		return nil
 	}
 
 	// Create user
@@ -102,13 +108,15 @@ func (h *AuthHandlerImpl) Register(c echo.Context) error {
 		DeletedAt: sql.NullTime{Valid: false},
 	})
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to create user"})
+		http.Error(w, ErrorResponse{Error: "Failed to create user"}.Error, http.StatusInternalServerError)
+		return nil
 	}
 
 	// Generate JWT token
 	token, err := utils.GenerateJWT(user.ID, user.Email, h.jwtSecret)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to generate token"})
+		http.Error(w, ErrorResponse{Error: "Failed to generate token"}.Error, http.StatusInternalServerError)
+		return nil
 	}
 
 	response := AuthResponse{
@@ -121,18 +129,22 @@ func (h *AuthHandlerImpl) Register(c echo.Context) error {
 		},
 	}
 
-	return c.JSON(http.StatusCreated, response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	return json.NewEncoder(w).Encode(response)
 }
 
-func (h *AuthHandlerImpl) Login(c echo.Context) error {
+func (h *AuthHandlerImpl) Login(w http.ResponseWriter, r *http.Request) error {
 	var req LoginRequest
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, ErrorResponse{Error: "Invalid request body"}.Error, http.StatusBadRequest)
+		return nil
 	}
 
 	// Basic validation
 	if req.Email == "" || req.Password == "" {
-		return c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Email and password are required"})
+		http.Error(w, ErrorResponse{Error: "Email and password are required"}.Error, http.StatusBadRequest)
+		return nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -141,20 +153,24 @@ func (h *AuthHandlerImpl) Login(c echo.Context) error {
 	// Get user by email
 	user, err := h.queries.GetUserByEmail(ctx, req.Email)
 	if err == sql.ErrNoRows {
-		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Invalid email or password"})
+		http.Error(w, ErrorResponse{Error: "Invalid email or password"}.Error, http.StatusUnauthorized)
+		return nil
 	} else if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to fetch user"})
+		http.Error(w, ErrorResponse{Error: "Failed to fetch user"}.Error, http.StatusInternalServerError)
+		return nil
 	}
 
 	// Check password
 	if !utils.CheckPasswordHash(req.Password, user.Password) {
-		return c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Invalid email or password"})
+		http.Error(w, ErrorResponse{Error: "Invalid email or password"}.Error, http.StatusUnauthorized)
+		return nil
 	}
 
 	// Generate JWT token
 	token, err := utils.GenerateJWT(user.ID, user.Email, h.jwtSecret)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Failed to generate token"})
+		http.Error(w, ErrorResponse{Error: "Failed to generate token"}.Error, http.StatusInternalServerError)
+		return nil
 	}
 
 	response := AuthResponse{
@@ -167,11 +183,9 @@ func (h *AuthHandlerImpl) Login(c echo.Context) error {
 		},
 	}
 
-	return c.JSON(http.StatusOK, response)
-}
-
-type ProfileHandler interface {
-	GetProfile(c echo.Context) error
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	return json.NewEncoder(w).Encode(response)
 }
 
 type ProfileResponse struct {
@@ -181,20 +195,19 @@ type ProfileResponse struct {
 	Exp    int64  `json:"expires_at"`
 }
 
-func (h *AuthHandlerImpl) GetProfile(c echo.Context) error {
+func (h *AuthHandlerImpl) GetProfile(w http.ResponseWriter, r *http.Request) error {
 	// Get user claims from context (set by JWT middleware)
-	user := c.Get("user")
+	// Note: This will need to be handled by server package middleware
+	user := r.Context().Value("user")
 	if user == nil {
-		return c.JSON(http.StatusUnauthorized, ErrorResponse{
-			Error: "Unauthorized",
-		})
+		http.Error(w, ErrorResponse{Error: "Unauthorized"}.Error, http.StatusUnauthorized)
+		return nil
 	}
 
 	claims, ok := user.(*utils.JWTClaims)
 	if !ok {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error: "Failed to parse user claims",
-		})
+		http.Error(w, ErrorResponse{Error: "Failed to parse user claims"}.Error, http.StatusInternalServerError)
+		return nil
 	}
 
 	response := ProfileResponse{
@@ -204,5 +217,7 @@ func (h *AuthHandlerImpl) GetProfile(c echo.Context) error {
 		Exp:    claims.Exp,
 	}
 
-	return c.JSON(http.StatusOK, response)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	return json.NewEncoder(w).Encode(response)
 }

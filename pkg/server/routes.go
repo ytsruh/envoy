@@ -23,28 +23,39 @@ func (s *Server) RegisterRoutes() {
 }
 
 func (s *Server) RegisterHealthHandler(h handlers.HealthHandler) {
-	s.echo.GET("/health", h.Health)
+	s.router.GET("/health", func(c echo.Context) error {
+		return h.Health(c.Response(), c.Request())
+	})
 }
 
 func (s *Server) RegisterGreetingHandlers(h handlers.GreetingHandler) {
 	// Create JWT middleware
 	authMiddleware := JWTAuthMiddleware(s.jwtSecret)
-	s.echo.Use(authMiddleware)
 
 	// Protected greeting routes
-	s.echo.GET("/hello", h.Hello)
-	s.echo.POST("/goodbye", h.Goodbye)
+	s.router.GET("/hello", authMiddleware(func(c echo.Context) error {
+		return h.Hello(c.Response(), c.Request())
+	}))
+	s.router.POST("/goodbye", authMiddleware(func(c echo.Context) error {
+		return h.Goodbye(c.Response(), c.Request())
+	}))
 }
 
 func (s *Server) RegisterAuthHandlers(h handlers.AuthHandler) {
-	s.echo.POST("/auth/register", h.Register)
-	s.echo.POST("/auth/login", h.Login)
+	s.router.POST("/auth/register", func(c echo.Context) error {
+		return h.Register(c.Response(), c.Request())
+	})
+	s.router.POST("/auth/login", func(c echo.Context) error {
+		return h.Login(c.Response(), c.Request())
+	})
 	authMiddleware := JWTAuthMiddleware(s.jwtSecret)
-	s.echo.GET("/auth/profile", h.GetProfile, authMiddleware)
+	s.router.GET("/auth/profile", authMiddleware(func(c echo.Context) error {
+		return h.GetProfile(c.Response(), c.Request())
+	}))
 }
 
 func (s *Server) RegisterFaviconHandler() {
-	s.echo.GET("/favicon.ico", func(c echo.Context) error {
+	s.router.GET("/favicon.ico", func(c echo.Context) error {
 		return c.NoContent(http.StatusNoContent)
 	})
 }

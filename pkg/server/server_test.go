@@ -20,7 +20,7 @@ func TestNew(t *testing.T) {
 		t.Errorf("Expected server address to be %s, got %s", addr, s.addr)
 	}
 
-	if s.echo == nil {
-		t.Fatal("Expected echo instance to be initialized")
+	if s.router == nil {
+		t.Fatal("Expected router instance to be initialized")
 	}
 }

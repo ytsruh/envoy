@@ -7,7 +7,7 @@ import (
 )
 
 type ServerBuilder struct {
-	echo            *echo.Echo
+	router          *echo.Echo
 	addr            string
 	dbService       DBService
 	middlewares     []echo.MiddlewareFunc
@@ -17,7 +17,7 @@ type ServerBuilder struct {
 
 func NewBuilder(addr string, dbService DBService, jwtSecret string) *ServerBuilder {
 	return &ServerBuilder{
-		echo:            echo.New(),
+		router:          echo.New(),
 		addr:            addr,
 		dbService:       dbService,
 		timeoutDuration: 30 * time.Second,
@@ -37,16 +37,16 @@ func (b *ServerBuilder) WithTimeout(duration time.Duration) *ServerBuilder {
 
 func (b *ServerBuilder) Build() (*Server, error) {
 	s := &Server{
-		echo:      b.echo,
+		router:    b.router,
 		dbService: b.dbService,
 		addr:      b.addr,
 		jwtSecret: b.jwtSecret,
 	}
 
-	RegisterMiddleware(b.echo, b.timeoutDuration)
+	RegisterMiddleware(b.router, b.timeoutDuration)
 
 	for _, mw := range b.middlewares {
-		b.echo.Use(mw)
+		b.router.Use(mw)
 	}
 
 	s.RegisterRoutes()

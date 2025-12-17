@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,9 +14,11 @@ type mockHealthHandler struct {
 	called bool
 }
 
-func (m *mockHealthHandler) Health(c echo.Context) error {
+func (m *mockHealthHandler) Health(w http.ResponseWriter, r *http.Request) error {
 	m.called = true
-	return c.JSON(http.StatusOK, map[string]string{"health": "ok"})
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	return json.NewEncoder(w).Encode(map[string]string{"health": "ok"})
 }
 
 type mockGreetingHandler struct {
@@ -23,20 +26,26 @@ type mockGreetingHandler struct {
 	goodbyeCalled bool
 }
 
-func (m *mockGreetingHandler) Hello(c echo.Context) error {
+func (m *mockGreetingHandler) Hello(w http.ResponseWriter, r *http.Request) error {
 	m.helloCalled = true
-	return c.String(http.StatusOK, "Hello, World!")
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Hello, World!"))
+	return nil
 }
 
-func (m *mockGreetingHandler) Goodbye(c echo.Context) error {
+func (m *mockGreetingHandler) Goodbye(w http.ResponseWriter, r *http.Request) error {
 	m.goodbyeCalled = true
-	return c.String(http.StatusOK, "Goodbye, World!")
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Goodbye, World!"))
+	return nil
 }
 
 func TestRegisterHealthHandler(t *testing.T) {
 	t.Parallel()
 	s := &Server{
-		echo:      echo.New(),
+		router:    echo.New(),
 		dbService: &mockDBService{},
 		addr:      ":8080",
 	}
@@ -47,7 +56,7 @@ func TestRegisterHealthHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rec := httptest.NewRecorder()
 
-	s.echo.ServeHTTP(rec, req)
+	s.router.ServeHTTP(rec, req)
 
 	if !mockHandler.called {
 		t.Error("Expected health handler to be called")
@@ -97,7 +106,7 @@ func TestRegisterGreetingHandlers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			s := &Server{
-				echo:      echo.New(),
+				router:    echo.New(),
 				dbService: &mockDBService{},
 				addr:      ":8080",
 				jwtSecret: jwtSecret,
@@ -112,7 +121,7 @@ func TestRegisterGreetingHandlers(t *testing.T) {
 
 			rec := httptest.NewRecorder()
 
-			s.echo.ServeHTTP(rec, req)
+			s.router.ServeHTTP(rec, req)
 
 			if !tt.handlerCheck(mockHandler) {
 				t.Error("Expected handler to be called")
@@ -127,7 +136,7 @@ func TestRegisterGreetingHandlers(t *testing.T) {
 func TestRegisterFaviconHandler(t *testing.T) {
 	t.Parallel()
 	s := &Server{
-		echo:      echo.New(),
+		router:    echo.New(),
 		dbService: &mockDBService{},
 		addr:      ":8080",
 	}
@@ -137,7 +146,7 @@ func TestRegisterFaviconHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
 	rec := httptest.NewRecorder()
 
-	s.echo.ServeHTTP(rec, req)
+	s.router.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusNoContent {
 		t.Errorf("Expected status %d, got %d", http.StatusNoContent, rec.Code)

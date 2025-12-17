@@ -1,14 +1,14 @@
 package handlers
 
 import (
-	"github.com/labstack/echo/v4"
+	"net/http"
 )
 
 type HealthHandler interface {
-	Health(c echo.Context) error
+	Health(w http.ResponseWriter, r *http.Request) error
 }
 
 type GreetingHandler interface {
-	Hello(c echo.Context) error
-	Goodbye(c echo.Context) error
+	Hello(w http.ResponseWriter, r *http.Request) error
+	Goodbye(w http.ResponseWriter, r *http.Request) error
 }

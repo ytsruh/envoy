@@ -18,8 +18,8 @@ func TestBuilderDefaults(t *testing.T) {
 		t.Errorf("Expected address :8080, got %s", builder.addr)
 	}
 
-	if builder.echo == nil {
-		t.Error("Expected echo instance to be initialized")
+	if builder.router == nil {
+		t.Error("Expected router instance to be initialized")
 	}
 
 	if builder.timeoutDuration != 30*time.Second {
@@ -99,8 +99,8 @@ func TestBuilderBuild(t *testing.T) {
 		t.Errorf("Expected address :8080, got %s", server.addr)
 	}
 
-	if server.echo == nil {
-		t.Error("Expected echo instance in server")
+	if server.router == nil {
+		t.Error("Expected router instance in server")
 	}
 }
 
@@ -123,7 +123,7 @@ func TestBuilderBuildWithCustomConfiguration(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/hello", nil)
 	rec := httptest.NewRecorder()
 
-	server.echo.ServeHTTP(rec, req)
+	server.router.ServeHTTP(rec, req)
 
 	if rec.Code == http.StatusNotFound {
 		t.Error("Routes should be registered")

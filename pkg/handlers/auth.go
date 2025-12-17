@@ -60,18 +60,24 @@ type ErrorResponse struct {
 func (h *AuthHandlerImpl) Register(w http.ResponseWriter, r *http.Request) error {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, ErrorResponse{Error: "Invalid request body"}.Error, http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid request body"})
 		return nil
 	}
 
 	// Basic validation
 	if req.Name == "" || req.Email == "" || req.Password == "" {
-		http.Error(w, ErrorResponse{Error: "Name, email, and password are required"}.Error, http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Name, email, and password are required"})
 		return nil
 	}
 
 	if len(req.Password) < 8 {
-		http.Error(w, ErrorResponse{Error: "Password must be at least 8 characters"}.Error, http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Password must be at least 8 characters"})
 		return nil
 	}
 
@@ -81,17 +87,23 @@ func (h *AuthHandlerImpl) Register(w http.ResponseWriter, r *http.Request) error
 	// Check if user already exists
 	_, err := h.queries.GetUserByEmail(ctx, req.Email)
 	if err == nil {
-		http.Error(w, ErrorResponse{Error: "User with this email already exists"}.Error, http.StatusConflict)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "User with this email already exists"})
 		return nil
 	} else if err != sql.ErrNoRows {
-		http.Error(w, ErrorResponse{Error: "Failed to check existing user"}.Error, http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to check existing user"})
 		return nil
 	}
 
 	// Hash password
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
-		http.Error(w, ErrorResponse{Error: "Failed to hash password"}.Error, http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to hash password"})
 		return nil
 	}
 
@@ -108,14 +120,18 @@ func (h *AuthHandlerImpl) Register(w http.ResponseWriter, r *http.Request) error
 		DeletedAt: sql.NullTime{Valid: false},
 	})
 	if err != nil {
-		http.Error(w, ErrorResponse{Error: "Failed to create user"}.Error, http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to create user"})
 		return nil
 	}
 
 	// Generate JWT token
 	token, err := utils.GenerateJWT(user.ID, user.Email, h.jwtSecret)
 	if err != nil {
-		http.Error(w, ErrorResponse{Error: "Failed to generate token"}.Error, http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to generate token"})
 		return nil
 	}
 
@@ -137,13 +153,17 @@ func (h *AuthHandlerImpl) Register(w http.ResponseWriter, r *http.Request) error
 func (h *AuthHandlerImpl) Login(w http.ResponseWriter, r *http.Request) error {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, ErrorResponse{Error: "Invalid request body"}.Error, http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid request body"})
 		return nil
 	}
 
 	// Basic validation
 	if req.Email == "" || req.Password == "" {
-		http.Error(w, ErrorResponse{Error: "Email and password are required"}.Error, http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Email and password are required"})
 		return nil
 	}
 
@@ -153,23 +173,31 @@ func (h *AuthHandlerImpl) Login(w http.ResponseWriter, r *http.Request) error {
 	// Get user by email
 	user, err := h.queries.GetUserByEmail(ctx, req.Email)
 	if err == sql.ErrNoRows {
-		http.Error(w, ErrorResponse{Error: "Invalid email or password"}.Error, http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid email or password"})
 		return nil
 	} else if err != nil {
-		http.Error(w, ErrorResponse{Error: "Failed to fetch user"}.Error, http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to fetch user"})
 		return nil
 	}
 
 	// Check password
 	if !utils.CheckPasswordHash(req.Password, user.Password) {
-		http.Error(w, ErrorResponse{Error: "Invalid email or password"}.Error, http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Invalid email or password"})
 		return nil
 	}
 
 	// Generate JWT token
 	token, err := utils.GenerateJWT(user.ID, user.Email, h.jwtSecret)
 	if err != nil {
-		http.Error(w, ErrorResponse{Error: "Failed to generate token"}.Error, http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to generate token"})
 		return nil
 	}
 
@@ -200,13 +228,17 @@ func (h *AuthHandlerImpl) GetProfile(w http.ResponseWriter, r *http.Request) err
 	// Note: This will need to be handled by server package middleware
 	user := r.Context().Value("user")
 	if user == nil {
-		http.Error(w, ErrorResponse{Error: "Unauthorized"}.Error, http.StatusUnauthorized)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Unauthorized"})
 		return nil
 	}
 
 	claims, ok := user.(*utils.JWTClaims)
 	if !ok {
-		http.Error(w, ErrorResponse{Error: "Failed to parse user claims"}.Error, http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to parse user claims"})
 		return nil
 	}
 

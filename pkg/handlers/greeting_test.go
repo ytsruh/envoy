@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,14 +11,14 @@ func TestGreetingHandlerHello(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		expectedStatus int
-		expectedBody   string
+		name            string
+		expectedStatus  int
+		expectedMessage string
 	}{
 		{
-			name:           "hello_returns_greeting",
-			expectedStatus: http.StatusOK,
-			expectedBody:   "Hello, World!",
+			name:            "hello_returns_greeting",
+			expectedStatus:  http.StatusOK,
+			expectedMessage: "Hello, World!",
 		},
 	}
 
@@ -39,13 +40,18 @@ func TestGreetingHandlerHello(t *testing.T) {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, rec.Code)
 			}
 
-			if rec.Body.String() != tt.expectedBody {
-				t.Errorf("Expected %q, got %q", tt.expectedBody, rec.Body.String())
+			var response map[string]string
+			if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+				t.Fatalf("Failed to unmarshal JSON response: %v", err)
+			}
+
+			if message, ok := response["message"]; !ok || message != tt.expectedMessage {
+				t.Errorf("Expected message %q, got %q", tt.expectedMessage, message)
 			}
 
 			contentType := rec.Header().Get("Content-Type")
-			if contentType != "text/plain" && contentType != "text/plain; charset=utf-8" {
-				t.Logf("Content-Type: %s (not validated strictly for text responses)", contentType)
+			if contentType != "application/json" {
+				t.Errorf("Expected Content-Type application/json, got %s", contentType)
 			}
 		})
 	}
@@ -55,14 +61,14 @@ func TestGreetingHandlerGoodbye(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		expectedStatus int
-		expectedBody   string
+		name            string
+		expectedStatus  int
+		expectedMessage string
 	}{
 		{
-			name:           "goodbye_returns_farewell",
-			expectedStatus: http.StatusOK,
-			expectedBody:   "Goodbye, World!",
+			name:            "goodbye_returns_farewell",
+			expectedStatus:  http.StatusOK,
+			expectedMessage: "Goodbye, World!",
 		},
 	}
 
@@ -84,13 +90,18 @@ func TestGreetingHandlerGoodbye(t *testing.T) {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, rec.Code)
 			}
 
-			if rec.Body.String() != tt.expectedBody {
-				t.Errorf("Expected %q, got %q", tt.expectedBody, rec.Body.String())
+			var response map[string]string
+			if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+				t.Fatalf("Failed to unmarshal JSON response: %v", err)
+			}
+
+			if message, ok := response["message"]; !ok || message != tt.expectedMessage {
+				t.Errorf("Expected message %q, got %q", tt.expectedMessage, message)
 			}
 
 			contentType := rec.Header().Get("Content-Type")
-			if contentType != "text/plain" && contentType != "text/plain; charset=utf-8" {
-				t.Logf("Content-Type: %s (not validated strictly for text responses)", contentType)
+			if contentType != "application/json" {
+				t.Errorf("Expected Content-Type application/json, got %s", contentType)
 			}
 		})
 	}

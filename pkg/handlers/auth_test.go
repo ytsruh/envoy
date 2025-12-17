@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	database "ytsruh.com/envoy/pkg/database/generated"
 	"ytsruh.com/envoy/pkg/utils"
 )
@@ -202,7 +201,6 @@ func TestRegister(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := echo.New()
 			var body []byte
 			var err error
 
@@ -216,12 +214,11 @@ func TestRegister(t *testing.T) {
 			}
 
 			req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(body))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
-			c := e.NewContext(req, rec)
 
 			handler := NewAuthHandler(tt.mockQuerier, jwtSecret)
-			err = handler.Register(c)
+			err = handler.Register(rec, req)
 
 			if err != nil {
 				t.Fatalf("Handler returned error: %v", err)
@@ -383,7 +380,6 @@ func TestLogin(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := echo.New()
 			var body []byte
 			var err error
 
@@ -397,12 +393,11 @@ func TestLogin(t *testing.T) {
 			}
 
 			req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(body))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
-			c := e.NewContext(req, rec)
 
 			handler := NewAuthHandler(tt.mockQuerier, jwtSecret)
-			err = handler.Login(c)
+			err = handler.Login(rec, req)
 
 			if err != nil {
 				t.Fatalf("Handler returned error: %v", err)
@@ -423,7 +418,6 @@ func TestLoginTokenValidation(t *testing.T) {
 	jwtSecret := "test-secret"
 	hashedPassword, _ := utils.HashPassword("password123")
 
-	e := echo.New()
 	requestBody := LoginRequest{
 		Email:    "test@example.com",
 		Password: "password123",
@@ -445,12 +439,11 @@ func TestLoginTokenValidation(t *testing.T) {
 
 	body, _ := json.Marshal(requestBody)
 	req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(body))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
 
 	handler := NewAuthHandler(mockQuerier, jwtSecret)
-	_ = handler.Login(c)
+	_ = handler.Login(rec, req)
 
 	var resp AuthResponse
 	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
@@ -485,20 +478,21 @@ func TestGetProfile(t *testing.T) {
 	tests := []struct {
 		name           string
 		mockQuerier    *MockQuerier
-		setupContext   func(*echo.Context)
+		setupContext   func(*http.Request)
 		expectedStatus int
 		checkResponse  func(t *testing.T, body []byte)
 	}{
 		{
 			name: "successful profile retrieval",
-			setupContext: func(c *echo.Context) {
+			setupContext: func(r *http.Request) {
 				claims := &utils.JWTClaims{
 					UserID: "user-123",
 					Email:  "test@example.com",
 					Iat:    time.Now().Unix(),
 					Exp:    time.Now().Add(7 * 24 * time.Hour).Unix(),
 				}
-				(*c).Set("user", claims)
+				ctx := context.WithValue(r.Context(), "user", claims)
+				*r = *r.WithContext(ctx)
 			},
 			mockQuerier: &MockQuerier{
 				getUserByEmailFunc: func(ctx context.Context, email string) (database.User, error) {
@@ -535,7 +529,7 @@ func TestGetProfile(t *testing.T) {
 		},
 		{
 			name: "missing user in context",
-			setupContext: func(c *echo.Context) {
+			setupContext: func(r *http.Request) {
 				// Don't set user in context
 			},
 			expectedStatus: http.StatusUnauthorized,
@@ -564,8 +558,9 @@ func TestGetProfile(t *testing.T) {
 		},
 		{
 			name: "invalid type in context",
-			setupContext: func(c *echo.Context) {
-				(*c).Set("user", "not-a-claims-object")
+			setupContext: func(r *http.Request) {
+				ctx := context.WithValue(r.Context(), "user", "not-a-claims-object")
+				*r = *r.WithContext(ctx)
 			},
 			expectedStatus: http.StatusInternalServerError,
 			mockQuerier: &MockQuerier{
@@ -595,18 +590,16 @@ func TestGetProfile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := echo.New()
 			req := httptest.NewRequest(http.MethodGet, "/profile", nil)
 			rec := httptest.NewRecorder()
-			c := e.NewContext(req, rec)
 
 			// Setup context
 			if tt.setupContext != nil {
-				tt.setupContext(&c)
+				tt.setupContext(req)
 			}
 
 			handler := NewAuthHandler(tt.mockQuerier, jwtSecret)
-			err := handler.GetProfile(c)
+			err := handler.GetProfile(rec, req)
 
 			if err != nil {
 				t.Fatalf("Handler returned error: %v", err)
@@ -627,10 +620,8 @@ func TestProfileResponseStructure(t *testing.T) {
 	jwtSecret := "test-secret"
 	hashedPassword, _ := utils.HashPassword("password123")
 
-	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/profile", nil)
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
 
 	now := time.Now().Unix()
 	exp := time.Now().Add(7 * 24 * time.Hour).Unix()
@@ -641,7 +632,8 @@ func TestProfileResponseStructure(t *testing.T) {
 		Iat:    now,
 		Exp:    exp,
 	}
-	c.Set("user", claims)
+	ctx := context.WithValue(req.Context(), "user", claims)
+	req = req.WithContext(ctx)
 
 	mockQuerier := &MockQuerier{
 		getUserByEmailFunc: func(ctx context.Context, email string) (database.User, error) {
@@ -657,7 +649,7 @@ func TestProfileResponseStructure(t *testing.T) {
 		},
 	}
 	handler := NewAuthHandler(mockQuerier, jwtSecret)
-	err := handler.GetProfile(c)
+	err := handler.GetProfile(rec, req)
 
 	if err != nil {
 		t.Fatalf("Handler returned error: %v", err)
@@ -758,10 +750,8 @@ func TestProfileHandlerWithDifferentUserData(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			e := echo.New()
 			req := httptest.NewRequest(http.MethodGet, "/profile", nil)
 			rec := httptest.NewRecorder()
-			c := e.NewContext(req, rec)
 
 			claims := &utils.JWTClaims{
 				UserID: tc.userID,
@@ -769,10 +759,11 @@ func TestProfileHandlerWithDifferentUserData(t *testing.T) {
 				Iat:    time.Now().Unix(),
 				Exp:    time.Now().Add(7 * 24 * time.Hour).Unix(),
 			}
-			c.Set("user", claims)
+			ctx := context.WithValue(req.Context(), "user", claims)
+			req = req.WithContext(ctx)
 
 			handler := NewAuthHandler(tc.mockQuerier, jwtSecret)
-			err := handler.GetProfile(c)
+			err := handler.GetProfile(rec, req)
 
 			if err != nil {
 				t.Fatalf("Handler returned error: %v", err)

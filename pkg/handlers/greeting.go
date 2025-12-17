@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 
 	database "ytsruh.com/envoy/pkg/database/generated"
@@ -15,15 +16,13 @@ func NewGreetingHandler(queries database.Querier) GreetingHandler {
 }
 
 func (h *GreetingHandlerImpl) Hello(w http.ResponseWriter, r *http.Request) error {
-	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Hello, World!"))
-	return nil
+	return json.NewEncoder(w).Encode(map[string]string{"message": "Hello, World!"})
 }
 
 func (h *GreetingHandlerImpl) Goodbye(w http.ResponseWriter, r *http.Request) error {
-	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Goodbye, World!"))
-	return nil
+	return json.NewEncoder(w).Encode(map[string]string{"message": "Goodbye, World!"})
 }

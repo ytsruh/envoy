@@ -44,22 +44,22 @@ func TestGreetingHandler(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		method         string
-		expectedStatus int
-		expectedBody   string
+		name            string
+		method          string
+		expectedStatus  int
+		expectedMessage string
 	}{
 		{
-			name:           "hello",
-			method:         http.MethodGet,
-			expectedStatus: http.StatusOK,
-			expectedBody:   "Hello, World!",
+			name:            "hello",
+			method:          http.MethodGet,
+			expectedStatus:  http.StatusOK,
+			expectedMessage: "Hello, World!",
 		},
 		{
-			name:           "goodbye",
-			method:         http.MethodPost,
-			expectedStatus: http.StatusOK,
-			expectedBody:   "Goodbye, World!",
+			name:            "goodbye",
+			method:          http.MethodPost,
+			expectedStatus:  http.StatusOK,
+			expectedMessage: "Goodbye, World!",
 		},
 	}
 
@@ -89,8 +89,13 @@ func TestGreetingHandler(t *testing.T) {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, rec.Code)
 			}
 
-			if rec.Body.String() != tt.expectedBody {
-				t.Errorf("Expected %q, got %q", tt.expectedBody, rec.Body.String())
+			var response map[string]string
+			if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+				t.Fatalf("Failed to unmarshal JSON response: %v", err)
+			}
+
+			if message, ok := response["message"]; !ok || message != tt.expectedMessage {
+				t.Errorf("Expected message %q, got %q", tt.expectedMessage, message)
 			}
 		})
 	}

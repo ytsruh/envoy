@@ -120,7 +120,7 @@ func TestBuilderBuildWithCustomConfiguration(t *testing.T) {
 		t.Errorf("Expected address :9000, got %s", server.addr)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/hello", nil)
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rec := httptest.NewRecorder()
 
 	server.router.ServeHTTP(rec, req)

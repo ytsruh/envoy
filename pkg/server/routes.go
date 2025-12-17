@@ -15,10 +15,6 @@ func (s *Server) RegisterRoutes() {
 	authHandler := handlers.NewAuthHandler(s.dbService.GetQueries(), s.jwtSecret)
 	s.RegisterAuthHandlers(authHandler)
 
-	// Protected routes (require JWT authentication)
-	greetingHandler := handlers.NewGreetingHandler(s.dbService.GetQueries())
-	s.RegisterGreetingHandlers(greetingHandler)
-
 	s.RegisterFaviconHandler()
 }
 
@@ -26,19 +22,6 @@ func (s *Server) RegisterHealthHandler(h handlers.HealthHandler) {
 	s.router.GET("/health", func(c echo.Context) error {
 		return h.Health(c.Response(), c.Request())
 	})
-}
-
-func (s *Server) RegisterGreetingHandlers(h handlers.GreetingHandler) {
-	// Create JWT middleware
-	authMiddleware := JWTAuthMiddleware(s.jwtSecret)
-
-	// Protected greeting routes
-	s.router.GET("/hello", authMiddleware(func(c echo.Context) error {
-		return h.Hello(c.Response(), c.Request())
-	}))
-	s.router.POST("/goodbye", authMiddleware(func(c echo.Context) error {
-		return h.Goodbye(c.Response(), c.Request())
-	}))
 }
 
 func (s *Server) RegisterAuthHandlers(h handlers.AuthHandler) {

@@ -7,6 +7,10 @@ import (
 	database "ytsruh.com/envoy/pkg/database/generated"
 )
 
+type HealthHandler interface {
+	Health(w http.ResponseWriter, r *http.Request) error
+}
+
 type HealthHandlerImpl struct {
 	queries database.Querier
 }

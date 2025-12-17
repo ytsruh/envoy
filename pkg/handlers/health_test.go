@@ -64,3 +64,57 @@ func TestHealthHandlerResponseFormat(t *testing.T) {
 		})
 	}
 }
+
+func TestHealthHandler(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		expectedStatus int
+		expectedKey    string
+		expectedValue  string
+	}{
+		{
+			name:           "health_ok",
+			expectedStatus: http.StatusOK,
+			expectedKey:    "health",
+			expectedValue:  "ok",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			req := httptest.NewRequest(http.MethodGet, "/health", nil)
+			rec := httptest.NewRecorder()
+
+			handler := NewHealthHandler(mockQuerier{})
+			err := handler.Health(rec, req)
+
+			if err != nil {
+				t.Errorf("Handler returned error: %v", err)
+				return
+			}
+
+			if rec.Code != tt.expectedStatus {
+				t.Errorf("Expected status %d, got %d", tt.expectedStatus, rec.Code)
+			}
+
+			body := make(map[string]string)
+			if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+				t.Errorf("Failed to unmarshal JSON: %v", err)
+				return
+			}
+
+			if value, ok := body[tt.expectedKey]; !ok || value != tt.expectedValue {
+				t.Errorf("Expected %s=%q, got %v", tt.expectedKey, tt.expectedValue, body)
+			}
+
+			contentType := rec.Header().Get("Content-Type")
+			if contentType != "application/json" {
+				t.Errorf("Expected Content-Type application/json, got %s", contentType)
+			}
+		})
+	}
+}

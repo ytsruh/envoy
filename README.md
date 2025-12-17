@@ -28,12 +28,9 @@
 - `POST /auth/register` - Register a new user and receive JWT token
 - `POST /auth/login` - Login and receive JWT token
 - Tokens expire in 7 days
-- See [AUTH_API.md](docs/AUTH_API.md) for detailed documentation
 
 ### Protected Endpoints (Require JWT Authentication)
 - `GET /profile` - Get authenticated user's profile from JWT
-- `GET /hello` - Protected greeting endpoint
-- `POST /goodbye` - Protected farewell endpoint
 
 All protected endpoints require a valid JWT token in the Authorization header:
 ```

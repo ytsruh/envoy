@@ -12,6 +12,9 @@ func (s *Server) RegisterRoutes() {
 	healthHandler := handlers.NewHealthHandler(s.dbService.GetQueries())
 	s.RegisterHealthHandler(healthHandler)
 
+	homeHandler := handlers.NewHomeHandler()
+	s.RegisterHomeHandler(homeHandler)
+
 	authHandler := handlers.NewAuthHandler(s.dbService.GetQueries(), s.jwtSecret)
 	s.RegisterAuthHandlers(authHandler)
 
@@ -101,6 +104,12 @@ func (s *Server) RegisterProjectSharingHandlers(h handlers.ProjectSharingHandler
 	s.router.GET("/user/projects", authMiddleware(func(c echo.Context) error {
 		return h.ListUserProjects(c.Response(), c.Request())
 	}))
+}
+
+func (s *Server) RegisterHomeHandler(h *handlers.HomeHandler) {
+	s.router.GET("/", func(c echo.Context) error {
+		return h.Home(c.Response(), c.Request())
+	})
 }
 
 func (s *Server) RegisterFaviconHandler() {

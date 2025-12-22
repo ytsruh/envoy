@@ -1,9 +1,10 @@
-node_modules
 .env
 .DS_Store
 *.db
 /tmp
 /data
+*_templ.go
 
 # Client
 .react-router/
+node_modules

@@ -19,6 +19,10 @@ func (s *Server) RegisterRoutes() {
 	projectHandler := handlers.NewProjectHandler(s.dbService.GetQueries())
 	s.RegisterProjectHandlers(projectHandler, s.jwtSecret)
 
+	// Protected project sharing routes
+	projectSharingHandler := handlers.NewProjectSharingHandler(s.dbService.GetQueries())
+	s.RegisterProjectSharingHandlers(projectSharingHandler, s.jwtSecret)
+
 	s.RegisterFaviconHandler()
 }
 
@@ -67,6 +71,35 @@ func (s *Server) RegisterProjectHandlers(h handlers.ProjectHandler, jwtSecret st
 	// Delete project
 	s.router.DELETE("/projects/:id", authMiddleware(func(c echo.Context) error {
 		return h.DeleteProject(c.Response(), c.Request())
+	}))
+}
+
+func (s *Server) RegisterProjectSharingHandlers(h handlers.ProjectSharingHandler, jwtSecret string) {
+	authMiddleware := JWTAuthMiddleware(jwtSecret)
+
+	// Add user to project
+	s.router.POST("/projects/:id/members", authMiddleware(func(c echo.Context) error {
+		return h.AddUserToProject(c.Response(), c.Request())
+	}))
+
+	// Remove user from project
+	s.router.DELETE("/projects/:id/members/:user_id", authMiddleware(func(c echo.Context) error {
+		return h.RemoveUserFromProject(c.Response(), c.Request())
+	}))
+
+	// Update user role in project
+	s.router.PUT("/projects/:id/members/:user_id", authMiddleware(func(c echo.Context) error {
+		return h.UpdateUserRole(c.Response(), c.Request())
+	}))
+
+	// Get project members
+	s.router.GET("/projects/:id/members", authMiddleware(func(c echo.Context) error {
+		return h.GetProjectUsers(c.Response(), c.Request())
+	}))
+
+	// List all projects accessible to user (owned + shared)
+	s.router.GET("/user/projects", authMiddleware(func(c echo.Context) error {
+		return h.ListUserProjects(c.Response(), c.Request())
 	}))
 }
 

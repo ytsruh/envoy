@@ -16,8 +16,9 @@ import (
 )
 
 type MockQueries struct {
-	projects []database.Project
-	users    map[string]database.User
+	projects            []database.Project
+	users               map[string]database.User
+	canUserModifyResult int64
 }
 
 func (m *MockQueries) CreateProject(ctx context.Context, arg database.CreateProjectParams) (database.Project, error) {
@@ -124,6 +125,80 @@ func (m *MockQueries) ListUsers(ctx context.Context) ([]database.User, error) {
 
 func (m *MockQueries) UpdateUser(ctx context.Context, arg database.UpdateUserParams) (database.User, error) {
 	return database.User{}, nil
+}
+
+// Project sharing methods
+func (m *MockQueries) AddUserToProject(ctx context.Context, arg database.AddUserToProjectParams) (database.ProjectUser, error) {
+	return database.ProjectUser{}, nil
+}
+
+func (m *MockQueries) RemoveUserFromProject(ctx context.Context, arg database.RemoveUserFromProjectParams) error {
+	return nil
+}
+
+func (m *MockQueries) UpdateUserRole(ctx context.Context, arg database.UpdateUserRoleParams) error {
+	return nil
+}
+
+func (m *MockQueries) GetProjectUsers(ctx context.Context, projectID int64) ([]database.ProjectUser, error) {
+	return []database.ProjectUser{}, nil
+}
+
+func (m *MockQueries) GetUserProjects(ctx context.Context, arg database.GetUserProjectsParams) ([]database.Project, error) {
+	var result []database.Project
+	for _, p := range m.projects {
+		if !p.DeletedAt.Valid {
+			// Owner access
+			if p.OwnerID == arg.OwnerID || p.OwnerID == arg.UserID {
+				result = append(result, p)
+			}
+		}
+	}
+	return result, nil
+}
+
+func (m *MockQueries) GetProjectMembership(ctx context.Context, arg database.GetProjectMembershipParams) (database.ProjectUser, error) {
+	return database.ProjectUser{}, sql.ErrNoRows
+}
+
+func (m *MockQueries) IsProjectOwner(ctx context.Context, arg database.IsProjectOwnerParams) (int64, error) {
+	return 0, nil
+}
+
+func (m *MockQueries) GetAccessibleProject(ctx context.Context, arg database.GetAccessibleProjectParams) (database.Project, error) {
+	for _, p := range m.projects {
+		if p.ID == arg.ID && !p.DeletedAt.Valid {
+			// Check if owner or shared user
+			if p.OwnerID == arg.OwnerID || p.OwnerID == arg.UserID {
+				return p, nil
+			}
+			// For tests, we don't have project users in this mock, so just check ownership
+		}
+	}
+	return database.Project{}, sql.ErrNoRows
+}
+
+func (m *MockQueries) CanUserModifyProject(ctx context.Context, arg database.CanUserModifyProjectParams) (int64, error) {
+	// If we've set a custom result for testing, use it
+	if m.canUserModifyResult != 0 {
+		return m.canUserModifyResult, nil
+	}
+
+	for _, p := range m.projects {
+		if p.ID == arg.ID && !p.DeletedAt.Valid {
+			// Owner can modify
+			if p.OwnerID == arg.OwnerID || p.OwnerID == arg.UserID {
+				return 1, nil
+			}
+			// For tests, we don't have project users in this mock, so just check ownership
+			break
+		}
+	}
+	return 0, nil
+}
+
+func (m *MockQueries) GetProjectMemberRole(ctx context.Context, arg database.GetProjectMemberRoleParams) (string, error) {
+	return "", sql.ErrNoRows
 }
 
 func createTestUser() *utils.JWTClaims {
@@ -266,6 +341,98 @@ func TestListProjects(t *testing.T) {
 
 	if len(response) != 2 {
 		t.Errorf("Expected 2 projects, got %d", len(response))
+	}
+}
+
+func TestUpdateProject(t *testing.T) {
+	mock := &MockQueries{
+		projects: []database.Project{},
+		users:    make(map[string]database.User),
+	}
+	handler := NewProjectHandler(mock)
+
+	ownerID := "owner123"
+	editorID := "editor123"
+
+	// Create owner and editor users
+	mock.users[ownerID] = database.User{ID: ownerID, Name: "Owner", Email: "owner@example.com"}
+	mock.users[editorID] = database.User{ID: editorID, Name: "Editor", Email: "editor@example.com"}
+
+	// Create project
+	project := database.Project{
+		ID:          1,
+		Name:        "Test Project",
+		Description: sql.NullString{String: "Original description", Valid: true},
+		OwnerID:     ownerID,
+		CreatedAt:   sql.NullTime{Time: time.Now(), Valid: true},
+		UpdatedAt:   time.Now(),
+		DeletedAt:   sql.NullTime{Valid: false},
+	}
+	mock.projects = append(mock.projects, project)
+
+	tests := []struct {
+		name           string
+		userID         string
+		isOwner        bool
+		expectedStatus int
+	}{
+		{
+			name:           "owner can update project",
+			userID:         ownerID,
+			isOwner:        true,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "editor can update project",
+			userID:         editorID,
+			isOwner:        false,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "non-member cannot update project",
+			userID:         "stranger123",
+			isOwner:        false,
+			expectedStatus: http.StatusForbidden,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup editor access for editor test
+			if !tt.isOwner && tt.userID == editorID {
+				// Update mock to allow editor to modify
+				mock.canUserModifyResult = 1
+			} else if tt.isOwner {
+				mock.canUserModifyResult = 1
+			} else {
+				mock.canUserModifyResult = 0
+			}
+
+			reqBody := UpdateProjectRequest{
+				Name:        "Updated Project Name",
+				Description: "Updated description",
+			}
+			body, _ := json.Marshal(reqBody)
+
+			req := httptest.NewRequest("PUT", "/projects/1", bytes.NewReader(body))
+			claims := &utils.JWTClaims{
+				UserID: tt.userID,
+				Email:  "test@example.com",
+				Iat:    time.Now().Unix(),
+				Exp:    time.Now().Add(time.Hour).Unix(),
+			}
+			req = req.WithContext(context.WithValue(req.Context(), "user", claims))
+			w := httptest.NewRecorder()
+
+			err := handler.UpdateProject(w, req)
+			if err != nil {
+				t.Fatalf("UpdateProject returned error: %v", err)
+			}
+
+			if w.Code != tt.expectedStatus {
+				t.Errorf("Expected status %d, got %d", tt.expectedStatus, w.Code)
+			}
+		})
 	}
 }
 

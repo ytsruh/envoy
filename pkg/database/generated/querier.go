@@ -9,18 +9,28 @@ import (
 )
 
 type Querier interface {
+	AddUserToProject(ctx context.Context, arg AddUserToProjectParams) (ProjectUser, error)
+	CanUserModifyProject(ctx context.Context, arg CanUserModifyProjectParams) (int64, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteProject(ctx context.Context, arg DeleteProjectParams) error
 	DeleteUser(ctx context.Context, arg DeleteUserParams) error
+	GetAccessibleProject(ctx context.Context, arg GetAccessibleProjectParams) (Project, error)
 	GetProject(ctx context.Context, id int64) (Project, error)
+	GetProjectMemberRole(ctx context.Context, arg GetProjectMemberRoleParams) (string, error)
+	GetProjectMembership(ctx context.Context, arg GetProjectMembershipParams) (ProjectUser, error)
+	GetProjectUsers(ctx context.Context, projectID int64) ([]ProjectUser, error)
 	GetUser(ctx context.Context, id string) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	GetUserProjects(ctx context.Context, arg GetUserProjectsParams) ([]Project, error)
 	HardDeleteUser(ctx context.Context, id string) error
+	IsProjectOwner(ctx context.Context, arg IsProjectOwnerParams) (int64, error)
 	ListProjectsByOwner(ctx context.Context, ownerID string) ([]Project, error)
 	ListUsers(ctx context.Context) ([]User, error)
+	RemoveUserFromProject(ctx context.Context, arg RemoveUserFromProjectParams) error
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
+	UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) error
 }
 
 var _ Querier = (*Queries)(nil)

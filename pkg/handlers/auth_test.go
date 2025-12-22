@@ -74,6 +74,47 @@ func (m *MockQuerier) DeleteProject(ctx context.Context, arg database.DeleteProj
 	return nil
 }
 
+// Project sharing methods
+func (m *MockQuerier) AddUserToProject(ctx context.Context, arg database.AddUserToProjectParams) (database.ProjectUser, error) {
+	return database.ProjectUser{}, nil
+}
+
+func (m *MockQuerier) RemoveUserFromProject(ctx context.Context, arg database.RemoveUserFromProjectParams) error {
+	return nil
+}
+
+func (m *MockQuerier) UpdateUserRole(ctx context.Context, arg database.UpdateUserRoleParams) error {
+	return nil
+}
+
+func (m *MockQuerier) GetProjectUsers(ctx context.Context, projectID int64) ([]database.ProjectUser, error) {
+	return []database.ProjectUser{}, nil
+}
+
+func (m *MockQuerier) GetUserProjects(ctx context.Context, arg database.GetUserProjectsParams) ([]database.Project, error) {
+	return []database.Project{}, nil
+}
+
+func (m *MockQuerier) GetProjectMembership(ctx context.Context, arg database.GetProjectMembershipParams) (database.ProjectUser, error) {
+	return database.ProjectUser{}, sql.ErrNoRows
+}
+
+func (m *MockQuerier) IsProjectOwner(ctx context.Context, arg database.IsProjectOwnerParams) (int64, error) {
+	return 0, nil
+}
+
+func (m *MockQuerier) GetAccessibleProject(ctx context.Context, arg database.GetAccessibleProjectParams) (database.Project, error) {
+	return database.Project{}, sql.ErrNoRows
+}
+
+func (m *MockQuerier) CanUserModifyProject(ctx context.Context, arg database.CanUserModifyProjectParams) (int64, error) {
+	return 0, nil
+}
+
+func (m *MockQuerier) GetProjectMemberRole(ctx context.Context, arg database.GetProjectMemberRoleParams) (string, error) {
+	return "", sql.ErrNoRows
+}
+
 func TestRegister(t *testing.T) {
 	jwtSecret := "test-secret"
 

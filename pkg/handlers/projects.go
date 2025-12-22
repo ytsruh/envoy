@@ -152,23 +152,20 @@ func (h *ProjectHandlerImpl) GetProject(w http.ResponseWriter, r *http.Request) 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	project, err := h.queries.GetProject(ctx, projectID)
+	project, err := h.queries.GetAccessibleProject(ctx, database.GetAccessibleProjectParams{
+		ID:      projectID,
+		OwnerID: claims.UserID,
+		UserID:  claims.UserID,
+	})
 	if err == sql.ErrNoRows {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "Project not found"})
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Project not found or access denied"})
 		return nil
 	} else if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to fetch project"})
-		return nil
-	}
-
-	if project.OwnerID != claims.UserID {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusForbidden)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "Access denied"})
 		return nil
 	}
 
@@ -206,7 +203,10 @@ func (h *ProjectHandlerImpl) ListProjects(w http.ResponseWriter, r *http.Request
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	projects, err := h.queries.ListProjectsByOwner(ctx, claims.UserID)
+	projects, err := h.queries.GetUserProjects(ctx, database.GetUserProjectsParams{
+		OwnerID: claims.UserID,
+		UserID:  claims.UserID,
+	})
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -274,14 +274,27 @@ func (h *ProjectHandlerImpl) UpdateProject(w http.ResponseWriter, r *http.Reques
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	now := time.Now()
-	project, err := h.queries.UpdateProject(ctx, database.UpdateProjectParams{
-		Name:        req.Name,
-		Description: sql.NullString{String: req.Description, Valid: req.Description != ""},
-		UpdatedAt:   now,
-		ID:          projectID,
-		OwnerID:     claims.UserID,
+	// Check if user can modify the project
+	canModify, err := h.queries.CanUserModifyProject(ctx, database.CanUserModifyProjectParams{
+		ID:      projectID,
+		OwnerID: claims.UserID,
+		UserID:  claims.UserID,
 	})
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to check permissions"})
+		return nil
+	}
+	if canModify == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Access denied"})
+		return nil
+	}
+
+	// Get the original project for the update operation
+	originalProject, err := h.queries.GetProject(ctx, projectID)
 	if err == sql.ErrNoRows {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -290,17 +303,26 @@ func (h *ProjectHandlerImpl) UpdateProject(w http.ResponseWriter, r *http.Reques
 	} else if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to update project"})
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to fetch project"})
 		return nil
 	}
 
+	now := time.Now()
+	updatedProject, err := h.queries.UpdateProject(ctx, database.UpdateProjectParams{
+		Name:        req.Name,
+		Description: sql.NullString{String: req.Description, Valid: req.Description != ""},
+		UpdatedAt:   now,
+		ID:          projectID,
+		OwnerID:     originalProject.OwnerID, // Use original owner ID for update
+	})
+
 	response := ProjectResponse{
-		ID:          project.ID,
-		Name:        project.Name,
-		Description: nullStringToStringPtr(project.Description),
-		OwnerID:     project.OwnerID,
-		CreatedAt:   project.CreatedAt.Time,
-		UpdatedAt:   project.UpdatedAt.(time.Time),
+		ID:          updatedProject.ID,
+		Name:        updatedProject.Name,
+		Description: nullStringToStringPtr(updatedProject.Description),
+		OwnerID:     updatedProject.OwnerID,
+		CreatedAt:   updatedProject.CreatedAt.Time,
+		UpdatedAt:   updatedProject.UpdatedAt.(time.Time),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -335,6 +357,24 @@ func (h *ProjectHandlerImpl) DeleteProject(w http.ResponseWriter, r *http.Reques
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
+	// Check if user is the project owner
+	ownerCount, err := h.queries.IsProjectOwner(ctx, database.IsProjectOwnerParams{
+		ID:      projectID,
+		OwnerID: claims.UserID,
+	})
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Failed to check ownership"})
+		return nil
+	}
+	if ownerCount == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "Only project owners can delete projects"})
+		return nil
+	}
 
 	err = h.queries.DeleteProject(ctx, database.DeleteProjectParams{
 		DeletedAt: sql.NullTime{Time: time.Now(), Valid: true},

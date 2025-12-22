@@ -8,6 +8,25 @@ import (
 	"database/sql"
 )
 
+type Project struct {
+	ID          int64
+	Name        string
+	Description sql.NullString
+	OwnerID     string
+	CreatedAt   sql.NullTime
+	UpdatedAt   interface{}
+	DeletedAt   sql.NullTime
+}
+
+type ProjectUser struct {
+	ID        int64
+	ProjectID int64
+	UserID    string
+	Role      string
+	CreatedAt sql.NullTime
+	UpdatedAt interface{}
+}
+
 type User struct {
 	ID        string
 	Name      string

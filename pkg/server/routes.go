@@ -15,6 +15,10 @@ func (s *Server) RegisterRoutes() {
 	authHandler := handlers.NewAuthHandler(s.dbService.GetQueries(), s.jwtSecret)
 	s.RegisterAuthHandlers(authHandler)
 
+	// Protected project routes
+	projectHandler := handlers.NewProjectHandler(s.dbService.GetQueries())
+	s.RegisterProjectHandlers(projectHandler, s.jwtSecret)
+
 	s.RegisterFaviconHandler()
 }
 
@@ -34,6 +38,35 @@ func (s *Server) RegisterAuthHandlers(h handlers.AuthHandler) {
 	authMiddleware := JWTAuthMiddleware(s.jwtSecret)
 	s.router.GET("/auth/profile", authMiddleware(func(c echo.Context) error {
 		return h.GetProfile(c.Response(), c.Request())
+	}))
+}
+
+func (s *Server) RegisterProjectHandlers(h handlers.ProjectHandler, jwtSecret string) {
+	authMiddleware := JWTAuthMiddleware(jwtSecret)
+
+	// Create project
+	s.router.POST("/projects", authMiddleware(func(c echo.Context) error {
+		return h.CreateProject(c.Response(), c.Request())
+	}))
+
+	// Get single project
+	s.router.GET("/projects/:id", authMiddleware(func(c echo.Context) error {
+		return h.GetProject(c.Response(), c.Request())
+	}))
+
+	// List projects
+	s.router.GET("/projects", authMiddleware(func(c echo.Context) error {
+		return h.ListProjects(c.Response(), c.Request())
+	}))
+
+	// Update project
+	s.router.PUT("/projects/:id", authMiddleware(func(c echo.Context) error {
+		return h.UpdateProject(c.Response(), c.Request())
+	}))
+
+	// Delete project
+	s.router.DELETE("/projects/:id", authMiddleware(func(c echo.Context) error {
+		return h.DeleteProject(c.Response(), c.Request())
 	}))
 }
 

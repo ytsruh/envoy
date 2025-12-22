@@ -35,3 +35,23 @@ func (m mockQuerier) ListUsers(ctx context.Context) ([]database.User, error) {
 func (m mockQuerier) UpdateUser(ctx context.Context, arg database.UpdateUserParams) (database.User, error) {
 	return database.User{}, nil
 }
+
+func (m mockQuerier) CreateProject(ctx context.Context, arg database.CreateProjectParams) (database.Project, error) {
+	return database.Project{}, nil
+}
+
+func (m mockQuerier) GetProject(ctx context.Context, id int64) (database.Project, error) {
+	return database.Project{}, nil
+}
+
+func (m mockQuerier) ListProjectsByOwner(ctx context.Context, ownerID string) ([]database.Project, error) {
+	return []database.Project{}, nil
+}
+
+func (m mockQuerier) UpdateProject(ctx context.Context, arg database.UpdateProjectParams) (database.Project, error) {
+	return database.Project{}, nil
+}
+
+func (m mockQuerier) DeleteProject(ctx context.Context, arg database.DeleteProjectParams) error {
+	return nil
+}

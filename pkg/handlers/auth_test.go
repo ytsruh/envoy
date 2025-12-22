@@ -54,6 +54,26 @@ func (m *MockQuerier) HardDeleteUser(ctx context.Context, id string) error {
 	return nil
 }
 
+func (m *MockQuerier) CreateProject(ctx context.Context, arg database.CreateProjectParams) (database.Project, error) {
+	return database.Project{}, nil
+}
+
+func (m *MockQuerier) GetProject(ctx context.Context, id int64) (database.Project, error) {
+	return database.Project{}, nil
+}
+
+func (m *MockQuerier) ListProjectsByOwner(ctx context.Context, ownerID string) ([]database.Project, error) {
+	return []database.Project{}, nil
+}
+
+func (m *MockQuerier) UpdateProject(ctx context.Context, arg database.UpdateProjectParams) (database.Project, error) {
+	return database.Project{}, nil
+}
+
+func (m *MockQuerier) DeleteProject(ctx context.Context, arg database.DeleteProjectParams) error {
+	return nil
+}
+
 func TestRegister(t *testing.T) {
 	jwtSecret := "test-secret"
 

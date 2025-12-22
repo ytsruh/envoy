@@ -32,8 +32,14 @@ type Service struct {
 }
 
 func NewService(dbPath string) (*Service, error) {
+	// Strip file: prefix for directory creation
+	filePath := dbPath
+	if len(dbPath) > 5 && dbPath[:5] == "file:" {
+		filePath = dbPath[5:]
+	}
+
 	// Ensure the data directory exists
-	dataDir := filepath.Dir(dbPath)
+	dataDir := filepath.Dir(filePath)
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create data directory: %w", err)
 	}

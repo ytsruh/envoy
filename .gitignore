@@ -4,7 +4,4 @@
 /tmp
 /data
 *_templ.go
-
-# Client
-.react-router/
-node_modules
+envoy

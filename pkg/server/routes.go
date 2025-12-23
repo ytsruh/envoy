@@ -26,6 +26,10 @@ func (s *Server) RegisterRoutes() {
 	projectSharingHandler := handlers.NewProjectSharingHandler(s.dbService.GetQueries())
 	s.RegisterProjectSharingHandlers(projectSharingHandler, s.jwtSecret)
 
+	// Documentation routes
+	docsHandler := handlers.NewDocsHandler()
+	s.RegisterDocsHandlers(docsHandler)
+
 	s.RegisterFaviconHandler()
 }
 
@@ -109,6 +113,17 @@ func (s *Server) RegisterProjectSharingHandlers(h handlers.ProjectSharingHandler
 func (s *Server) RegisterHomeHandler(h *handlers.HomeHandler) {
 	s.router.GET("/", func(c echo.Context) error {
 		return h.Home(c.Response(), c.Request())
+	})
+}
+
+func (s *Server) RegisterDocsHandlers(h handlers.DocsHandler) {
+	// OpenAPI specification JSON
+	s.router.GET("/openapi.json", func(c echo.Context) error {
+		return h.OpenAPI(c.Response(), c.Request())
+	})
+	// API documentation interface
+	s.router.GET("/docs", func(c echo.Context) error {
+		return h.Docs(c.Response(), c.Request())
 	})
 }
 

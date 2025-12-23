@@ -10,12 +10,17 @@ import (
 
 type Querier interface {
 	AddUserToProject(ctx context.Context, arg AddUserToProjectParams) (ProjectUser, error)
+	CanUserModifyEnvironment(ctx context.Context, arg CanUserModifyEnvironmentParams) (int64, error)
 	CanUserModifyProject(ctx context.Context, arg CanUserModifyProjectParams) (int64, error)
+	CreateEnvironment(ctx context.Context, arg CreateEnvironmentParams) (Environment, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeleteEnvironment(ctx context.Context, arg DeleteEnvironmentParams) error
 	DeleteProject(ctx context.Context, arg DeleteProjectParams) error
 	DeleteUser(ctx context.Context, arg DeleteUserParams) error
+	GetAccessibleEnvironment(ctx context.Context, arg GetAccessibleEnvironmentParams) (Environment, error)
 	GetAccessibleProject(ctx context.Context, arg GetAccessibleProjectParams) (Project, error)
+	GetEnvironment(ctx context.Context, id int64) (Environment, error)
 	GetProject(ctx context.Context, id int64) (Project, error)
 	GetProjectMemberRole(ctx context.Context, arg GetProjectMemberRoleParams) (string, error)
 	GetProjectMembership(ctx context.Context, arg GetProjectMembershipParams) (ProjectUser, error)
@@ -25,9 +30,11 @@ type Querier interface {
 	GetUserProjects(ctx context.Context, arg GetUserProjectsParams) ([]Project, error)
 	HardDeleteUser(ctx context.Context, id string) error
 	IsProjectOwner(ctx context.Context, arg IsProjectOwnerParams) (int64, error)
+	ListEnvironmentsByProject(ctx context.Context, projectID int64) ([]Environment, error)
 	ListProjectsByOwner(ctx context.Context, ownerID string) ([]Project, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	RemoveUserFromProject(ctx context.Context, arg RemoveUserFromProjectParams) error
+	UpdateEnvironment(ctx context.Context, arg UpdateEnvironmentParams) (Environment, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) error

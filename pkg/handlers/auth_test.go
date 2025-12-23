@@ -115,6 +115,35 @@ func (m *MockQuerier) GetProjectMemberRole(ctx context.Context, arg database.Get
 	return "", sql.ErrNoRows
 }
 
+// Environment methods
+func (m *MockQuerier) CreateEnvironment(ctx context.Context, arg database.CreateEnvironmentParams) (database.Environment, error) {
+	return database.Environment{}, nil
+}
+
+func (m *MockQuerier) GetEnvironment(ctx context.Context, id int64) (database.Environment, error) {
+	return database.Environment{}, nil
+}
+
+func (m *MockQuerier) ListEnvironmentsByProject(ctx context.Context, projectID int64) ([]database.Environment, error) {
+	return []database.Environment{}, nil
+}
+
+func (m *MockQuerier) UpdateEnvironment(ctx context.Context, arg database.UpdateEnvironmentParams) (database.Environment, error) {
+	return database.Environment{}, nil
+}
+
+func (m *MockQuerier) DeleteEnvironment(ctx context.Context, arg database.DeleteEnvironmentParams) error {
+	return nil
+}
+
+func (m *MockQuerier) GetAccessibleEnvironment(ctx context.Context, arg database.GetAccessibleEnvironmentParams) (database.Environment, error) {
+	return database.Environment{}, nil
+}
+
+func (m *MockQuerier) CanUserModifyEnvironment(ctx context.Context, arg database.CanUserModifyEnvironmentParams) (int64, error) {
+	return 0, nil
+}
+
 func TestRegister(t *testing.T) {
 	jwtSecret := "test-secret"
 

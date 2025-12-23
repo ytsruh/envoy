@@ -11,6 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 	dbpkg "ytsruh.com/envoy/pkg/database"
 	database "ytsruh.com/envoy/pkg/database/generated"
+	"ytsruh.com/envoy/pkg/utils"
 )
 
 type DBService interface {
@@ -21,18 +22,22 @@ type DBService interface {
 }
 
 type Server struct {
-	router    *echo.Echo
-	dbService DBService
-	addr      string
-	jwtSecret string
+	router        *echo.Echo
+	dbService     DBService
+	accessControl utils.AccessControlService
+	addr          string
+	jwtSecret     string
 }
 
-func New(addr string, dbService DBService) *Server {
+func New(addr string, dbService DBService, jwtSecret string) *Server {
 	e := echo.New()
+	accessControl := utils.NewAccessControlService(dbService.GetQueries())
 	s := &Server{
-		router:    e,
-		dbService: dbService,
-		addr:      addr,
+		router:        e,
+		dbService:     dbService,
+		accessControl: accessControl,
+		addr:          addr,
+		jwtSecret:     jwtSecret,
 	}
 	RegisterMiddleware(e, 30*time.Second)
 	s.RegisterRoutes()

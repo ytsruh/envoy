@@ -26,6 +26,10 @@ func (s *Server) RegisterRoutes() {
 	projectSharingHandler := handlers.NewProjectSharingHandler(s.dbService.GetQueries())
 	s.RegisterProjectSharingHandlers(projectSharingHandler, s.jwtSecret)
 
+	// Protected environment routes
+	environmentHandler := handlers.NewEnvironmentHandler(s.dbService.GetQueries(), s.accessControl)
+	s.RegisterEnvironmentHandlers(environmentHandler, s.jwtSecret)
+
 	// Documentation routes
 	docsHandler := handlers.NewDocsHandler()
 	s.RegisterDocsHandlers(docsHandler)
@@ -125,6 +129,35 @@ func (s *Server) RegisterDocsHandlers(h handlers.DocsHandler) {
 	s.router.GET("/docs", func(c echo.Context) error {
 		return h.Docs(c.Response(), c.Request())
 	})
+}
+
+func (s *Server) RegisterEnvironmentHandlers(h handlers.EnvironmentHandler, jwtSecret string) {
+	authMiddleware := JWTAuthMiddleware(jwtSecret)
+
+	// Create environment
+	s.router.POST("/projects/:project_id/environments", authMiddleware(func(c echo.Context) error {
+		return h.CreateEnvironment(c.Response(), c.Request())
+	}))
+
+	// Get single environment
+	s.router.GET("/projects/:project_id/environments/:id", authMiddleware(func(c echo.Context) error {
+		return h.GetEnvironment(c.Response(), c.Request())
+	}))
+
+	// List environments for project
+	s.router.GET("/projects/:project_id/environments", authMiddleware(func(c echo.Context) error {
+		return h.ListEnvironments(c.Response(), c.Request())
+	}))
+
+	// Update environment
+	s.router.PUT("/projects/:project_id/environments/:id", authMiddleware(func(c echo.Context) error {
+		return h.UpdateEnvironment(c.Response(), c.Request())
+	}))
+
+	// Delete environment
+	s.router.DELETE("/projects/:project_id/environments/:id", authMiddleware(func(c echo.Context) error {
+		return h.DeleteEnvironment(c.Response(), c.Request())
+	}))
 }
 
 func (s *Server) RegisterFaviconHandler() {

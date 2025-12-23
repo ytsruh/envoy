@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"os"
 	"testing"
@@ -291,5 +292,26 @@ func TestService_WALMode(t *testing.T) {
 
 	if journalMode != "wal" {
 		t.Errorf("Expected journal mode to be 'wal', got '%s'", journalMode)
+	}
+}
+
+func TestService_GetQueriesReturnsValidQuerier(t *testing.T) {
+	service := createTestService(t)
+	defer service.Close()
+
+	queries := service.GetQueries()
+	if queries == nil {
+		t.Error("GetQueries() returned nil")
+	}
+
+	// Test that we can call environment methods on the returned querier
+	ctx := context.Background()
+	envs, err := queries.ListEnvironmentsByProject(ctx, 1)
+	// This should return empty list, not an error
+	if err != nil {
+		t.Errorf("Expected no error when listing environments from empty database, got: %v", err)
+	}
+	if len(envs) != 0 {
+		t.Errorf("Expected empty list from empty database, got %d environments", len(envs))
 	}
 }

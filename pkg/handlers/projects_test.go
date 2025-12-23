@@ -201,6 +201,35 @@ func (m *MockQueries) GetProjectMemberRole(ctx context.Context, arg database.Get
 	return "", sql.ErrNoRows
 }
 
+// Environment methods
+func (m *MockQueries) CreateEnvironment(ctx context.Context, arg database.CreateEnvironmentParams) (database.Environment, error) {
+	return database.Environment{}, nil
+}
+
+func (m *MockQueries) GetEnvironment(ctx context.Context, id int64) (database.Environment, error) {
+	return database.Environment{}, nil
+}
+
+func (m *MockQueries) ListEnvironmentsByProject(ctx context.Context, projectID int64) ([]database.Environment, error) {
+	return []database.Environment{}, nil
+}
+
+func (m *MockQueries) UpdateEnvironment(ctx context.Context, arg database.UpdateEnvironmentParams) (database.Environment, error) {
+	return database.Environment{}, nil
+}
+
+func (m *MockQueries) DeleteEnvironment(ctx context.Context, arg database.DeleteEnvironmentParams) error {
+	return nil
+}
+
+func (m *MockQueries) GetAccessibleEnvironment(ctx context.Context, arg database.GetAccessibleEnvironmentParams) (database.Environment, error) {
+	return database.Environment{}, nil
+}
+
+func (m *MockQueries) CanUserModifyEnvironment(ctx context.Context, arg database.CanUserModifyEnvironmentParams) (int64, error) {
+	return 0, nil
+}
+
 func createTestUser() *utils.JWTClaims {
 	return &utils.JWTClaims{
 		UserID: uuid.New().String(),

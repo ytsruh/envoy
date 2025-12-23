@@ -10,7 +10,7 @@ func TestNew(t *testing.T) {
 	addr := ":8080"
 	dbService := &mockDBService{}
 
-	s := New(addr, dbService)
+	s := New(addr, dbService, "test-secret")
 
 	if s == nil {
 		t.Fatal("New returned nil")

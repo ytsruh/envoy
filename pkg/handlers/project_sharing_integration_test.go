@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"ytsruh.com/envoy/pkg/database/generated"
+	database "ytsruh.com/envoy/pkg/database/generated"
 	"ytsruh.com/envoy/pkg/utils"
 )
 

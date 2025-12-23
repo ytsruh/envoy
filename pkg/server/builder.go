@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"ytsruh.com/envoy/pkg/utils"
 )
 
 type ServerBuilder struct {
@@ -36,11 +37,13 @@ func (b *ServerBuilder) WithTimeout(duration time.Duration) *ServerBuilder {
 }
 
 func (b *ServerBuilder) Build() (*Server, error) {
+	accessControl := utils.NewAccessControlService(b.dbService.GetQueries())
 	s := &Server{
-		router:    b.router,
-		dbService: b.dbService,
-		addr:      b.addr,
-		jwtSecret: b.jwtSecret,
+		router:        b.router,
+		dbService:     b.dbService,
+		accessControl: accessControl,
+		addr:          b.addr,
+		jwtSecret:     b.jwtSecret,
 	}
 
 	RegisterMiddleware(b.router, b.timeoutDuration)

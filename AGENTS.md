@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Overview
-A Go server built using the standard library, SQLite, SQLC library, Goose for database migrations, and internal packages.
+A Go server built using the Echo framework, SQLite, SQLC library, Goose for database migrations, and internal packages.
 
 ## Code style & conventions
 - Formatting: gofmt / goimports for Go; Always run formatters before commits.
@@ -17,6 +17,6 @@ A Go server built using the standard library, SQLite, SQLC library, Goose for da
 - If adding env variables, create .env.example with placeholders.
 
 ## Quick checklist for agents
-- Run unit tests (single test when debugging)
+- Run unit tests (single test when debugging) by running 'make test'
 - Add/modify .env.example if new secrets needed
 - Update AGENTS.md when new tooling is added

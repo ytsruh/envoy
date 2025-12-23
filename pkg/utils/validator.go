@@ -17,6 +17,7 @@ func init() {
 
 	// Register custom validation functions
 	validate.RegisterValidation("project_name", validateProjectName)
+	validate.RegisterValidation("environment_name", validateEnvironmentName)
 }
 
 // Validate validates a struct using the validator package
@@ -50,6 +51,22 @@ func validateProjectName(fl validator.FieldLevel) bool {
 	return true
 }
 
+// validateEnvironmentName custom validation for environment names
+func validateEnvironmentName(fl validator.FieldLevel) bool {
+	name := fl.Field().String()
+	if len(name) < 1 || len(name) > 100 {
+		return false
+	}
+	// Allow letters, numbers, spaces, hyphens, and underscores
+	for _, char := range name {
+		if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
+			(char >= '0' && char <= '9') || char == ' ' || char == '-' || char == '_') {
+			return false
+		}
+	}
+	return true
+}
+
 // formatValidationError converts validation errors to user-friendly messages
 func formatValidationError(fe validator.FieldError) string {
 	field := fe.Field()
@@ -66,6 +83,8 @@ func formatValidationError(fe validator.FieldError) string {
 	case "email":
 		return fmt.Sprintf("%s must be a valid email address", field)
 	case "project_name":
+		return fmt.Sprintf("%s must be 1-100 characters and contain only letters, numbers, spaces, hyphens, and underscores", field)
+	case "environment_name":
 		return fmt.Sprintf("%s must be 1-100 characters and contain only letters, numbers, spaces, hyphens, and underscores", field)
 	default:
 		return fmt.Sprintf("%s is invalid", field)

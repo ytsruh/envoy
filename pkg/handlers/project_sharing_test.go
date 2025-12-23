@@ -276,6 +276,35 @@ func (m *MockSharingQueries) HardDeleteUser(ctx context.Context, id string) erro
 	return nil
 }
 
+// Environment methods
+func (m *MockSharingQueries) CreateEnvironment(ctx context.Context, arg database.CreateEnvironmentParams) (database.Environment, error) {
+	return database.Environment{}, nil
+}
+
+func (m *MockSharingQueries) GetEnvironment(ctx context.Context, id int64) (database.Environment, error) {
+	return database.Environment{}, nil
+}
+
+func (m *MockSharingQueries) ListEnvironmentsByProject(ctx context.Context, projectID int64) ([]database.Environment, error) {
+	return []database.Environment{}, nil
+}
+
+func (m *MockSharingQueries) UpdateEnvironment(ctx context.Context, arg database.UpdateEnvironmentParams) (database.Environment, error) {
+	return database.Environment{}, nil
+}
+
+func (m *MockSharingQueries) DeleteEnvironment(ctx context.Context, arg database.DeleteEnvironmentParams) error {
+	return nil
+}
+
+func (m *MockSharingQueries) GetAccessibleEnvironment(ctx context.Context, arg database.GetAccessibleEnvironmentParams) (database.Environment, error) {
+	return database.Environment{}, nil
+}
+
+func (m *MockSharingQueries) CanUserModifyEnvironment(ctx context.Context, arg database.CanUserModifyEnvironmentParams) (int64, error) {
+	return 0, nil
+}
+
 // Helper function for tests
 func createSharingTestUser(id string) *utils.JWTClaims {
 	return &utils.JWTClaims{

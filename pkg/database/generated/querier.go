@@ -27,6 +27,7 @@ type Querier interface {
 	GetEnvironment(ctx context.Context, id int64) (Environment, error)
 	GetEnvironmentVariable(ctx context.Context, id int64) (EnvironmentVariable, error)
 	GetProject(ctx context.Context, id int64) (Project, error)
+	GetProjectByGitRepo(ctx context.Context, arg GetProjectByGitRepoParams) (Project, error)
 	GetProjectMemberRole(ctx context.Context, arg GetProjectMemberRoleParams) (string, error)
 	GetProjectMembership(ctx context.Context, arg GetProjectMembershipParams) (ProjectUser, error)
 	GetProjectUsers(ctx context.Context, projectID int64) ([]ProjectUser, error)

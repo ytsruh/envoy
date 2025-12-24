@@ -17,17 +17,20 @@ import (
 type CreateProjectRequest struct {
 	Name        string `json:"name" validate:"required,project_name"`
 	Description string `json:"description" validate:"max=500"`
+	GitRepo     string `json:"git_repo" validate:"omitempty,max=500"`
 }
 
 type UpdateProjectRequest struct {
 	Name        string `json:"name" validate:"required,project_name"`
 	Description string `json:"description" validate:"max=500"`
+	GitRepo     string `json:"git_repo" validate:"omitempty,max=500"`
 }
 
 type ProjectResponse struct {
 	ID          int64     `json:"id"`
 	Name        string    `json:"name"`
 	Description *string   `json:"description"`
+	GitRepo     *string   `json:"git_repo"`
 	OwnerID     string    `json:"owner_id"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
@@ -51,10 +54,21 @@ func CreateProject(c echo.Context, ctx *HandlerContext) error {
 	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	if req.GitRepo != "" {
+		_, err := ctx.Queries.GetProjectByGitRepo(dbCtx, database.GetProjectByGitRepoParams{
+			OwnerID: claims.UserID,
+			GitRepo: sql.NullString{String: req.GitRepo, Valid: true},
+		})
+		if err == nil {
+			return SendErrorResponse(c, http.StatusConflict, fmt.Errorf("a project with this git repository already exists"))
+		}
+	}
+
 	now := time.Now()
 	project, err := ctx.Queries.CreateProject(dbCtx, database.CreateProjectParams{
 		Name:        req.Name,
 		Description: sql.NullString{String: req.Description, Valid: req.Description != ""},
+		GitRepo:     sql.NullString{String: req.GitRepo, Valid: req.GitRepo != ""},
 		OwnerID:     claims.UserID,
 		CreatedAt:   sql.NullTime{Time: now, Valid: true},
 		UpdatedAt:   now,
@@ -67,6 +81,7 @@ func CreateProject(c echo.Context, ctx *HandlerContext) error {
 		ID:          project.ID,
 		Name:        project.Name,
 		Description: NullStringToStringPtr(project.Description),
+		GitRepo:     NullStringToStringPtr(project.GitRepo),
 		OwnerID:     project.OwnerID,
 		CreatedAt:   project.CreatedAt.Time,
 		UpdatedAt:   project.UpdatedAt.(time.Time),
@@ -104,6 +119,7 @@ func GetProject(c echo.Context, ctx *HandlerContext) error {
 		ID:          project.ID,
 		Name:        project.Name,
 		Description: NullStringToStringPtr(project.Description),
+		GitRepo:     NullStringToStringPtr(project.GitRepo),
 		OwnerID:     project.OwnerID,
 		CreatedAt:   project.CreatedAt.Time,
 		UpdatedAt:   project.UpdatedAt.(time.Time),
@@ -135,6 +151,7 @@ func ListProjects(c echo.Context, ctx *HandlerContext) error {
 			ID:          project.ID,
 			Name:        project.Name,
 			Description: NullStringToStringPtr(project.Description),
+			GitRepo:     NullStringToStringPtr(project.GitRepo),
 			OwnerID:     project.OwnerID,
 			CreatedAt:   project.CreatedAt.Time,
 			UpdatedAt:   project.UpdatedAt.(time.Time),
@@ -186,10 +203,21 @@ func UpdateProject(c echo.Context, ctx *HandlerContext) error {
 		return SendErrorResponse(c, http.StatusInternalServerError, fmt.Errorf("failed to fetch project"))
 	}
 
+	if req.GitRepo != "" && (NullStringToString(originalProject.GitRepo) != req.GitRepo) {
+		_, err := ctx.Queries.GetProjectByGitRepo(dbCtx, database.GetProjectByGitRepoParams{
+			OwnerID: originalProject.OwnerID,
+			GitRepo: sql.NullString{String: req.GitRepo, Valid: true},
+		})
+		if err == nil {
+			return SendErrorResponse(c, http.StatusConflict, fmt.Errorf("a project with this git repository already exists"))
+		}
+	}
+
 	now := time.Now()
 	updatedProject, err := ctx.Queries.UpdateProject(dbCtx, database.UpdateProjectParams{
 		Name:        req.Name,
 		Description: sql.NullString{String: req.Description, Valid: req.Description != ""},
+		GitRepo:     sql.NullString{String: req.GitRepo, Valid: req.GitRepo != ""},
 		UpdatedAt:   now,
 		ID:          projectID,
 		OwnerID:     originalProject.OwnerID,
@@ -199,6 +227,7 @@ func UpdateProject(c echo.Context, ctx *HandlerContext) error {
 		ID:          updatedProject.ID,
 		Name:        updatedProject.Name,
 		Description: NullStringToStringPtr(updatedProject.Description),
+		GitRepo:     NullStringToStringPtr(updatedProject.GitRepo),
 		OwnerID:     updatedProject.OwnerID,
 		CreatedAt:   updatedProject.CreatedAt.Time,
 		UpdatedAt:   updatedProject.UpdatedAt.(time.Time),
@@ -242,4 +271,11 @@ func DeleteProject(c echo.Context, ctx *HandlerContext) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "Project deleted successfully"})
+}
+
+func NullStringToString(ns sql.NullString) string {
+	if ns.Valid {
+		return ns.String
+	}
+	return ""
 }

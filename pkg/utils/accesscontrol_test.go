@@ -108,6 +108,10 @@ func (m *mockQuerier) GetProject(ctx context.Context, id int64) (database.Projec
 	return database.Project{}, nil
 }
 
+func (m *mockQuerier) GetProjectByGitRepo(ctx context.Context, arg database.GetProjectByGitRepoParams) (database.Project, error) {
+	return database.Project{}, nil
+}
+
 func (m *mockQuerier) GetProjectMemberRole(ctx context.Context, arg database.GetProjectMemberRoleParams) (string, error) {
 	return "", nil
 }

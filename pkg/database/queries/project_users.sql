@@ -20,7 +20,7 @@ WHERE pu.project_id = ?
 ORDER BY pu.created_at ASC;
 
 -- name: GetUserProjects :many
-SELECT DISTINCT p.id, p.name, p.description, p.owner_id, p.created_at, p.updated_at, p.deleted_at
+SELECT DISTINCT p.id, p.name, p.description, p.git_repo, p.owner_id, p.created_at, p.updated_at, p.deleted_at
 FROM projects p
 LEFT JOIN project_users pu ON p.id = pu.project_id
 WHERE (p.owner_id = ? OR pu.user_id = ?) AND p.deleted_at IS NULL
@@ -37,7 +37,7 @@ FROM projects
 WHERE id = ? AND owner_id = ? AND deleted_at IS NULL;
 
 -- name: GetAccessibleProject :one
-SELECT p.id, p.name, p.description, p.owner_id, p.created_at, p.updated_at, p.deleted_at
+SELECT p.id, p.name, p.description, p.git_repo, p.owner_id, p.created_at, p.updated_at, p.deleted_at
 FROM projects p
 WHERE p.id = ? AND p.deleted_at IS NULL
 AND (p.owner_id = ? OR EXISTS (

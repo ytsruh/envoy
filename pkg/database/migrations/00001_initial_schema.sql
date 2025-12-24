@@ -11,13 +11,15 @@ CREATE TABLE users (
 
 CREATE TABLE projects (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
   description TEXT,
+  git_repo TEXT,
   owner_id text NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   deleted_at TIMESTAMP DEFAULT NULL,
-  FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE(owner_id, git_repo)
 );
 
 CREATE TABLE project_users (

@@ -69,7 +69,7 @@ func (q *Queries) CanUserModifyProject(ctx context.Context, arg CanUserModifyPro
 }
 
 const getAccessibleProject = `-- name: GetAccessibleProject :one
-SELECT p.id, p.name, p.description, p.owner_id, p.created_at, p.updated_at, p.deleted_at
+SELECT p.id, p.name, p.description, p.git_repo, p.owner_id, p.created_at, p.updated_at, p.deleted_at
 FROM projects p
 WHERE p.id = ? AND p.deleted_at IS NULL
 AND (p.owner_id = ? OR EXISTS (
@@ -91,6 +91,7 @@ func (q *Queries) GetAccessibleProject(ctx context.Context, arg GetAccessiblePro
 		&i.ID,
 		&i.Name,
 		&i.Description,
+		&i.GitRepo,
 		&i.OwnerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -181,7 +182,7 @@ func (q *Queries) GetProjectUsers(ctx context.Context, projectID int64) ([]Proje
 }
 
 const getUserProjects = `-- name: GetUserProjects :many
-SELECT DISTINCT p.id, p.name, p.description, p.owner_id, p.created_at, p.updated_at, p.deleted_at
+SELECT DISTINCT p.id, p.name, p.description, p.git_repo, p.owner_id, p.created_at, p.updated_at, p.deleted_at
 FROM projects p
 LEFT JOIN project_users pu ON p.id = pu.project_id
 WHERE (p.owner_id = ? OR pu.user_id = ?) AND p.deleted_at IS NULL
@@ -206,6 +207,7 @@ func (q *Queries) GetUserProjects(ctx context.Context, arg GetUserProjectsParams
 			&i.ID,
 			&i.Name,
 			&i.Description,
+			&i.GitRepo,
 			&i.OwnerID,
 			&i.CreatedAt,
 			&i.UpdatedAt,

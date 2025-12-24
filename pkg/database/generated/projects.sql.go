@@ -11,14 +11,15 @@ import (
 )
 
 const createProject = `-- name: CreateProject :one
-INSERT INTO projects (name, description, owner_id, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?)
-RETURNING id, name, description, owner_id, created_at, updated_at, deleted_at
+INSERT INTO projects (name, description, git_repo, owner_id, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?)
+RETURNING id, name, description, git_repo, owner_id, created_at, updated_at, deleted_at
 `
 
 type CreateProjectParams struct {
 	Name        string
 	Description sql.NullString
+	GitRepo     sql.NullString
 	OwnerID     string
 	CreatedAt   sql.NullTime
 	UpdatedAt   interface{}
@@ -28,6 +29,7 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 	row := q.db.QueryRowContext(ctx, createProject,
 		arg.Name,
 		arg.Description,
+		arg.GitRepo,
 		arg.OwnerID,
 		arg.CreatedAt,
 		arg.UpdatedAt,
@@ -37,6 +39,7 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		&i.ID,
 		&i.Name,
 		&i.Description,
+		&i.GitRepo,
 		&i.OwnerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -63,7 +66,7 @@ func (q *Queries) DeleteProject(ctx context.Context, arg DeleteProjectParams) er
 }
 
 const getProject = `-- name: GetProject :one
-SELECT id, name, description, owner_id, created_at, updated_at, deleted_at
+SELECT id, name, description, git_repo, owner_id, created_at, updated_at, deleted_at
 FROM projects
 WHERE id = ? AND deleted_at IS NULL
 `
@@ -75,6 +78,34 @@ func (q *Queries) GetProject(ctx context.Context, id int64) (Project, error) {
 		&i.ID,
 		&i.Name,
 		&i.Description,
+		&i.GitRepo,
+		&i.OwnerID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getProjectByGitRepo = `-- name: GetProjectByGitRepo :one
+SELECT id, name, description, git_repo, owner_id, created_at, updated_at, deleted_at
+FROM projects
+WHERE owner_id = ? AND git_repo = ? AND deleted_at IS NULL
+`
+
+type GetProjectByGitRepoParams struct {
+	OwnerID string
+	GitRepo sql.NullString
+}
+
+func (q *Queries) GetProjectByGitRepo(ctx context.Context, arg GetProjectByGitRepoParams) (Project, error) {
+	row := q.db.QueryRowContext(ctx, getProjectByGitRepo, arg.OwnerID, arg.GitRepo)
+	var i Project
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.GitRepo,
 		&i.OwnerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -84,7 +115,7 @@ func (q *Queries) GetProject(ctx context.Context, id int64) (Project, error) {
 }
 
 const listProjectsByOwner = `-- name: ListProjectsByOwner :many
-SELECT id, name, description, owner_id, created_at, updated_at, deleted_at
+SELECT id, name, description, git_repo, owner_id, created_at, updated_at, deleted_at
 FROM projects
 WHERE owner_id = ? AND deleted_at IS NULL
 ORDER BY created_at DESC
@@ -103,6 +134,7 @@ func (q *Queries) ListProjectsByOwner(ctx context.Context, ownerID string) ([]Pr
 			&i.ID,
 			&i.Name,
 			&i.Description,
+			&i.GitRepo,
 			&i.OwnerID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -123,14 +155,15 @@ func (q *Queries) ListProjectsByOwner(ctx context.Context, ownerID string) ([]Pr
 
 const updateProject = `-- name: UpdateProject :one
 UPDATE projects
-SET name = ?, description = ?, updated_at = ?
+SET name = ?, description = ?, git_repo = ?, updated_at = ?
 WHERE id = ? AND owner_id = ? AND deleted_at IS NULL
-RETURNING id, name, description, owner_id, created_at, updated_at, deleted_at
+RETURNING id, name, description, git_repo, owner_id, created_at, updated_at, deleted_at
 `
 
 type UpdateProjectParams struct {
 	Name        string
 	Description sql.NullString
+	GitRepo     sql.NullString
 	UpdatedAt   interface{}
 	ID          int64
 	OwnerID     string
@@ -140,6 +173,7 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 	row := q.db.QueryRowContext(ctx, updateProject,
 		arg.Name,
 		arg.Description,
+		arg.GitRepo,
 		arg.UpdatedAt,
 		arg.ID,
 		arg.OwnerID,
@@ -149,6 +183,7 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		&i.ID,
 		&i.Name,
 		&i.Description,
+		&i.GitRepo,
 		&i.OwnerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,

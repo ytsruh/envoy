@@ -32,6 +32,7 @@ type Project struct {
 	ID          int64
 	Name        string
 	Description sql.NullString
+	GitRepo     sql.NullString
 	OwnerID     string
 	CreatedAt   sql.NullTime
 	UpdatedAt   interface{}

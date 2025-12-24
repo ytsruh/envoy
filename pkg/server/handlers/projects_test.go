@@ -25,6 +25,7 @@ func (m *MockQueries) CreateProject(ctx context.Context, arg database.CreateProj
 		ID:          int64(len(m.projects) + 1),
 		Name:        arg.Name,
 		Description: arg.Description,
+		GitRepo:     arg.GitRepo,
 		OwnerID:     arg.OwnerID,
 		CreatedAt:   arg.CreatedAt,
 		UpdatedAt:   arg.UpdatedAt,
@@ -37,6 +38,15 @@ func (m *MockQueries) CreateProject(ctx context.Context, arg database.CreateProj
 func (m *MockQueries) GetProject(ctx context.Context, id int64) (database.Project, error) {
 	for _, p := range m.projects {
 		if p.ID == id {
+			return p, nil
+		}
+	}
+	return database.Project{}, sql.ErrNoRows
+}
+
+func (m *MockQueries) GetProjectByGitRepo(ctx context.Context, arg database.GetProjectByGitRepoParams) (database.Project, error) {
+	for _, p := range m.projects {
+		if p.OwnerID == arg.OwnerID && p.GitRepo.String == arg.GitRepo.String && !p.DeletedAt.Valid {
 			return p, nil
 		}
 	}
@@ -58,6 +68,7 @@ func (m *MockQueries) UpdateProject(ctx context.Context, arg database.UpdateProj
 		if p.ID == arg.ID && !p.DeletedAt.Valid {
 			m.projects[i].Name = arg.Name
 			m.projects[i].Description = arg.Description
+			m.projects[i].GitRepo = arg.GitRepo
 			m.projects[i].UpdatedAt = arg.UpdatedAt
 			return m.projects[i], nil
 		}

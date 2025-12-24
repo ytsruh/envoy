@@ -4,4 +4,5 @@
 /tmp
 /data
 *_templ.go
-envoy
+envoy-server
+envoy-cli

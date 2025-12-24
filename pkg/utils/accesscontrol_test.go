@@ -33,6 +33,10 @@ func (m *mockQuerier) CanUserModifyEnvironment(ctx context.Context, arg database
 	return 0, nil
 }
 
+func (m *mockQuerier) CanUserModifyEnvironmentVariable(ctx context.Context, arg database.CanUserModifyEnvironmentVariableParams) (int64, error) {
+	return 0, nil
+}
+
 func (m *mockQuerier) CanUserModifyProject(ctx context.Context, arg database.CanUserModifyProjectParams) (int64, error) {
 	// Check if user is owner (OwnerID and UserID are the same)
 	if arg.OwnerID == arg.UserID {
@@ -166,6 +170,30 @@ func (m *mockQuerier) UpdateUser(ctx context.Context, arg database.UpdateUserPar
 
 func (m *mockQuerier) UpdateUserRole(ctx context.Context, arg database.UpdateUserRoleParams) error {
 	return nil
+}
+
+func (m *mockQuerier) CreateEnvironmentVariable(ctx context.Context, arg database.CreateEnvironmentVariableParams) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m *mockQuerier) DeleteEnvironmentVariable(ctx context.Context, id int64) error {
+	return nil
+}
+
+func (m *mockQuerier) GetAccessibleEnvironmentVariable(ctx context.Context, arg database.GetAccessibleEnvironmentVariableParams) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m *mockQuerier) GetEnvironmentVariable(ctx context.Context, id int64) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m *mockQuerier) ListEnvironmentVariablesByEnvironment(ctx context.Context, environmentID int64) ([]database.EnvironmentVariable, error) {
+	return []database.EnvironmentVariable{}, nil
+}
+
+func (m *mockQuerier) UpdateEnvironmentVariable(ctx context.Context, arg database.UpdateEnvironmentVariableParams) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
 }
 
 func TestAccessControlService_RequireOwner(t *testing.T) {

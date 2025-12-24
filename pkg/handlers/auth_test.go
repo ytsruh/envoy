@@ -144,6 +144,35 @@ func (m *MockQuerier) CanUserModifyEnvironment(ctx context.Context, arg database
 	return 0, nil
 }
 
+// Environment variable methods
+func (m *MockQuerier) CreateEnvironmentVariable(ctx context.Context, arg database.CreateEnvironmentVariableParams) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m *MockQuerier) DeleteEnvironmentVariable(ctx context.Context, id int64) error {
+	return nil
+}
+
+func (m *MockQuerier) GetAccessibleEnvironmentVariable(ctx context.Context, arg database.GetAccessibleEnvironmentVariableParams) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m *MockQuerier) GetEnvironmentVariable(ctx context.Context, id int64) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m *MockQuerier) ListEnvironmentVariablesByEnvironment(ctx context.Context, environmentID int64) ([]database.EnvironmentVariable, error) {
+	return []database.EnvironmentVariable{}, nil
+}
+
+func (m *MockQuerier) UpdateEnvironmentVariable(ctx context.Context, arg database.UpdateEnvironmentVariableParams) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m *MockQuerier) CanUserModifyEnvironmentVariable(ctx context.Context, arg database.CanUserModifyEnvironmentVariableParams) (int64, error) {
+	return 0, nil
+}
+
 func TestRegister(t *testing.T) {
 	jwtSecret := "test-secret"
 

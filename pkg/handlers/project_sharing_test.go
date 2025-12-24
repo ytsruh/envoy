@@ -305,6 +305,35 @@ func (m *MockSharingQueries) CanUserModifyEnvironment(ctx context.Context, arg d
 	return 0, nil
 }
 
+// Environment variable methods
+func (m *MockSharingQueries) CreateEnvironmentVariable(ctx context.Context, arg database.CreateEnvironmentVariableParams) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m *MockSharingQueries) DeleteEnvironmentVariable(ctx context.Context, id int64) error {
+	return nil
+}
+
+func (m *MockSharingQueries) GetAccessibleEnvironmentVariable(ctx context.Context, arg database.GetAccessibleEnvironmentVariableParams) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m *MockSharingQueries) GetEnvironmentVariable(ctx context.Context, id int64) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m *MockSharingQueries) ListEnvironmentVariablesByEnvironment(ctx context.Context, environmentID int64) ([]database.EnvironmentVariable, error) {
+	return []database.EnvironmentVariable{}, nil
+}
+
+func (m *MockSharingQueries) UpdateEnvironmentVariable(ctx context.Context, arg database.UpdateEnvironmentVariableParams) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m *MockSharingQueries) CanUserModifyEnvironmentVariable(ctx context.Context, arg database.CanUserModifyEnvironmentVariableParams) (int64, error) {
+	return 0, nil
+}
+
 // Helper function for tests
 func createSharingTestUser(id string) *utils.JWTClaims {
 	return &utils.JWTClaims{

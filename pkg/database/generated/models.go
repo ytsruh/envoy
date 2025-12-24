@@ -18,6 +18,16 @@ type Environment struct {
 	DeletedAt   sql.NullTime
 }
 
+type EnvironmentVariable struct {
+	ID            int64
+	EnvironmentID int64
+	Key           string
+	Value         string
+	Description   sql.NullString
+	CreatedAt     sql.NullTime
+	UpdatedAt     sql.NullTime
+}
+
 type Project struct {
 	ID          int64
 	Name        string

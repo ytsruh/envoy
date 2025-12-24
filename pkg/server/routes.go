@@ -30,6 +30,10 @@ func (s *Server) RegisterRoutes() {
 	environmentHandler := handlers.NewEnvironmentHandler(s.dbService.GetQueries(), s.accessControl)
 	s.RegisterEnvironmentHandlers(environmentHandler, s.jwtSecret)
 
+	// Protected environment variable routes
+	environmentVariableHandler := handlers.NewEnvironmentVariableHandler(s.dbService.GetQueries(), s.accessControl)
+	s.RegisterEnvironmentVariableHandlers(environmentVariableHandler, s.jwtSecret)
+
 	// Documentation routes
 	docsHandler := handlers.NewDocsHandler()
 	s.RegisterDocsHandlers(docsHandler)
@@ -164,4 +168,33 @@ func (s *Server) RegisterFaviconHandler() {
 	s.router.GET("/favicon.ico", func(c echo.Context) error {
 		return c.NoContent(http.StatusNoContent)
 	})
+}
+
+func (s *Server) RegisterEnvironmentVariableHandlers(h handlers.EnvironmentVariableHandler, jwtSecret string) {
+	authMiddleware := JWTAuthMiddleware(jwtSecret)
+
+	// Create environment variable
+	s.router.POST("/projects/:project_id/environments/:environment_id/variables", authMiddleware(func(c echo.Context) error {
+		return h.CreateEnvironmentVariable(c.Response(), c.Request())
+	}))
+
+	// Get single environment variable
+	s.router.GET("/projects/:project_id/environments/:environment_id/variables/:id", authMiddleware(func(c echo.Context) error {
+		return h.GetEnvironmentVariable(c.Response(), c.Request())
+	}))
+
+	// List environment variables for environment
+	s.router.GET("/projects/:project_id/environments/:environment_id/variables", authMiddleware(func(c echo.Context) error {
+		return h.ListEnvironmentVariables(c.Response(), c.Request())
+	}))
+
+	// Update environment variable
+	s.router.PUT("/projects/:project_id/environments/:environment_id/variables/:id", authMiddleware(func(c echo.Context) error {
+		return h.UpdateEnvironmentVariable(c.Response(), c.Request())
+	}))
+
+	// Delete environment variable
+	s.router.DELETE("/projects/:project_id/environments/:environment_id/variables/:id", authMiddleware(func(c echo.Context) error {
+		return h.DeleteEnvironmentVariable(c.Response(), c.Request())
+	}))
 }

@@ -125,3 +125,32 @@ func (m mockQuerier) GetAccessibleEnvironment(ctx context.Context, arg database.
 func (m mockQuerier) CanUserModifyEnvironment(ctx context.Context, arg database.CanUserModifyEnvironmentParams) (int64, error) {
 	return 0, nil
 }
+
+// Environment variable methods
+func (m mockQuerier) CreateEnvironmentVariable(ctx context.Context, arg database.CreateEnvironmentVariableParams) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m mockQuerier) DeleteEnvironmentVariable(ctx context.Context, id int64) error {
+	return nil
+}
+
+func (m mockQuerier) GetAccessibleEnvironmentVariable(ctx context.Context, arg database.GetAccessibleEnvironmentVariableParams) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m mockQuerier) GetEnvironmentVariable(ctx context.Context, id int64) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m mockQuerier) ListEnvironmentVariablesByEnvironment(ctx context.Context, environmentID int64) ([]database.EnvironmentVariable, error) {
+	return []database.EnvironmentVariable{}, nil
+}
+
+func (m mockQuerier) UpdateEnvironmentVariable(ctx context.Context, arg database.UpdateEnvironmentVariableParams) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m mockQuerier) CanUserModifyEnvironmentVariable(ctx context.Context, arg database.CanUserModifyEnvironmentVariableParams) (int64, error) {
+	return 0, nil
+}

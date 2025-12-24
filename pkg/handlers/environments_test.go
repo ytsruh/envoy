@@ -183,6 +183,35 @@ func (m *mockEnvironmentQueries) UpdateUserRole(ctx context.Context, arg generat
 	return nil
 }
 
+// Environment variable methods
+func (m *mockEnvironmentQueries) CreateEnvironmentVariable(ctx context.Context, arg generated.CreateEnvironmentVariableParams) (generated.EnvironmentVariable, error) {
+	return generated.EnvironmentVariable{}, nil
+}
+
+func (m *mockEnvironmentQueries) DeleteEnvironmentVariable(ctx context.Context, id int64) error {
+	return nil
+}
+
+func (m *mockEnvironmentQueries) GetAccessibleEnvironmentVariable(ctx context.Context, arg generated.GetAccessibleEnvironmentVariableParams) (generated.EnvironmentVariable, error) {
+	return generated.EnvironmentVariable{}, nil
+}
+
+func (m *mockEnvironmentQueries) GetEnvironmentVariable(ctx context.Context, id int64) (generated.EnvironmentVariable, error) {
+	return generated.EnvironmentVariable{}, nil
+}
+
+func (m *mockEnvironmentQueries) ListEnvironmentVariablesByEnvironment(ctx context.Context, environmentID int64) ([]generated.EnvironmentVariable, error) {
+	return []generated.EnvironmentVariable{}, nil
+}
+
+func (m *mockEnvironmentQueries) UpdateEnvironmentVariable(ctx context.Context, arg generated.UpdateEnvironmentVariableParams) (generated.EnvironmentVariable, error) {
+	return generated.EnvironmentVariable{}, nil
+}
+
+func (m *mockEnvironmentQueries) CanUserModifyEnvironmentVariable(ctx context.Context, arg generated.CanUserModifyEnvironmentVariableParams) (int64, error) {
+	return 1, nil
+}
+
 type mockAccessControlService struct {
 	accessibleProjects map[string]generated.Project
 }

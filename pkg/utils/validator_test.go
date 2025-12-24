@@ -220,6 +220,59 @@ func TestValidateProjectName(t *testing.T) {
 	}
 }
 
+func TestValidateEnvVarValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{
+			name:     "empty value",
+			input:    "",
+			expected: true,
+		},
+		{
+			name:     "single character",
+			input:    "a",
+			expected: true,
+		},
+		{
+			name:     "valid value",
+			input:    "my-secret-value",
+			expected: true,
+		},
+		{
+			name:     "maximum length (255 chars)",
+			input:    string(make([]byte, 255)),
+			expected: true,
+		},
+		{
+			name:     "too long (256 chars)",
+			input:    string(make([]byte, 256)),
+			expected: false,
+		},
+		{
+			name:     "special characters allowed",
+			input:    "value_with-special@chars#123!",
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := validator.New()
+			v.RegisterValidation("env_var_value", validateEnvVarValue)
+
+			err := v.Var(tt.input, "env_var_value")
+			result := err == nil
+
+			if result != tt.expected {
+				t.Errorf("expected %v for input length %d, got %v", tt.expected, len(tt.input), result)
+			}
+		})
+	}
+}
+
 func TestValidateWithNilInput(t *testing.T) {
 	err := Validate(nil)
 	if err == nil {

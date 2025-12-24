@@ -230,6 +230,35 @@ func (m *MockQueries) CanUserModifyEnvironment(ctx context.Context, arg database
 	return 0, nil
 }
 
+// Environment variable methods
+func (m *MockQueries) CreateEnvironmentVariable(ctx context.Context, arg database.CreateEnvironmentVariableParams) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m *MockQueries) DeleteEnvironmentVariable(ctx context.Context, id int64) error {
+	return nil
+}
+
+func (m *MockQueries) GetAccessibleEnvironmentVariable(ctx context.Context, arg database.GetAccessibleEnvironmentVariableParams) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m *MockQueries) GetEnvironmentVariable(ctx context.Context, id int64) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m *MockQueries) ListEnvironmentVariablesByEnvironment(ctx context.Context, environmentID int64) ([]database.EnvironmentVariable, error) {
+	return []database.EnvironmentVariable{}, nil
+}
+
+func (m *MockQueries) UpdateEnvironmentVariable(ctx context.Context, arg database.UpdateEnvironmentVariableParams) (database.EnvironmentVariable, error) {
+	return database.EnvironmentVariable{}, nil
+}
+
+func (m *MockQueries) CanUserModifyEnvironmentVariable(ctx context.Context, arg database.CanUserModifyEnvironmentVariableParams) (int64, error) {
+	return 0, nil
+}
+
 func createTestUser() *utils.JWTClaims {
 	return &utils.JWTClaims{
 		UserID: uuid.New().String(),

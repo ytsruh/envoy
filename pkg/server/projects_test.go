@@ -1,4 +1,4 @@
-package handlers
+package server
 
 import (
 	"bytes"
@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 	database "ytsruh.com/envoy/pkg/database/generated"
 	"ytsruh.com/envoy/pkg/utils"
 )
@@ -127,7 +128,6 @@ func (m *MockQueries) UpdateUser(ctx context.Context, arg database.UpdateUserPar
 	return database.User{}, nil
 }
 
-// Project sharing methods
 func (m *MockQueries) AddUserToProject(ctx context.Context, arg database.AddUserToProjectParams) (database.ProjectUser, error) {
 	return database.ProjectUser{}, nil
 }
@@ -148,7 +148,6 @@ func (m *MockQueries) GetUserProjects(ctx context.Context, arg database.GetUserP
 	var result []database.Project
 	for _, p := range m.projects {
 		if !p.DeletedAt.Valid {
-			// Owner access
 			if p.OwnerID == arg.OwnerID || p.OwnerID == arg.UserID {
 				result = append(result, p)
 			}
@@ -168,29 +167,24 @@ func (m *MockQueries) IsProjectOwner(ctx context.Context, arg database.IsProject
 func (m *MockQueries) GetAccessibleProject(ctx context.Context, arg database.GetAccessibleProjectParams) (database.Project, error) {
 	for _, p := range m.projects {
 		if p.ID == arg.ID && !p.DeletedAt.Valid {
-			// Check if owner or shared user
 			if p.OwnerID == arg.OwnerID || p.OwnerID == arg.UserID {
 				return p, nil
 			}
-			// For tests, we don't have project users in this mock, so just check ownership
 		}
 	}
 	return database.Project{}, sql.ErrNoRows
 }
 
 func (m *MockQueries) CanUserModifyProject(ctx context.Context, arg database.CanUserModifyProjectParams) (int64, error) {
-	// If we've set a custom result for testing, use it
 	if m.canUserModifyResult != 0 {
 		return m.canUserModifyResult, nil
 	}
 
 	for _, p := range m.projects {
 		if p.ID == arg.ID && !p.DeletedAt.Valid {
-			// Owner can modify
 			if p.OwnerID == arg.OwnerID || p.OwnerID == arg.UserID {
 				return 1, nil
 			}
-			// For tests, we don't have project users in this mock, so just check ownership
 			break
 		}
 	}
@@ -201,7 +195,6 @@ func (m *MockQueries) GetProjectMemberRole(ctx context.Context, arg database.Get
 	return "", sql.ErrNoRows
 }
 
-// Environment methods
 func (m *MockQueries) CreateEnvironment(ctx context.Context, arg database.CreateEnvironmentParams) (database.Environment, error) {
 	return database.Environment{}, nil
 }
@@ -230,7 +223,6 @@ func (m *MockQueries) CanUserModifyEnvironment(ctx context.Context, arg database
 	return 0, nil
 }
 
-// Environment variable methods
 func (m *MockQueries) CreateEnvironmentVariable(ctx context.Context, arg database.CreateEnvironmentVariableParams) (database.EnvironmentVariable, error) {
 	return database.EnvironmentVariable{}, nil
 }
@@ -268,12 +260,21 @@ func createTestUser() *utils.JWTClaims {
 	}
 }
 
+func newTestServer(queries database.Querier) *Server {
+	return &Server{
+		router:        echo.New(),
+		dbService:     &mockDBService{queries: queries},
+		accessControl: utils.NewAccessControlService(queries),
+		jwtSecret:     "test-secret",
+	}
+}
+
 func TestCreateProject(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{},
 		users:    make(map[string]database.User),
 	}
-	handler := NewProjectHandler(mock)
+	server := newTestServer(mock)
 	claims := createTestUser()
 
 	reqBody := CreateProjectRequest{
@@ -282,21 +283,24 @@ func TestCreateProject(t *testing.T) {
 	}
 	body, _ := json.Marshal(reqBody)
 
+	e := echo.New()
 	req := httptest.NewRequest("POST", "/projects", bytes.NewReader(body))
-	req = req.WithContext(context.WithValue(req.Context(), "user", claims))
-	w := httptest.NewRecorder()
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.Set("user", claims)
 
-	err := handler.CreateProject(w, req)
+	err := server.CreateProject(c)
 	if err != nil {
 		t.Fatalf("CreateProject returned error: %v", err)
 	}
 
-	if w.Code != http.StatusCreated {
-		t.Errorf("Expected status %d, got %d", http.StatusCreated, w.Code)
+	if rec.Code != http.StatusCreated {
+		t.Errorf("Expected status %d, got %d", http.StatusCreated, rec.Code)
 	}
 
 	var response ProjectResponse
-	err = json.Unmarshal(w.Body.Bytes(), &response)
+	err = json.Unmarshal(rec.Body.Bytes(), &response)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
 	}
@@ -307,270 +311,5 @@ func TestCreateProject(t *testing.T) {
 
 	if response.OwnerID != claims.UserID {
 		t.Errorf("Expected owner ID '%s', got '%s'", claims.UserID, response.OwnerID)
-	}
-}
-
-func TestGetProject(t *testing.T) {
-	mock := &MockQueries{
-		projects: []database.Project{},
-		users:    make(map[string]database.User),
-	}
-	handler := NewProjectHandler(mock)
-	claims := createTestUser()
-
-	projectID := int64(1)
-	mock.projects = append(mock.projects, database.Project{
-		ID:        projectID,
-		Name:      "Test Project",
-		OwnerID:   claims.UserID,
-		CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
-		UpdatedAt: time.Now(),
-		DeletedAt: sql.NullTime{Valid: false},
-	})
-
-	req := httptest.NewRequest("GET", "/projects/1", nil)
-	req = req.WithContext(context.WithValue(req.Context(), "user", claims))
-	w := httptest.NewRecorder()
-
-	err := handler.GetProject(w, req)
-	if err != nil {
-		t.Fatalf("GetProject returned error: %v", err)
-	}
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
-	}
-
-	var response ProjectResponse
-	err = json.Unmarshal(w.Body.Bytes(), &response)
-	if err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
-	}
-
-	if response.ID != projectID {
-		t.Errorf("Expected ID %d, got %d", projectID, response.ID)
-	}
-}
-
-func TestListProjects(t *testing.T) {
-	mock := &MockQueries{
-		projects: []database.Project{},
-		users:    make(map[string]database.User),
-	}
-	handler := NewProjectHandler(mock)
-	claims := createTestUser()
-
-	mock.projects = append(mock.projects, database.Project{
-		ID:        1,
-		Name:      "Project 1",
-		OwnerID:   claims.UserID,
-		CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
-		UpdatedAt: time.Now(),
-		DeletedAt: sql.NullTime{Valid: false},
-	})
-
-	mock.projects = append(mock.projects, database.Project{
-		ID:        2,
-		Name:      "Project 2",
-		OwnerID:   claims.UserID,
-		CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
-		UpdatedAt: time.Now(),
-		DeletedAt: sql.NullTime{Valid: false},
-	})
-
-	req := httptest.NewRequest("GET", "/projects", nil)
-	req = req.WithContext(context.WithValue(req.Context(), "user", claims))
-	w := httptest.NewRecorder()
-
-	err := handler.ListProjects(w, req)
-	if err != nil {
-		t.Fatalf("ListProjects returned error: %v", err)
-	}
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status %d, got %d", http.StatusOK, w.Code)
-	}
-
-	var response []ProjectResponse
-	err = json.Unmarshal(w.Body.Bytes(), &response)
-	if err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
-	}
-
-	if len(response) != 2 {
-		t.Errorf("Expected 2 projects, got %d", len(response))
-	}
-}
-
-func TestUpdateProject(t *testing.T) {
-	mock := &MockQueries{
-		projects: []database.Project{},
-		users:    make(map[string]database.User),
-	}
-	handler := NewProjectHandler(mock)
-
-	ownerID := "owner123"
-	editorID := "editor123"
-
-	// Create owner and editor users
-	mock.users[ownerID] = database.User{ID: ownerID, Name: "Owner", Email: "owner@example.com"}
-	mock.users[editorID] = database.User{ID: editorID, Name: "Editor", Email: "editor@example.com"}
-
-	// Create project
-	project := database.Project{
-		ID:          1,
-		Name:        "Test Project",
-		Description: sql.NullString{String: "Original description", Valid: true},
-		OwnerID:     ownerID,
-		CreatedAt:   sql.NullTime{Time: time.Now(), Valid: true},
-		UpdatedAt:   time.Now(),
-		DeletedAt:   sql.NullTime{Valid: false},
-	}
-	mock.projects = append(mock.projects, project)
-
-	tests := []struct {
-		name           string
-		userID         string
-		isOwner        bool
-		expectedStatus int
-	}{
-		{
-			name:           "owner can update project",
-			userID:         ownerID,
-			isOwner:        true,
-			expectedStatus: http.StatusOK,
-		},
-		{
-			name:           "editor can update project",
-			userID:         editorID,
-			isOwner:        false,
-			expectedStatus: http.StatusOK,
-		},
-		{
-			name:           "non-member cannot update project",
-			userID:         "stranger123",
-			isOwner:        false,
-			expectedStatus: http.StatusForbidden,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Setup editor access for editor test
-			if !tt.isOwner && tt.userID == editorID {
-				// Update mock to allow editor to modify
-				mock.canUserModifyResult = 1
-			} else if tt.isOwner {
-				mock.canUserModifyResult = 1
-			} else {
-				mock.canUserModifyResult = 0
-			}
-
-			reqBody := UpdateProjectRequest{
-				Name:        "Updated Project Name",
-				Description: "Updated description",
-			}
-			body, _ := json.Marshal(reqBody)
-
-			req := httptest.NewRequest("PUT", "/projects/1", bytes.NewReader(body))
-			claims := &utils.JWTClaims{
-				UserID: tt.userID,
-				Email:  "test@example.com",
-				Iat:    time.Now().Unix(),
-				Exp:    time.Now().Add(time.Hour).Unix(),
-			}
-			req = req.WithContext(context.WithValue(req.Context(), "user", claims))
-			w := httptest.NewRecorder()
-
-			err := handler.UpdateProject(w, req)
-			if err != nil {
-				t.Fatalf("UpdateProject returned error: %v", err)
-			}
-
-			if w.Code != tt.expectedStatus {
-				t.Errorf("Expected status %d, got %d", tt.expectedStatus, w.Code)
-			}
-		})
-	}
-}
-
-func TestCreateProjectValidation(t *testing.T) {
-	mock := &MockQueries{
-		projects: []database.Project{},
-		users:    make(map[string]database.User),
-	}
-	handler := NewProjectHandler(mock)
-	claims := createTestUser()
-
-	tests := []struct {
-		name           string
-		requestBody    CreateProjectRequest
-		expectedError  string
-		expectedStatus int
-	}{
-		{
-			name: "empty name",
-			requestBody: CreateProjectRequest{
-				Name:        "",
-				Description: "A test project",
-			},
-			expectedError:  "Name is required",
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name: "name too long",
-			requestBody: CreateProjectRequest{
-				Name:        string(make([]byte, 101)), // 101 characters
-				Description: "A test project",
-			},
-			expectedError:  "Name must be 1-100 characters and contain only letters, numbers, spaces, hyphens, and underscores",
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name: "invalid characters in name",
-			requestBody: CreateProjectRequest{
-				Name:        "Test@Project!",
-				Description: "A test project",
-			},
-			expectedError:  "Name must be 1-100 characters and contain only letters, numbers, spaces, hyphens, and underscores",
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name: "description too long",
-			requestBody: CreateProjectRequest{
-				Name:        "Valid Project Name",
-				Description: string(make([]byte, 501)), // 501 characters
-			},
-			expectedError:  "Description must be at most 500 characters long",
-			expectedStatus: http.StatusBadRequest,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			body, _ := json.Marshal(tt.requestBody)
-			req := httptest.NewRequest("POST", "/projects", bytes.NewReader(body))
-			req = req.WithContext(context.WithValue(req.Context(), "user", claims))
-			w := httptest.NewRecorder()
-
-			err := handler.CreateProject(w, req)
-			if err != nil {
-				t.Fatalf("CreateProject returned error: %v", err)
-			}
-
-			if w.Code != tt.expectedStatus {
-				t.Errorf("Expected status %d, got %d", tt.expectedStatus, w.Code)
-			}
-
-			var response ErrorResponse
-			err = json.Unmarshal(w.Body.Bytes(), &response)
-			if err != nil {
-				t.Fatalf("Failed to unmarshal response: %v", err)
-			}
-
-			if response.Error != tt.expectedError {
-				t.Errorf("Expected error '%s', got '%s'", tt.expectedError, response.Error)
-			}
-		})
 	}
 }

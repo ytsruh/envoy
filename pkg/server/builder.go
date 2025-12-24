@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"ytsruh.com/envoy/pkg/server/middleware"
 	"ytsruh.com/envoy/pkg/utils"
 )
 
@@ -46,7 +47,7 @@ func (b *ServerBuilder) Build() (*Server, error) {
 		jwtSecret:     b.jwtSecret,
 	}
 
-	RegisterMiddleware(b.router, b.timeoutDuration)
+	middleware.RegisterMiddleware(b.router, b.timeoutDuration)
 
 	for _, mw := range b.middlewares {
 		b.router.Use(mw)

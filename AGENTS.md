@@ -4,10 +4,16 @@
 A Go server built using the Echo framework, SQLite, SQLC library, Goose for database migrations, and internal packages.
 
 ## Architecture
-- **Server package** (`pkg/server/`): Contains all HTTP handlers, middleware, and routing logic
-  - Handlers are methods on the `Server` struct and accept Echo's `echo.Context`
-  - Access control is handled via Echo middleware (`RequireProjectOwner`, `RequireProjectEditor`, `RequireProjectViewer`)
-  - Routes are registered in `routes.go` with simplified handler registration
+- **Server package** (`pkg/server/`): Server core, initialization, routing
+  - Server struct in `server.go`, Builder pattern in `builder.go`
+  - Routes registered in `routes.go` with explicit closures
+- **Handlers package** (`pkg/server/handlers/`): All HTTP handlers
+  - Handlers use `HandlerContext` struct for dependencies
+  - Request/response utilities in `pkg/response`
+- **Middleware package** (`pkg/server/middleware/`): All Echo middleware
+  - Auth middleware: JWT validation, user context
+  - Access control middleware: Owner/Editor/Viewer checks
+  - General middleware: logging, CORS, rate limiting
 - **Database package** (`pkg/database/`): Database service, migrations, and SQLC-generated code
 - **Utils package** (`pkg/utils/`): Shared utilities (JWT, password hashing, validation, access control)
 
@@ -23,8 +29,11 @@ A Go server built using the Echo framework, SQLite, SQLC library, Goose for data
 ## Agent rules
 - Follow repository toolchain (use go tools for Go).
 - If adding env variables, create .env.example with placeholders.
-- Handlers are methods on the Server struct in `pkg/server/` package, accepting `echo.Context`.
-- Tests use standard `httptest` with Echo context setup for handler testing.
+- Handlers are functions in `pkg/server/handlers/` with signature:
+  `func Handler(c echo.Context, ctx *handlers.HandlerContext) error`
+- HandlerContext contains Queries, JWTSecret, AccessControl
+- Tests use shared utilities in `handlers/testutil.go`
+- Tests use standard `httptest` with Echo context setup.
 
 ## Quick checklist for agents
 - Run unit tests (single test when debugging) by running 'make test'

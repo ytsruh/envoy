@@ -11,6 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 	dbpkg "ytsruh.com/envoy/pkg/database"
 	database "ytsruh.com/envoy/pkg/database/generated"
+	"ytsruh.com/envoy/pkg/server/middleware"
 	"ytsruh.com/envoy/pkg/utils"
 )
 
@@ -39,7 +40,7 @@ func New(addr string, dbService DBService, jwtSecret string) *Server {
 		addr:          addr,
 		jwtSecret:     jwtSecret,
 	}
-	RegisterMiddleware(e, 30*time.Second)
+	middleware.RegisterMiddleware(e, 30*time.Second)
 	s.RegisterRoutes()
 
 	return s

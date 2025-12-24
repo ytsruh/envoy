@@ -1,4 +1,4 @@
-package server
+package middleware
 
 import (
 	"bytes"
@@ -28,7 +28,6 @@ func TestRecoverMiddleware(t *testing.T) {
 
 	e.ServeHTTP(rec, req)
 
-	// Echo's Recover middleware returns 500 by default
 	if rec.Code != http.StatusInternalServerError {
 		t.Errorf("Expected status 500, got %d", rec.Code)
 	}
@@ -39,14 +38,13 @@ func TestRateLimiterMiddleware(t *testing.T) {
 
 	e := echo.New()
 	e.Use(middleware.RateLimiterWithConfig(middleware.RateLimiterConfig{
-		Store: middleware.NewRateLimiterMemoryStore(2), // Very low limit for testing
+		Store: middleware.NewRateLimiterMemoryStore(2),
 	}))
 
 	e.GET("/test", func(c echo.Context) error {
 		return c.String(http.StatusOK, "OK")
 	})
 
-	// First request should succeed
 	req1 := httptest.NewRequest(http.MethodGet, "/test", nil)
 	rec1 := httptest.NewRecorder()
 	e.ServeHTTP(rec1, req1)
@@ -55,7 +53,6 @@ func TestRateLimiterMiddleware(t *testing.T) {
 		t.Errorf("First request should succeed, got %d", rec1.Code)
 	}
 
-	// Second request should succeed
 	req2 := httptest.NewRequest(http.MethodGet, "/test", nil)
 	rec2 := httptest.NewRecorder()
 	e.ServeHTTP(rec2, req2)
@@ -64,7 +61,6 @@ func TestRateLimiterMiddleware(t *testing.T) {
 		t.Errorf("Second request should succeed, got %d", rec2.Code)
 	}
 
-	// Third request should be rate limited
 	req3 := httptest.NewRequest(http.MethodGet, "/test", nil)
 	rec3 := httptest.NewRecorder()
 	e.ServeHTTP(rec3, req3)
@@ -147,11 +143,9 @@ func TestSecureMiddleware(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", rec.Code)
 	}
 
-	// Test that Secure middleware adds expected built-in headers
-	// Note: These are the actual defaults from Echo's Secure middleware
 	expectedHeaders := map[string]string{
 		"X-Content-Type-Options": "nosniff",
-		"X-Frame-Options":        "SAMEORIGIN", // Echo's default is SAMEORIGIN, not DENY
+		"X-Frame-Options":        "SAMEORIGIN",
 		"X-XSS-Protection":       "1; mode=block",
 	}
 
@@ -161,9 +155,6 @@ func TestSecureMiddleware(t *testing.T) {
 			t.Errorf("Expected header %s=%q, got %q", header, expectedValue, actualValue)
 		}
 	}
-
-	// Strict-Transport-Security is only set for HTTPS requests
-	// so we don't test it here since we're using HTTP
 }
 
 func TestBodyLimitMiddleware(t *testing.T) {
@@ -176,12 +167,12 @@ func TestBodyLimitMiddleware(t *testing.T) {
 	}{
 		{
 			name:           "within_limit",
-			bodySize:       1024, // 1KB
+			bodySize:       1024,
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "exceeds_limit",
-			bodySize:       3 * 1024 * 1024, // 3MB (exceeds 2MB limit)
+			bodySize:       3 * 1024 * 1024,
 			expectedStatus: http.StatusRequestEntityTooLarge,
 		},
 	}
@@ -303,13 +294,11 @@ func TestRequestIDMiddleware(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", rec.Code)
 	}
 
-	// Check that request ID was added to response headers
 	requestID := rec.Header().Get(echo.HeaderXRequestID)
 	if requestID == "" {
 		t.Error("Expected request ID header to be set")
 	}
 
-	// Check that request ID was returned in response body
 	if rec.Body.String() != requestID {
 		t.Errorf("Expected response body to contain request ID %q, got %q", requestID, rec.Body.String())
 	}
@@ -327,7 +316,6 @@ func TestRemoveTrailingSlashMiddleware(t *testing.T) {
 		return c.String(http.StatusOK, "OK")
 	})
 
-	// Test without trailing slash - should work normally
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	rec := httptest.NewRecorder()
 
@@ -337,7 +325,6 @@ func TestRemoveTrailingSlashMiddleware(t *testing.T) {
 		t.Errorf("Expected status 200 for URL without trailing slash, got %d", rec.Code)
 	}
 
-	// Test with trailing slash - should redirect
 	req2 := httptest.NewRequest(http.MethodGet, "/test/", nil)
 	rec2 := httptest.NewRecorder()
 

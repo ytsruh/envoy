@@ -1,4 +1,4 @@
-package server
+package handlers
 
 import (
 	"bytes"
@@ -8,9 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	database "ytsruh.com/envoy/pkg/database/generated"
 	"ytsruh.com/envoy/pkg/utils"
@@ -38,7 +36,7 @@ func (m *MockQueries) CreateProject(ctx context.Context, arg database.CreateProj
 
 func (m *MockQueries) GetProject(ctx context.Context, id int64) (database.Project, error) {
 	for _, p := range m.projects {
-		if p.ID == id && !p.DeletedAt.Valid {
+		if p.ID == id {
 			return p, nil
 		}
 	}
@@ -57,7 +55,7 @@ func (m *MockQueries) ListProjectsByOwner(ctx context.Context, ownerID string) (
 
 func (m *MockQueries) UpdateProject(ctx context.Context, arg database.UpdateProjectParams) (database.Project, error) {
 	for i, p := range m.projects {
-		if p.ID == arg.ID && p.OwnerID == arg.OwnerID && !p.DeletedAt.Valid {
+		if p.ID == arg.ID && !p.DeletedAt.Valid {
 			m.projects[i].Name = arg.Name
 			m.projects[i].Description = arg.Description
 			m.projects[i].UpdatedAt = arg.UpdatedAt
@@ -69,7 +67,7 @@ func (m *MockQueries) UpdateProject(ctx context.Context, arg database.UpdateProj
 
 func (m *MockQueries) DeleteProject(ctx context.Context, arg database.DeleteProjectParams) error {
 	for i, p := range m.projects {
-		if p.ID == arg.ID && p.OwnerID == arg.OwnerID && !p.DeletedAt.Valid {
+		if p.ID == arg.ID && p.OwnerID == arg.OwnerID {
 			m.projects[i].DeletedAt = arg.DeletedAt
 			return nil
 		}
@@ -161,6 +159,11 @@ func (m *MockQueries) GetProjectMembership(ctx context.Context, arg database.Get
 }
 
 func (m *MockQueries) IsProjectOwner(ctx context.Context, arg database.IsProjectOwnerParams) (int64, error) {
+	for _, p := range m.projects {
+		if p.ID == arg.ID && p.OwnerID == arg.OwnerID && !p.DeletedAt.Valid {
+			return 1, nil
+		}
+	}
 	return 0, nil
 }
 
@@ -251,31 +254,14 @@ func (m *MockQueries) CanUserModifyEnvironmentVariable(ctx context.Context, arg 
 	return 0, nil
 }
 
-func createTestUser() *utils.JWTClaims {
-	return &utils.JWTClaims{
-		UserID: uuid.New().String(),
-		Email:  "test@example.com",
-		Iat:    time.Now().Unix(),
-		Exp:    time.Now().Add(time.Hour).Unix(),
-	}
-}
-
-func newTestServer(queries database.Querier) *Server {
-	return &Server{
-		router:        echo.New(),
-		dbService:     &mockDBService{queries: queries},
-		accessControl: utils.NewAccessControlService(queries),
-		jwtSecret:     "test-secret",
-	}
-}
-
 func TestCreateProject(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{},
 		users:    make(map[string]database.User),
 	}
-	server := newTestServer(mock)
-	claims := createTestUser()
+	accessControl := utils.NewAccessControlService(mock)
+	ctx := NewHandlerContext(mock, "test-secret", accessControl)
+	claims := CreateTestUser()
 
 	reqBody := CreateProjectRequest{
 		Name:        "Test Project",
@@ -290,7 +276,7 @@ func TestCreateProject(t *testing.T) {
 	c := e.NewContext(req, rec)
 	c.Set("user", claims)
 
-	err := server.CreateProject(c)
+	err := CreateProject(c, ctx)
 	if err != nil {
 		t.Fatalf("CreateProject returned error: %v", err)
 	}

@@ -1,4 +1,4 @@
-package server
+package handlers
 
 import (
 	_ "embed"
@@ -12,27 +12,7 @@ import (
 //go:embed docs.json
 var openapiSpec []byte
 
-type ErrorResponse struct {
-	Error string `json:"error"`
-}
-
-func sendErrorResponse(c echo.Context, code int, err error) error {
-	return c.JSON(code, ErrorResponse{Error: err.Error()})
-}
-
-func nullStringToStringPtr(ns any) *string {
-	if ns == nil {
-		return nil
-	}
-	switch v := ns.(type) {
-	case string:
-		return &v
-	default:
-		return nil
-	}
-}
-
-func (s *Server) Docs(c echo.Context) error {
+func Docs(c echo.Context, _ *HandlerContext) error {
 	html, err := scalargo.NewV2(
 		scalargo.WithSpecBytes(openapiSpec),
 		scalargo.WithTheme(scalargo.ThemeMoon),
@@ -44,11 +24,11 @@ func (s *Server) Docs(c echo.Context) error {
 	)
 
 	if err != nil {
-		return sendErrorResponse(c, http.StatusInternalServerError, fmt.Errorf("failed to generate documentation: %w", err))
+		return SendErrorResponse(c, http.StatusInternalServerError, fmt.Errorf("failed to generate documentation: %w", err))
 	}
 	return c.HTML(http.StatusOK, html)
 }
 
-func (s *Server) OpenAPI(c echo.Context) error {
+func OpenAPI(c echo.Context, _ *HandlerContext) error {
 	return c.Blob(http.StatusOK, "application/json", openapiSpec)
 }

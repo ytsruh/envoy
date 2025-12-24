@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"ytsruh.com/envoy/pkg/server/handlers"
+	"ytsruh.com/envoy/pkg/server/middleware"
 )
 
 func (s *Server) RegisterRoutes() {
@@ -19,16 +21,27 @@ func (s *Server) RegisterRoutes() {
 }
 
 func (s *Server) RegisterHealthHandler() {
-	s.router.GET("/health", s.Health)
+	ctx := handlers.NewHandlerContext(s.dbService.GetQueries(), s.jwtSecret, s.accessControl)
+	s.router.GET("/health", func(c echo.Context) error {
+		return handlers.Health(c, ctx)
+	})
 }
 
 func (s *Server) RegisterHomeHandler() {
-	s.router.GET("/", s.Home)
+	ctx := handlers.NewHandlerContext(s.dbService.GetQueries(), s.jwtSecret, s.accessControl)
+	s.router.GET("/", func(c echo.Context) error {
+		return handlers.Home(c, ctx)
+	})
 }
 
 func (s *Server) RegisterDocsHandlers() {
-	s.router.GET("/openapi.json", s.OpenAPI)
-	s.router.GET("/docs", s.Docs)
+	ctx := handlers.NewHandlerContext(s.dbService.GetQueries(), s.jwtSecret, s.accessControl)
+	s.router.GET("/openapi.json", func(c echo.Context) error {
+		return handlers.OpenAPI(c, ctx)
+	})
+	s.router.GET("/docs", func(c echo.Context) error {
+		return handlers.Docs(c, ctx)
+	})
 }
 
 func (s *Server) RegisterFaviconHandler() {
@@ -38,44 +51,95 @@ func (s *Server) RegisterFaviconHandler() {
 }
 
 func (s *Server) RegisterAuthHandlers() {
-	auth := JWTAuthMiddleware(s.jwtSecret)
-	s.router.POST("/auth/register", s.Register)
-	s.router.POST("/auth/login", s.Login)
-	s.router.GET("/auth/profile", auth(s.GetProfile))
+	auth := middleware.JWTAuthMiddleware(s.jwtSecret)
+	ctx := handlers.NewHandlerContext(s.dbService.GetQueries(), s.jwtSecret, s.accessControl)
+	s.router.POST("/auth/register", func(c echo.Context) error {
+		return handlers.Register(c, ctx)
+	})
+	s.router.POST("/auth/login", func(c echo.Context) error {
+		return handlers.Login(c, ctx)
+	})
+	s.router.GET("/auth/profile", auth(func(c echo.Context) error {
+		return handlers.GetProfile(c, ctx)
+	}))
 }
 
 func (s *Server) RegisterProjectHandlers() {
-	auth := JWTAuthMiddleware(s.jwtSecret)
-	s.router.POST("/projects", auth(s.CreateProject))
-	s.router.GET("/projects/:id", auth(s.GetProject))
-	s.router.GET("/projects", auth(s.ListProjects))
-	s.router.PUT("/projects/:id", auth(s.UpdateProject))
-	s.router.DELETE("/projects/:id", auth(s.DeleteProject))
+	auth := middleware.JWTAuthMiddleware(s.jwtSecret)
+	ctx := handlers.NewHandlerContext(s.dbService.GetQueries(), s.jwtSecret, s.accessControl)
+	s.router.POST("/projects", auth(func(c echo.Context) error {
+		return handlers.CreateProject(c, ctx)
+	}))
+	s.router.GET("/projects/:id", auth(func(c echo.Context) error {
+		return handlers.GetProject(c, ctx)
+	}))
+	s.router.GET("/projects", auth(func(c echo.Context) error {
+		return handlers.ListProjects(c, ctx)
+	}))
+	s.router.PUT("/projects/:id", auth(func(c echo.Context) error {
+		return handlers.UpdateProject(c, ctx)
+	}))
+	s.router.DELETE("/projects/:id", auth(func(c echo.Context) error {
+		return handlers.DeleteProject(c, ctx)
+	}))
 }
 
 func (s *Server) RegisterProjectSharingHandlers() {
-	auth := JWTAuthMiddleware(s.jwtSecret)
-	s.router.POST("/projects/:id/members", auth(s.AddUserToProject))
-	s.router.DELETE("/projects/:id/members/:user_id", auth(s.RemoveUserFromProject))
-	s.router.PUT("/projects/:id/members/:user_id", auth(s.UpdateUserRole))
-	s.router.GET("/projects/:id/members", auth(s.GetProjectUsers))
-	s.router.GET("/user/projects", auth(s.ListUserProjects))
+	auth := middleware.JWTAuthMiddleware(s.jwtSecret)
+	ctx := handlers.NewHandlerContext(s.dbService.GetQueries(), s.jwtSecret, s.accessControl)
+	s.router.POST("/projects/:id/members", auth(func(c echo.Context) error {
+		return handlers.AddUserToProject(c, ctx)
+	}))
+	s.router.DELETE("/projects/:id/members/:user_id", auth(func(c echo.Context) error {
+		return handlers.RemoveUserFromProject(c, ctx)
+	}))
+	s.router.PUT("/projects/:id/members/:user_id", auth(func(c echo.Context) error {
+		return handlers.UpdateUserRole(c, ctx)
+	}))
+	s.router.GET("/projects/:id/members", auth(func(c echo.Context) error {
+		return handlers.GetProjectUsers(c, ctx)
+	}))
+	s.router.GET("/user/projects", auth(func(c echo.Context) error {
+		return handlers.ListUserProjects(c, ctx)
+	}))
 }
 
 func (s *Server) RegisterEnvironmentHandlers() {
-	auth := JWTAuthMiddleware(s.jwtSecret)
-	s.router.POST("/projects/:project_id/environments", auth(s.CreateEnvironment))
-	s.router.GET("/projects/:project_id/environments/:id", auth(s.GetEnvironment))
-	s.router.GET("/projects/:project_id/environments", auth(s.ListEnvironments))
-	s.router.PUT("/projects/:project_id/environments/:id", auth(s.UpdateEnvironment))
-	s.router.DELETE("/projects/:project_id/environments/:id", auth(s.DeleteEnvironment))
+	auth := middleware.JWTAuthMiddleware(s.jwtSecret)
+	ctx := handlers.NewHandlerContext(s.dbService.GetQueries(), s.jwtSecret, s.accessControl)
+	s.router.POST("/projects/:project_id/environments", auth(func(c echo.Context) error {
+		return handlers.CreateEnvironment(c, ctx)
+	}))
+	s.router.GET("/projects/:project_id/environments/:id", auth(func(c echo.Context) error {
+		return handlers.GetEnvironment(c, ctx)
+	}))
+	s.router.GET("/projects/:project_id/environments", auth(func(c echo.Context) error {
+		return handlers.ListEnvironments(c, ctx)
+	}))
+	s.router.PUT("/projects/:project_id/environments/:id", auth(func(c echo.Context) error {
+		return handlers.UpdateEnvironment(c, ctx)
+	}))
+	s.router.DELETE("/projects/:project_id/environments/:id", auth(func(c echo.Context) error {
+		return handlers.DeleteEnvironment(c, ctx)
+	}))
 }
 
 func (s *Server) RegisterEnvironmentVariableHandlers() {
-	auth := JWTAuthMiddleware(s.jwtSecret)
-	s.router.POST("/projects/:project_id/environments/:environment_id/variables", auth(s.CreateEnvironmentVariable))
-	s.router.GET("/projects/:project_id/environments/:environment_id/variables/:id", auth(s.GetEnvironmentVariable))
-	s.router.GET("/projects/:project_id/environments/:environment_id/variables", auth(s.ListEnvironmentVariables))
-	s.router.PUT("/projects/:project_id/environments/:environment_id/variables/:id", auth(s.UpdateEnvironmentVariable))
-	s.router.DELETE("/projects/:project_id/environments/:environment_id/variables/:id", auth(s.DeleteEnvironmentVariable))
+	auth := middleware.JWTAuthMiddleware(s.jwtSecret)
+	ctx := handlers.NewHandlerContext(s.dbService.GetQueries(), s.jwtSecret, s.accessControl)
+	s.router.POST("/projects/:project_id/environments/:environment_id/variables", auth(func(c echo.Context) error {
+		return handlers.CreateEnvironmentVariable(c, ctx)
+	}))
+	s.router.GET("/projects/:project_id/environments/:environment_id/variables/:id", auth(func(c echo.Context) error {
+		return handlers.GetEnvironmentVariable(c, ctx)
+	}))
+	s.router.GET("/projects/:project_id/environments/:environment_id/variables", auth(func(c echo.Context) error {
+		return handlers.ListEnvironmentVariables(c, ctx)
+	}))
+	s.router.PUT("/projects/:project_id/environments/:environment_id/variables/:id", auth(func(c echo.Context) error {
+		return handlers.UpdateEnvironmentVariable(c, ctx)
+	}))
+	s.router.DELETE("/projects/:project_id/environments/:environment_id/variables/:id", auth(func(c echo.Context) error {
+		return handlers.DeleteEnvironmentVariable(c, ctx)
+	}))
 }

@@ -1,4 +1,4 @@
-package server
+package middleware
 
 import (
 	"net/http"
@@ -15,13 +15,11 @@ func TestJWTAuthMiddleware(t *testing.T) {
 	userID := "user-123"
 	email := "test@example.com"
 
-	// Generate a valid token
 	validToken, err := utils.GenerateJWT(userID, email, jwtSecret)
 	if err != nil {
 		t.Fatalf("Failed to generate JWT: %v", err)
 	}
 
-	// Generate a token with wrong secret
 	wrongSecretToken, err := utils.GenerateJWT(userID, email, "wrong-secret")
 	if err != nil {
 		t.Fatalf("Failed to generate JWT: %v", err)
@@ -82,7 +80,6 @@ func TestJWTAuthMiddleware(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			e := echo.New()
 
-			// Create a test handler that will be called if middleware passes
 			testHandler := func(c echo.Context) error {
 				return c.JSON(http.StatusOK, map[string]string{"message": "success"})
 			}
@@ -94,22 +91,18 @@ func TestJWTAuthMiddleware(t *testing.T) {
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
 
-			// Create middleware and wrap test handler
-			middleware := JWTAuthMiddleware(jwtSecret)
-			handler := middleware(testHandler)
+			mw := JWTAuthMiddleware(jwtSecret)
+			handler := mw(testHandler)
 
-			// Execute
 			err := handler(c)
 			if err != nil {
 				t.Fatalf("Handler returned error: %v", err)
 			}
 
-			// Check status code
 			if rec.Code != tt.expectedStatus {
 				t.Errorf("Expected status %d, got %d", tt.expectedStatus, rec.Code)
 			}
 
-			// Check error message if expected
 			if tt.expectedError != "" {
 				body := rec.Body.String()
 				if !contains(body, tt.expectedError) {
@@ -117,7 +110,6 @@ func TestJWTAuthMiddleware(t *testing.T) {
 				}
 			}
 
-			// Check context if token should be valid
 			if tt.checkContext && tt.expectedStatus == http.StatusOK {
 				claims, ok := GetUserFromContext(c)
 				if !ok {
@@ -196,19 +188,11 @@ func TestGetUserFromContext(t *testing.T) {
 	})
 }
 
-func TestJWTAuthMiddlewareExpiredToken(t *testing.T) {
-	// This test would require creating an expired token
-	// For now, we'll skip it as it would require mocking time
-	// or waiting for token expiration
-	t.Skip("Expired token test requires time mocking")
-}
-
 func TestJWTAuthMiddlewareIntegration(t *testing.T) {
 	jwtSecret := "integration-test-secret"
 	userID := "integration-user"
 	email := "integration@example.com"
 
-	// Generate a valid token
 	token, err := utils.GenerateJWT(userID, email, jwtSecret)
 	if err != nil {
 		t.Fatalf("Failed to generate JWT: %v", err)
@@ -216,12 +200,10 @@ func TestJWTAuthMiddlewareIntegration(t *testing.T) {
 
 	e := echo.New()
 
-	// Create a test handler that checks context
 	handlerCalled := false
 	testHandler := func(c echo.Context) error {
 		handlerCalled = true
 
-		// Verify user is in context
 		claims, ok := GetUserFromContext(c)
 		if !ok {
 			return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -247,22 +229,18 @@ func TestJWTAuthMiddlewareIntegration(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	// Apply middleware
-	middleware := JWTAuthMiddleware(jwtSecret)
-	handler := middleware(testHandler)
+	mw := JWTAuthMiddleware(jwtSecret)
+	handler := mw(testHandler)
 
-	// Execute
 	err = handler(c)
 	if err != nil {
 		t.Fatalf("Handler returned error: %v", err)
 	}
 
-	// Verify handler was called
 	if !handlerCalled {
 		t.Error("Test handler was not called")
 	}
 
-	// Verify response
 	if rec.Code != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", rec.Code)
 	}
@@ -273,7 +251,6 @@ func TestJWTAuthMiddlewareIntegration(t *testing.T) {
 	}
 }
 
-// Helper function to check if string contains substring
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
 		(len(s) > 0 && len(substr) > 0 && stringContains(s, substr)))

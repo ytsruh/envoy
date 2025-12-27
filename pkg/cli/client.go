@@ -98,7 +98,7 @@ func (c *Client) Register(name, email, password string) (*AuthResponse, error) {
 		"password": password,
 	}
 
-	resp, err := c.doRequest("POST", "/api/register", reqBody, false)
+	resp, err := c.doRequest("POST", "/auth/register", reqBody, false)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func (c *Client) Login(email, password string) (*AuthResponse, error) {
 		"password": password,
 	}
 
-	resp, err := c.doRequest("POST", "/api/login", reqBody, false)
+	resp, err := c.doRequest("POST", "/auth/login", reqBody, false)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func (c *Client) Login(email, password string) (*AuthResponse, error) {
 }
 
 func (c *Client) GetProfile() (*ProfileResponse, error) {
-	resp, err := c.doRequest("GET", "/api/profile", nil, true)
+	resp, err := c.doRequest("GET", "/auth/profile", nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func (c *Client) CreateProject(name, description, gitRepo string) (*ProjectRespo
 		reqBody["git_repo"] = gitRepo
 	}
 
-	resp, err := c.doRequest("POST", "/api/projects", reqBody, true)
+	resp, err := c.doRequest("POST", "/projects", reqBody, true)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func (c *Client) CreateProject(name, description, gitRepo string) (*ProjectRespo
 }
 
 func (c *Client) ListProjects() ([]ProjectResponse, error) {
-	resp, err := c.doRequest("GET", "/api/projects", nil, true)
+	resp, err := c.doRequest("GET", "/projects", nil, true)
 	if err != nil {
 		return nil, err
 	}

@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"syscall"
 
 	"golang.org/x/term"
 )
+
+var stdinReader = bufio.NewReader(os.Stdin)
 
 type PromptConfig struct {
 	Prompt    string
@@ -19,8 +20,6 @@ type PromptConfig struct {
 }
 
 func Prompt(cfg PromptConfig) (string, error) {
-	reader := bufio.NewReader(os.Stdin)
-
 	for {
 		if cfg.Default != "" {
 			fmt.Printf("%s [%s]: ", cfg.Prompt, cfg.Default)
@@ -32,14 +31,22 @@ func Prompt(cfg PromptConfig) (string, error) {
 		var err error
 
 		if cfg.Password {
-			bytePassword, err := term.ReadPassword(int(syscall.Stdin))
-			if err != nil {
-				return "", fmt.Errorf("failed to read password: %w", err)
+			if term.IsTerminal(int(os.Stdin.Fd())) {
+				bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
+				if err != nil {
+					return "", fmt.Errorf("failed to read password: %w", err)
+				}
+				input = string(bytePassword)
+				fmt.Println()
+			} else {
+				input, err = stdinReader.ReadString('\n')
+				if err != nil {
+					return "", fmt.Errorf("failed to read password: %w", err)
+				}
+				input = strings.TrimSpace(input)
 			}
-			input = string(bytePassword)
-			fmt.Println()
 		} else {
-			input, err = reader.ReadString('\n')
+			input, err = stdinReader.ReadString('\n')
 			if err != nil {
 				return "", fmt.Errorf("failed to read input: %w", err)
 			}
@@ -104,11 +111,9 @@ func PromptEmail(prompt string) (string, error) {
 }
 
 func Confirm(prompt string) (bool, error) {
-	reader := bufio.NewReader(os.Stdin)
-
 	for {
 		fmt.Printf("%s [y/N]: ", prompt)
-		input, err := reader.ReadString('\n')
+		input, err := stdinReader.ReadString('\n')
 		if err != nil {
 			return false, fmt.Errorf("failed to read input: %w", err)
 		}

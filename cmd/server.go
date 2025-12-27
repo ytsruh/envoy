@@ -4,10 +4,10 @@ package main
 import (
 	"log"
 
-	"ytsruh.com/envoy/pkg/cron"
-	"ytsruh.com/envoy/pkg/database"
-	"ytsruh.com/envoy/pkg/server"
-	"ytsruh.com/envoy/pkg/utils"
+	"ytsruh.com/envoy/server"
+	"ytsruh.com/envoy/server/cron"
+	"ytsruh.com/envoy/server/database"
+	"ytsruh.com/envoy/server/utils"
 )
 
 func main() {

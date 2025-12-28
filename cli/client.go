@@ -21,6 +21,11 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+var (
+	ErrExpiredToken = fmt.Errorf("token has expired")
+	ErrNoToken      = fmt.Errorf("not logged in")
+)
+
 func NewClient() (*Client, error) {
 	serverURL, err := config.GetServerURL()
 	if err != nil {
@@ -39,6 +44,19 @@ func NewClient() (*Client, error) {
 			Timeout: 30 * time.Second,
 		},
 	}, nil
+}
+
+func RequireToken() (*Client, error) {
+	client, err := NewClient()
+	if err != nil {
+		return nil, err
+	}
+
+	if client.token == "" {
+		return nil, ErrNoToken
+	}
+
+	return client, nil
 }
 
 func (c *Client) SetToken(token string) {
@@ -79,6 +97,14 @@ func (c *Client) doRequest(method, path string, body interface{}, authRequired b
 		var errResp ErrorResponse
 		if err := json.NewDecoder(resp.Body).Decode(&errResp); err == nil && errResp.Error != "" {
 			defer resp.Body.Close()
+
+			if resp.StatusCode == http.StatusUnauthorized && errResp.Error == "Token has expired" {
+				if err := config.ClearToken(); err == nil {
+					c.token = ""
+				}
+				return resp, ErrExpiredToken
+			}
+
 			return resp, fmt.Errorf("server error: %s", errResp.Error)
 		}
 	}
@@ -195,7 +221,7 @@ func (c *Client) ListProjects() ([]ProjectResponse, error) {
 }
 
 func (c *Client) GetProject(projectID int64) (*ProjectResponse, error) {
-	resp, err := c.doRequest("GET", fmt.Sprintf("/api/projects/%d", projectID), nil, true)
+	resp, err := c.doRequest("GET", fmt.Sprintf("/projects/%d", projectID), nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +245,7 @@ func (c *Client) UpdateProject(projectID int64, name, description, gitRepo strin
 		reqBody["git_repo"] = gitRepo
 	}
 
-	resp, err := c.doRequest("PUT", fmt.Sprintf("/api/projects/%d", projectID), reqBody, true)
+	resp, err := c.doRequest("PUT", fmt.Sprintf("/projects/%d", projectID), reqBody, true)
 	if err != nil {
 		return nil, err
 	}

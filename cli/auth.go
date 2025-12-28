@@ -110,15 +110,21 @@ var profileCmd = &cobra.Command{
 	Short: "Show your profile information",
 	Long:  "Display your current account information",
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := NewClient()
+		client, err := RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+			if err == ErrNoToken {
+				fmt.Println("Please login first using 'envoy login'")
+			}
 			os.Exit(1)
 		}
 
 		profile, err := client.GetProfile()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+			if err == ErrExpiredToken {
+				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+			}
 			os.Exit(1)
 		}
 

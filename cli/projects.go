@@ -58,15 +58,21 @@ var createProjectCmd = &cobra.Command{
 			}
 		}
 
-		client, err := NewClient()
+		client, err := RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+			if err == ErrNoToken {
+				fmt.Println("Please login first using 'envoy login'")
+			}
 			os.Exit(1)
 		}
 
 		project, err := client.CreateProject(name, description, gitRepo)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to create project: %v\n", err)
+			if err == ErrExpiredToken {
+				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+			}
 			os.Exit(1)
 		}
 
@@ -87,15 +93,21 @@ var listProjectsCmd = &cobra.Command{
 	Short: "List all projects",
 	Long:  "List all projects you have access to",
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := NewClient()
+		client, err := RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+			if err == ErrNoToken {
+				fmt.Println("Please login first using 'envoy login'")
+			}
 			os.Exit(1)
 		}
 
 		projects, err := client.ListProjects()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to list projects: %v\n", err)
+			if err == ErrExpiredToken {
+				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+			}
 			os.Exit(1)
 		}
 
@@ -171,15 +183,21 @@ var updateProjectCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		client, err := NewClient()
+		client, err := RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+			if err == ErrNoToken {
+				fmt.Println("Please login first using 'envoy login'")
+			}
 			os.Exit(1)
 		}
 
 		project, err := client.GetProject(projectID)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
+			if err == ErrExpiredToken {
+				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+			}
 			os.Exit(1)
 		}
 
@@ -210,6 +228,9 @@ var updateProjectCmd = &cobra.Command{
 		updatedProject, err := client.UpdateProject(projectID, name, description, gitRepo)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to update project: %v\n", err)
+			if err == ErrExpiredToken {
+				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+			}
 			os.Exit(1)
 		}
 
@@ -236,15 +257,21 @@ var deleteProjectCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		client, err := NewClient()
+		client, err := RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+			if err == ErrNoToken {
+				fmt.Println("Please login first using 'envoy login'")
+			}
 			os.Exit(1)
 		}
 
 		project, err := client.GetProject(projectID)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
+			if err == ErrExpiredToken {
+				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+			}
 			os.Exit(1)
 		}
 
@@ -262,6 +289,9 @@ var deleteProjectCmd = &cobra.Command{
 
 		if err := client.DeleteProject(projectID); err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to delete project: %v\n", err)
+			if err == ErrExpiredToken {
+				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+			}
 			os.Exit(1)
 		}
 

@@ -134,6 +134,12 @@ var profileCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		environmentID, err := config.GetEnvironmentID()
+		if err != nil {
+			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+			os.Exit(1)
+		}
+
 		fmt.Println("Profile Information:")
 		fmt.Printf("  User ID: %s\n", profile.UserID)
 		fmt.Printf("  Email: %s\n", profile.Email)
@@ -149,6 +155,17 @@ var profileCmd = &cobra.Command{
 			}
 		} else {
 			fmt.Println("  Current Project: None (use 'envoy projects use <id>' to set)")
+		}
+
+		if environmentID != 0 && projectID != 0 {
+			environment, err := client.GetEnvironment(projectID, environmentID)
+			if err != nil {
+				fmt.Printf("  Current Environment: ID: %d (failed to fetch environment details)\n", environmentID)
+			} else {
+				fmt.Printf("  Current Environment: ID: %d, Name: \"%s\"\n", environment.ID, environment.Name)
+			}
+		} else {
+			fmt.Println("  Current Environment: None (use 'envoy environments use <id>' to set)")
 		}
 	},
 }

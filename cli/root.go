@@ -27,4 +27,5 @@ func init() {
 	RootCmd.AddCommand(profileCmd)
 	RootCmd.AddCommand(projectsCmd)
 	RootCmd.AddCommand(environmentsCmd)
+	RootCmd.AddCommand(environmentVariablesCmd)
 }

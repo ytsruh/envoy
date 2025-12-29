@@ -368,6 +368,92 @@ func (c *Client) DeleteEnvironment(projectID, environmentID int64) error {
 	return nil
 }
 
+func (c *Client) CreateEnvironmentVariable(projectID, environmentID int64, key, value string) (*EnvironmentVariableResponse, error) {
+	reqBody := map[string]any{
+		"key":   key,
+		"value": value,
+	}
+
+	resp, err := c.doRequest("POST", fmt.Sprintf("/projects/%d/environments/%d/variables", projectID, environmentID), reqBody, true)
+	if err != nil {
+		return nil, err
+	}
+
+	var varResp EnvironmentVariableResponse
+	if err := c.decodeResponse(resp, &varResp); err != nil {
+		return nil, err
+	}
+
+	return &varResp, nil
+}
+
+func (c *Client) ListEnvironmentVariables(projectID, environmentID int64) ([]EnvironmentVariableResponse, error) {
+	resp, err := c.doRequest("GET", fmt.Sprintf("/projects/%d/environments/%d/variables", projectID, environmentID), nil, true)
+	if err != nil {
+		return nil, err
+	}
+
+	var variables []EnvironmentVariableResponse
+	if err := c.decodeResponse(resp, &variables); err != nil {
+		return nil, err
+	}
+
+	return variables, nil
+}
+
+func (c *Client) GetEnvironmentVariable(projectID, environmentID, variableID int64) (*EnvironmentVariableResponse, error) {
+	resp, err := c.doRequest("GET", fmt.Sprintf("/projects/%d/environments/%d/variables/%d", projectID, environmentID, variableID), nil, true)
+	if err != nil {
+		return nil, err
+	}
+
+	var varResp EnvironmentVariableResponse
+	if err := c.decodeResponse(resp, &varResp); err != nil {
+		return nil, err
+	}
+
+	return &varResp, nil
+}
+
+func (c *Client) UpdateEnvironmentVariable(projectID, environmentID, variableID int64, key, value string) (*EnvironmentVariableResponse, error) {
+	reqBody := map[string]any{
+		"key":   key,
+		"value": value,
+	}
+
+	resp, err := c.doRequest("PUT", fmt.Sprintf("/projects/%d/environments/%d/variables/%d", projectID, environmentID, variableID), reqBody, true)
+	if err != nil {
+		return nil, err
+	}
+
+	var varResp EnvironmentVariableResponse
+	if err := c.decodeResponse(resp, &varResp); err != nil {
+		return nil, err
+	}
+
+	return &varResp, nil
+}
+
+func (c *Client) DeleteEnvironmentVariable(projectID, environmentID, variableID int64) error {
+	resp, err := c.doRequest("DELETE", fmt.Sprintf("/projects/%d/environments/%d/variables/%d", projectID, environmentID, variableID), nil, true)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		var errResp ErrorResponse
+		json.NewDecoder(resp.Body).Decode(&errResp)
+		if errResp.Error != "" {
+			return fmt.Errorf("server error: %s", errResp.Error)
+		}
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
 type AuthResponse struct {
 	Token string   `json:"token"`
 	User  UserData `json:"user"`
@@ -404,4 +490,13 @@ type EnvironmentResponse struct {
 	Description string `json:"description,omitempty"`
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
+}
+
+type EnvironmentVariableResponse struct {
+	ID            int64  `json:"id"`
+	EnvironmentID int64  `json:"environment_id"`
+	Key           string `json:"key"`
+	Value         string `json:"value"`
+	CreatedAt     string `json:"created_at"`
+	UpdatedAt     string `json:"updated_at"`
 }

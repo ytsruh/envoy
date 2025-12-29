@@ -278,6 +278,96 @@ func (c *Client) DeleteProject(projectID int64) error {
 	return nil
 }
 
+func (c *Client) CreateEnvironment(projectID int64, name, description string) (*EnvironmentResponse, error) {
+	reqBody := map[string]any{
+		"name": name,
+	}
+	if description != "" {
+		reqBody["description"] = description
+	}
+
+	resp, err := c.doRequest("POST", fmt.Sprintf("/projects/%d/environments", projectID), reqBody, true)
+	if err != nil {
+		return nil, err
+	}
+
+	var envResp EnvironmentResponse
+	if err := c.decodeResponse(resp, &envResp); err != nil {
+		return nil, err
+	}
+
+	return &envResp, nil
+}
+
+func (c *Client) ListEnvironments(projectID int64) ([]EnvironmentResponse, error) {
+	resp, err := c.doRequest("GET", fmt.Sprintf("/projects/%d/environments", projectID), nil, true)
+	if err != nil {
+		return nil, err
+	}
+
+	var environments []EnvironmentResponse
+	if err := c.decodeResponse(resp, &environments); err != nil {
+		return nil, err
+	}
+
+	return environments, nil
+}
+
+func (c *Client) GetEnvironment(projectID, environmentID int64) (*EnvironmentResponse, error) {
+	resp, err := c.doRequest("GET", fmt.Sprintf("/projects/%d/environments/%d", projectID, environmentID), nil, true)
+	if err != nil {
+		return nil, err
+	}
+
+	var envResp EnvironmentResponse
+	if err := c.decodeResponse(resp, &envResp); err != nil {
+		return nil, err
+	}
+
+	return &envResp, nil
+}
+
+func (c *Client) UpdateEnvironment(projectID, environmentID int64, name, description string) (*EnvironmentResponse, error) {
+	reqBody := map[string]any{
+		"name": name,
+	}
+	if description != "" {
+		reqBody["description"] = description
+	}
+
+	resp, err := c.doRequest("PUT", fmt.Sprintf("/projects/%d/environments/%d", projectID, environmentID), reqBody, true)
+	if err != nil {
+		return nil, err
+	}
+
+	var envResp EnvironmentResponse
+	if err := c.decodeResponse(resp, &envResp); err != nil {
+		return nil, err
+	}
+
+	return &envResp, nil
+}
+
+func (c *Client) DeleteEnvironment(projectID, environmentID int64) error {
+	resp, err := c.doRequest("DELETE", fmt.Sprintf("/projects/%d/environments/%d", projectID, environmentID), nil, true)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		var errResp ErrorResponse
+		json.NewDecoder(resp.Body).Decode(&errResp)
+		if errResp.Error != "" {
+			return fmt.Errorf("server error: %s", errResp.Error)
+		}
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
 type AuthResponse struct {
 	Token string   `json:"token"`
 	User  UserData `json:"user"`
@@ -303,6 +393,15 @@ type ProjectResponse struct {
 	Description string `json:"description,omitempty"`
 	GitRepo     string `json:"git_repo,omitempty"`
 	OwnerID     string `json:"owner_id"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
+}
+
+type EnvironmentResponse struct {
+	ID          int64  `json:"id"`
+	ProjectID   int64  `json:"project_id"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
 }

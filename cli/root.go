@@ -26,4 +26,5 @@ func init() {
 	RootCmd.AddCommand(logoutCmd)
 	RootCmd.AddCommand(profileCmd)
 	RootCmd.AddCommand(projectsCmd)
+	RootCmd.AddCommand(environmentsCmd)
 }

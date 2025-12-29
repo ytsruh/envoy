@@ -35,6 +35,7 @@ func init() {
 type Config struct {
 	ServerURL string `json:"server_url"`
 	Token     string `json:"token"`
+	ProjectID int64  `json:"project_id,omitempty"`
 }
 
 func GetConfigDir() string {
@@ -126,5 +127,31 @@ func ClearToken() error {
 		return err
 	}
 	cfg.Token = ""
+	return Save(cfg)
+}
+
+func GetProjectID() (int64, error) {
+	cfg, err := Load()
+	if err != nil {
+		return 0, err
+	}
+	return cfg.ProjectID, nil
+}
+
+func SetProjectID(id int64) error {
+	cfg, err := Load()
+	if err != nil {
+		return err
+	}
+	cfg.ProjectID = id
+	return Save(cfg)
+}
+
+func ClearProjectID() error {
+	cfg, err := Load()
+	if err != nil {
+		return err
+	}
+	cfg.ProjectID = 0
 	return Save(cfg)
 }

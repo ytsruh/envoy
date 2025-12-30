@@ -19,19 +19,19 @@ type mockAccessControl struct {
 	getRoleErr       error
 }
 
-func (m *mockAccessControl) RequireOwner(ctx context.Context, projectID int64, userID string) error {
+func (m *mockAccessControl) RequireOwner(ctx context.Context, projectID string, userID string) error {
 	return m.requireOwnerErr
 }
 
-func (m *mockAccessControl) RequireEditor(ctx context.Context, projectID int64, userID string) error {
+func (m *mockAccessControl) RequireEditor(ctx context.Context, projectID string, userID string) error {
 	return m.requireEditorErr
 }
 
-func (m *mockAccessControl) RequireViewer(ctx context.Context, projectID int64, userID string) error {
+func (m *mockAccessControl) RequireViewer(ctx context.Context, projectID string, userID string) error {
 	return m.requireViewerErr
 }
 
-func (m *mockAccessControl) GetRole(ctx context.Context, projectID int64, userID string) (string, error) {
+func (m *mockAccessControl) GetRole(ctx context.Context, projectID string, userID string) (string, error) {
 	return m.getRoleResult, m.getRoleErr
 }
 

@@ -22,14 +22,14 @@ func TestListProjects_Simple(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{
 			{
-				ID:        1,
+				ID:        "550e8400-e29b-41d4-a716-446655440001",
 				Name:      "Project 1",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
 				UpdatedAt: time.Now(),
 			},
 			{
-				ID:        2,
+				ID:        "550e8400-e29b-41d4-a716-446655440002",
 				Name:      "Project 2",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
@@ -76,7 +76,7 @@ func TestUpdateProject_Simple(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{
 			{
-				ID:        1,
+				ID:        "550e8400-e29b-41d4-a716-446655440001",
 				Name:      "Original Name",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
@@ -96,12 +96,12 @@ func TestUpdateProject_Simple(t *testing.T) {
 	body, _ := json.Marshal(reqBody)
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPut, "/projects/1", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPut, "/projects/550e8400-e29b-41d4-a716-446655440001", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("id")
-	c.SetParamValues("1")
+	c.SetParamValues("550e8400-e29b-41d4-a716-446655440001")
 	c.Set("user", user)
 
 	err := UpdateProject(c, ctx)
@@ -132,7 +132,7 @@ func TestDeleteProject_Simple(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{
 			{
-				ID:        1,
+				ID:        "550e8400-e29b-41d4-a716-446655440001",
 				Name:      "To Delete",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
@@ -146,11 +146,11 @@ func TestDeleteProject_Simple(t *testing.T) {
 	ctx := NewHandlerContext(mock, "test-secret", accessControl)
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodDelete, "/projects/1", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/projects/550e8400-e29b-41d4-a716-446655440001", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("id")
-	c.SetParamValues("1")
+	c.SetParamValues("550e8400-e29b-41d4-a716-446655440001")
 	c.Set("user", user)
 
 	err := DeleteProject(c, ctx)

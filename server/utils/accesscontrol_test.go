@@ -17,7 +17,7 @@ type mockQuerier struct {
 }
 
 func (m *mockQuerier) IsProjectOwner(ctx context.Context, arg database.IsProjectOwnerParams) (int64, error) {
-	key := fmt.Sprintf("%d:%s", arg.ID, arg.OwnerID)
+	key := fmt.Sprintf("%s:%s", arg.ID, arg.OwnerID)
 	if count, exists := m.projectOwnerCounts[key]; exists {
 		return count, nil
 	}
@@ -40,14 +40,14 @@ func (m *mockQuerier) CanUserModifyEnvironmentVariable(ctx context.Context, arg 
 func (m *mockQuerier) CanUserModifyProject(ctx context.Context, arg database.CanUserModifyProjectParams) (int64, error) {
 	// Check if user is owner (OwnerID and UserID are the same)
 	if arg.OwnerID == arg.UserID {
-		key := fmt.Sprintf("%d:%s", arg.ID, arg.OwnerID)
+		key := fmt.Sprintf("%s:%s", arg.ID, arg.OwnerID)
 		if ownerCount, exists := m.projectOwnerCounts[key]; exists {
 			return ownerCount, nil
 		}
 	}
 
 	// Check if user has editor permissions (OwnerID and UserID are different in tests)
-	key := fmt.Sprintf("%d:%s:%s", arg.ID, arg.OwnerID, arg.UserID)
+	key := fmt.Sprintf("%s:%s:%s", arg.ID, arg.OwnerID, arg.UserID)
 	if count, exists := m.editorPermissionCounts[key]; exists {
 		return count, nil
 	}
@@ -85,7 +85,7 @@ func (m *mockQuerier) GetAccessibleEnvironment(ctx context.Context, arg database
 func (m *mockQuerier) GetAccessibleProject(ctx context.Context, arg database.GetAccessibleProjectParams) (database.Project, error) {
 	// Check if user is owner (OwnerID and UserID are the same)
 	if arg.OwnerID == arg.UserID {
-		key := fmt.Sprintf("%d:%s", arg.ID, arg.OwnerID)
+		key := fmt.Sprintf("%s:%s", arg.ID, arg.OwnerID)
 		if ownerCount, exists := m.projectOwnerCounts[key]; exists && ownerCount > 0 {
 			// Return a dummy project for owners
 			return database.Project{ID: arg.ID, Name: "Test Project"}, nil
@@ -93,18 +93,18 @@ func (m *mockQuerier) GetAccessibleProject(ctx context.Context, arg database.Get
 	}
 
 	// Check if user has viewer permissions
-	key := fmt.Sprintf("%d:%s:%s", arg.ID, arg.OwnerID, arg.UserID)
+	key := fmt.Sprintf("%s:%s:%s", arg.ID, arg.OwnerID, arg.UserID)
 	if project, exists := m.accessibleProjects[key]; exists {
 		return project, nil
 	}
 	return database.Project{}, sql.ErrNoRows
 }
 
-func (m *mockQuerier) GetEnvironment(ctx context.Context, id int64) (database.Environment, error) {
+func (m *mockQuerier) GetEnvironment(ctx context.Context, id string) (database.Environment, error) {
 	return database.Environment{}, nil
 }
 
-func (m *mockQuerier) GetProject(ctx context.Context, id int64) (database.Project, error) {
+func (m *mockQuerier) GetProject(ctx context.Context, id string) (database.Project, error) {
 	return database.Project{}, nil
 }
 
@@ -117,14 +117,14 @@ func (m *mockQuerier) GetProjectMemberRole(ctx context.Context, arg database.Get
 }
 
 func (m *mockQuerier) GetProjectMembership(ctx context.Context, arg database.GetProjectMembershipParams) (database.ProjectUser, error) {
-	key := fmt.Sprintf("%d:%s", arg.ProjectID, arg.UserID)
+	key := fmt.Sprintf("%s:%s", arg.ProjectID, arg.UserID)
 	if membership, exists := m.projectMemberships[key]; exists {
 		return membership, nil
 	}
 	return database.ProjectUser{}, sql.ErrNoRows
 }
 
-func (m *mockQuerier) GetProjectUsers(ctx context.Context, projectID int64) ([]database.ProjectUser, error) {
+func (m *mockQuerier) GetProjectUsers(ctx context.Context, projectID string) ([]database.ProjectUser, error) {
 	return []database.ProjectUser{}, nil
 }
 
@@ -144,7 +144,7 @@ func (m *mockQuerier) HardDeleteUser(ctx context.Context, id string) error {
 	return nil
 }
 
-func (m *mockQuerier) ListEnvironmentsByProject(ctx context.Context, projectID int64) ([]database.Environment, error) {
+func (m *mockQuerier) ListEnvironmentsByProject(ctx context.Context, projectID string) ([]database.Environment, error) {
 	return []database.Environment{}, nil
 }
 
@@ -180,7 +180,7 @@ func (m *mockQuerier) CreateEnvironmentVariable(ctx context.Context, arg databas
 	return database.EnvironmentVariable{}, nil
 }
 
-func (m *mockQuerier) DeleteEnvironmentVariable(ctx context.Context, id int64) error {
+func (m *mockQuerier) DeleteEnvironmentVariable(ctx context.Context, id string) error {
 	return nil
 }
 
@@ -188,11 +188,11 @@ func (m *mockQuerier) GetAccessibleEnvironmentVariable(ctx context.Context, arg 
 	return database.EnvironmentVariable{}, nil
 }
 
-func (m *mockQuerier) GetEnvironmentVariable(ctx context.Context, id int64) (database.EnvironmentVariable, error) {
+func (m *mockQuerier) GetEnvironmentVariable(ctx context.Context, id string) (database.EnvironmentVariable, error) {
 	return database.EnvironmentVariable{}, nil
 }
 
-func (m *mockQuerier) ListEnvironmentVariablesByEnvironment(ctx context.Context, environmentID int64) ([]database.EnvironmentVariable, error) {
+func (m *mockQuerier) ListEnvironmentVariablesByEnvironment(ctx context.Context, environmentID string) ([]database.EnvironmentVariable, error) {
 	return []database.EnvironmentVariable{}, nil
 }
 
@@ -204,32 +204,32 @@ func TestAccessControlService_RequireOwner(t *testing.T) {
 	tests := []struct {
 		name          string
 		userID        string
-		projectID     int64
+		projectID     string
 		setupCounts   map[string]int64
 		expectedError string
 	}{
 		{
 			name:      "owner can access project",
 			userID:    "user1",
-			projectID: 1,
+			projectID: "550e8400-e29b-41d4-a716-4466554401",
 			setupCounts: map[string]int64{
-				"1:user1": 1,
+				"550e8400-e29b-41d4-a716-4466554401:user1": 1,
 			},
 			expectedError: "",
 		},
 		{
 			name:      "non-owner cannot access project",
 			userID:    "user2",
-			projectID: 1,
+			projectID: "550e8400-e29b-41d4-a716-4466554401",
 			setupCounts: map[string]int64{
-				"1:user1": 1,
+				"550e8400-e29b-41d4-a716-4466554401:user1": 1,
 			},
 			expectedError: "access denied",
 		},
 		{
 			name:          "no owner data",
 			userID:        "user1",
-			projectID:     1,
+			projectID:     "550e8400-e29b-41d4-a716-4466554401",
 			setupCounts:   map[string]int64{},
 			expectedError: "access denied",
 		},
@@ -263,7 +263,7 @@ func TestAccessControlService_RequireEditor(t *testing.T) {
 	tests := []struct {
 		name              string
 		userID            string
-		projectID         int64
+		projectID         string
 		setupOwnerCounts  map[string]int64
 		setupEditorCounts map[string]int64
 		expectedError     string
@@ -271,35 +271,35 @@ func TestAccessControlService_RequireEditor(t *testing.T) {
 		{
 			name:      "owner can edit project",
 			userID:    "user1",
-			projectID: 1,
+			projectID: "550e8400-e29b-41d4-a716-4466554401",
 			setupOwnerCounts: map[string]int64{
-				"1:user1": 1,
+				"550e8400-e29b-41d4-a716-4466554401:user1": 1,
 			},
 			expectedError: "",
 		},
 		{
 			name:             "editor can edit project",
 			userID:           "user2",
-			projectID:        1,
+			projectID:        "550e8400-e29b-41d4-a716-4466554401",
 			setupOwnerCounts: map[string]int64{},
 			setupEditorCounts: map[string]int64{
-				"1:user2:user2": 1,
+				"550e8400-e29b-41d4-a716-4466554401:user2:user2": 1,
 			},
 			expectedError: "",
 		},
 		{
 			name:      "viewer cannot edit project",
 			userID:    "user3",
-			projectID: 1,
+			projectID: "550e8400-e29b-41d4-a716-4466554401",
 			setupEditorCounts: map[string]int64{
-				"1:user3:user3": 0, // user3 is not an editor
+				"550e8400-e29b-41d4-a716-4466554401:user3:user3": 0, // user3 is not an editor
 			},
 			expectedError: "access denied",
 		},
 		{
 			name:          "no editor data",
 			userID:        "user1",
-			projectID:     1,
+			projectID:     "550e8400-e29b-41d4-a716-4466554401",
 			expectedError: "access denied",
 		},
 	}
@@ -333,7 +333,7 @@ func TestAccessControlService_RequireViewer(t *testing.T) {
 	tests := []struct {
 		name             string
 		userID           string
-		projectID        int64
+		projectID        string
 		setupOwnerCounts map[string]int64
 		setupProjects    map[string]database.Project
 		expectedError    string
@@ -341,34 +341,34 @@ func TestAccessControlService_RequireViewer(t *testing.T) {
 		{
 			name:      "owner can view project",
 			userID:    "user1",
-			projectID: 1,
+			projectID: "550e8400-e29b-41d4-a716-4466554401",
 			setupOwnerCounts: map[string]int64{
-				"1:user1": 1,
+				"550e8400-e29b-41d4-a716-4466554401:user1": 1,
 			},
 			expectedError: "",
 		},
 		{
 			name:      "viewer can view project",
 			userID:    "user2",
-			projectID: 1,
+			projectID: "550e8400-e29b-41d4-a716-4466554401",
 			setupProjects: map[string]database.Project{
-				"1:user2:user2": {ID: 1, Name: "Test Project"},
+				"550e8400-e29b-41d4-a716-4466554401:user2:user2": {ID: "550e8400-e29b-41d4-a716-4466554401", Name: "Test Project"},
 			},
 			expectedError: "",
 		},
 		{
 			name:      "non-member cannot view project",
 			userID:    "user3",
-			projectID: 1,
+			projectID: "550e8400-e29b-41d4-a716-4466554401",
 			setupProjects: map[string]database.Project{
-				"1:user2:user2": {ID: 1, Name: "Test Project"},
+				"550e8400-e29b-41d4-a716-4466554401:user2:user2": {ID: "550e8400-e29b-41d4-a716-4466554401", Name: "Test Project"},
 			},
 			expectedError: "access denied",
 		},
 		{
 			name:          "no accessible project data",
 			userID:        "user1",
-			projectID:     1,
+			projectID:     "550e8400-e29b-41d4-a716-4466554401",
 			expectedError: "access denied",
 		},
 	}
@@ -402,7 +402,7 @@ func TestAccessControlService_GetRole(t *testing.T) {
 	tests := []struct {
 		name             string
 		userID           string
-		projectID        int64
+		projectID        string
 		setupOwnerCounts map[string]int64
 		setupMemberships map[string]database.ProjectUser
 		expectedRole     string
@@ -411,9 +411,9 @@ func TestAccessControlService_GetRole(t *testing.T) {
 		{
 			name:      "user is owner",
 			userID:    "user1",
-			projectID: 1,
+			projectID: "550e8400-e29b-41d4-a716-4466554401",
 			setupOwnerCounts: map[string]int64{
-				"1:user1": 1,
+				"550e8400-e29b-41d4-a716-4466554401:user1": 1,
 			},
 			expectedRole:  "owner",
 			expectedError: "",
@@ -421,10 +421,10 @@ func TestAccessControlService_GetRole(t *testing.T) {
 		{
 			name:             "user is editor",
 			userID:           "user2",
-			projectID:        1,
+			projectID:        "550e8400-e29b-41d4-a716-4466554401",
 			setupOwnerCounts: map[string]int64{},
 			setupMemberships: map[string]database.ProjectUser{
-				"1:user2": {ProjectID: 1, UserID: "user2", Role: "editor"},
+				"550e8400-e29b-41d4-a716-4466554401:user2": {ProjectID: "550e8400-e29b-41d4-a716-4466554401", UserID: "user2", Role: "editor"},
 			},
 			expectedRole:  "editor",
 			expectedError: "",
@@ -432,10 +432,10 @@ func TestAccessControlService_GetRole(t *testing.T) {
 		{
 			name:             "user is viewer",
 			userID:           "user3",
-			projectID:        1,
+			projectID:        "550e8400-e29b-41d4-a716-4466554401",
 			setupOwnerCounts: map[string]int64{},
 			setupMemberships: map[string]database.ProjectUser{
-				"1:user3": {ProjectID: 1, UserID: "user3", Role: "viewer"},
+				"550e8400-e29b-41d4-a716-4466554401:user3": {ProjectID: "550e8400-e29b-41d4-a716-4466554401", UserID: "user3", Role: "viewer"},
 			},
 			expectedRole:  "viewer",
 			expectedError: "",
@@ -443,7 +443,7 @@ func TestAccessControlService_GetRole(t *testing.T) {
 		{
 			name:             "user is not member",
 			userID:           "user4",
-			projectID:        1,
+			projectID:        "550e8400-e29b-41d4-a716-4466554401",
 			setupOwnerCounts: map[string]int64{},
 			setupMemberships: map[string]database.ProjectUser{},
 			expectedRole:     "",
@@ -491,7 +491,7 @@ func TestNewAccessControlService(t *testing.T) {
 	var _ AccessControlService = service
 
 	// Check that the service has the expected methods by calling them
-	err := service.RequireOwner(context.Background(), 1, "test")
+	err := service.RequireOwner(context.Background(), "550e8400-e29b-41d4-a716-4466554401", "test")
 	if err != nil {
 		// Expected to fail since mock is empty, but method should exist
 	}

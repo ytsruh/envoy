@@ -15,19 +15,19 @@ type APIClient interface {
 
 	CreateProject(name, description, gitRepo string) (*ProjectResponse, error)
 	ListProjects() ([]ProjectResponse, error)
-	GetProject(projectID int64) (*ProjectResponse, error)
-	UpdateProject(projectID int64, name, description, gitRepo string) (*ProjectResponse, error)
-	DeleteProject(projectID int64) error
+	GetProject(projectID string) (*ProjectResponse, error)
+	UpdateProject(projectID string, name, description, gitRepo string) (*ProjectResponse, error)
+	DeleteProject(projectID string) error
 
-	CreateEnvironment(projectID int64, name, description string) (*EnvironmentResponse, error)
-	ListEnvironments(projectID int64) ([]EnvironmentResponse, error)
-	GetEnvironment(projectID, environmentID int64) (*EnvironmentResponse, error)
-	UpdateEnvironment(projectID, environmentID int64, name, description string) (*EnvironmentResponse, error)
-	DeleteEnvironment(projectID, environmentID int64) error
+	CreateEnvironment(projectID string, name, description string) (*EnvironmentResponse, error)
+	ListEnvironments(projectID string) ([]EnvironmentResponse, error)
+	GetEnvironment(projectID string, environmentID string) (*EnvironmentResponse, error)
+	UpdateEnvironment(projectID string, environmentID string, name, description string) (*EnvironmentResponse, error)
+	DeleteEnvironment(projectID string, environmentID string) error
 
-	CreateEnvironmentVariable(projectID, environmentID int64, key, value string) (*EnvironmentVariableResponse, error)
-	ListEnvironmentVariables(projectID, environmentID int64) ([]EnvironmentVariableResponse, error)
-	GetEnvironmentVariable(projectID, environmentID, variableID int64) (*EnvironmentVariableResponse, error)
-	UpdateEnvironmentVariable(projectID, environmentID, variableID int64, key, value string) (*EnvironmentVariableResponse, error)
-	DeleteEnvironmentVariable(projectID, environmentID, variableID int64) error
+	CreateEnvironmentVariable(projectID string, environmentID string, key, value string) (*EnvironmentVariableResponse, error)
+	ListEnvironmentVariables(projectID string, environmentID string) ([]EnvironmentVariableResponse, error)
+	GetEnvironmentVariable(projectID string, environmentID string, variableID string) (*EnvironmentVariableResponse, error)
+	UpdateEnvironmentVariable(projectID string, environmentID string, variableID string, key, value string) (*EnvironmentVariableResponse, error)
+	DeleteEnvironmentVariable(projectID string, environmentID string, variableID string) error
 }

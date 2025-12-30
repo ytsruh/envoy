@@ -22,7 +22,7 @@ func TestCreateEnvironment(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{
 			{
-				ID:        1,
+				ID:        "550e8400-e29b-41d4-a716-446655440001",
 				Name:      "Test Project",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
@@ -42,12 +42,12 @@ func TestCreateEnvironment(t *testing.T) {
 	body, _ := json.Marshal(reqBody)
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/projects/1/environments", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/projects/550e8400-e29b-41d4-a716-446655440001/environments", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("project_id")
-	c.SetParamValues("1")
+	c.SetParamValues("550e8400-e29b-41d4-a716-446655440001")
 	c.Set("user", user)
 
 	err := CreateEnvironment(c, ctx)
@@ -68,7 +68,7 @@ func TestListEnvironments(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{
 			{
-				ID:        1,
+				ID:        "550e8400-e29b-41d4-a716-446655440001",
 				Name:      "Test Project",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
@@ -82,11 +82,11 @@ func TestListEnvironments(t *testing.T) {
 	ctx := NewHandlerContext(mock, "test-secret", accessControl)
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/projects/1/environments", nil)
+	req := httptest.NewRequest(http.MethodGet, "/projects/550e8400-e29b-41d4-a716-446655440001/environments", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("project_id")
-	c.SetParamValues("1")
+	c.SetParamValues("550e8400-e29b-41d4-a716-446655440001")
 	c.Set("user", user)
 
 	err := ListEnvironments(c, ctx)
@@ -110,7 +110,7 @@ func TestUpdateEnvironment(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{
 			{
-				ID:        1,
+				ID:        "550e8400-e29b-41d4-a716-446655440001",
 				Name:      "Test Project",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
@@ -130,12 +130,12 @@ func TestUpdateEnvironment(t *testing.T) {
 	body, _ := json.Marshal(reqBody)
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPut, "/projects/1/environments/1", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPut, "/projects/550e8400-e29b-41d4-a716-446655440001/environments/550e8400-e29b-41d4-a716-446655440002", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("id")
-	c.SetParamValues("1")
+	c.SetParamValues("550e8400-e29b-41d4-a716-446655440002")
 	c.Set("user", user)
 
 	err := UpdateEnvironment(c, ctx)
@@ -156,7 +156,7 @@ func TestDeleteEnvironment(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{
 			{
-				ID:        1,
+				ID:        "550e8400-e29b-41d4-a716-446655440001",
 				Name:      "Test Project",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
@@ -170,11 +170,11 @@ func TestDeleteEnvironment(t *testing.T) {
 	ctx := NewHandlerContext(mock, "test-secret", accessControl)
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodDelete, "/projects/1/environments/1", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/projects/550e8400-e29b-41d4-a716-446655440001/environments/550e8400-e29b-41d4-a716-446655440002", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("id")
-	c.SetParamValues("1")
+	c.SetParamValues("550e8400-e29b-41d4-a716-446655440002")
 	c.Set("user", user)
 
 	err := DeleteEnvironment(c, ctx)

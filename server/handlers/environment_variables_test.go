@@ -22,7 +22,7 @@ func TestCreateEnvironmentVariable(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{
 			{
-				ID:        1,
+				ID:        "550e8400-e29b-41d4-a716-446655440001",
 				Name:      "Test Project",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
@@ -43,12 +43,12 @@ func TestCreateEnvironmentVariable(t *testing.T) {
 	body, _ := json.Marshal(reqBody)
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/projects/1/environments/1/variables", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/projects/550e8400-e29b-41d4-a716-446655440001/environments/550e8400-e29b-41d4-a716-446655440002/variables", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("project_id", "environment_id")
-	c.SetParamValues("1", "1")
+	c.SetParamValues("550e8400-e29b-41d4-a716-446655440001", "550e8400-e29b-41d4-a716-4466554402")
 	c.Set("user", user)
 
 	err := CreateEnvironmentVariable(c, ctx)
@@ -69,7 +69,7 @@ func TestListEnvironmentVariables(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{
 			{
-				ID:        1,
+				ID:        "550e8400-e29b-41d4-a716-446655440001",
 				Name:      "Test Project",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
@@ -83,11 +83,11 @@ func TestListEnvironmentVariables(t *testing.T) {
 	ctx := NewHandlerContext(mock, "test-secret", accessControl)
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/projects/1/environments/1/variables", nil)
+	req := httptest.NewRequest(http.MethodGet, "/projects/550e8400-e29b-41d4-a716-446655440001/environments/550e8400-e29b-41d4-a716-446655440002/variables", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("project_id", "environment_id")
-	c.SetParamValues("1", "1")
+	c.SetParamValues("550e8400-e29b-41d4-a716-446655440001", "550e8400-e29b-41d4-a716-446655440002")
 	c.Set("user", user)
 
 	err := ListEnvironmentVariables(c, ctx)
@@ -111,7 +111,7 @@ func TestUpdateEnvironmentVariable(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{
 			{
-				ID:        1,
+				ID:        "550e8400-e29b-41d4-a716-446655440001",
 				Name:      "Test Project",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
@@ -132,12 +132,12 @@ func TestUpdateEnvironmentVariable(t *testing.T) {
 	body, _ := json.Marshal(reqBody)
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPut, "/projects/1/environments/1/variables/1", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPut, "/projects/550e8400-e29b-41d4-a716-446655440001/environments/550e8400-e29b-41d4-a716-4466554402/variables/550e8400-e29b-41d4-a716-4466554403", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("project_id", "id")
-	c.SetParamValues("1", "1")
+	c.SetParamValues("550e8400-e29b-41d4-a716-446655440001", "550e8400-e29b-41d4-a716-4466554403")
 	c.Set("user", user)
 
 	err := UpdateEnvironmentVariable(c, ctx)
@@ -158,7 +158,7 @@ func TestDeleteEnvironmentVariable(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{
 			{
-				ID:        1,
+				ID:        "550e8400-e29b-41d4-a716-446655440001",
 				Name:      "Test Project",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
@@ -172,11 +172,11 @@ func TestDeleteEnvironmentVariable(t *testing.T) {
 	ctx := NewHandlerContext(mock, "test-secret", accessControl)
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodDelete, "/projects/1/environments/1/variables/1", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/projects/550e8400-e29b-41d4-a716-4466554401/environments/550e8400-e29b-41d4-a716-4466554402/variables/550e8400-e29b-41d4-a716-4466554403", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("project_id", "id")
-	c.SetParamValues("1", "1")
+	c.SetParamValues("550e8400-e29b-41d4-a716-4466554401", "550e8400-e29b-41d4-a716-4466554403")
 	c.Set("user", user)
 
 	err := DeleteEnvironmentVariable(c, ctx)

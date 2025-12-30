@@ -23,7 +23,7 @@ func TestAddUserToProject(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{
 			{
-				ID:        1,
+				ID:        "550e8400-e29b-41d4-a716-446655440001",
 				Name:      "Test Project",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
@@ -49,12 +49,12 @@ func TestAddUserToProject(t *testing.T) {
 	body, _ := json.Marshal(reqBody)
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPost, "/projects/1/members", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/projects/550e8400-e29b-41d4-a716-446655440001/members", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("id")
-	c.SetParamValues("1")
+	c.SetParamValues("550e8400-e29b-41d4-a716-446655440001")
 	c.Set("user", user)
 
 	err := AddUserToProject(c, ctx)
@@ -75,7 +75,7 @@ func TestRemoveUserFromProject(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{
 			{
-				ID:        1,
+				ID:        "550e8400-e29b-41d4-a716-446655440001",
 				Name:      "Test Project",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
@@ -89,11 +89,11 @@ func TestRemoveUserFromProject(t *testing.T) {
 	ctx := NewHandlerContext(mock, "test-secret", accessControl)
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodDelete, "/projects/1/members/user-to-remove", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/projects/550e8400-e29b-41d4-a716-446655440001/members/user-to-remove", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("id", "user_id")
-	c.SetParamValues("1", "user-to-remove")
+	c.SetParamValues("550e8400-e29b-41d4-a716-446655440001", "user-to-remove")
 	c.Set("user", user)
 
 	err := RemoveUserFromProject(c, ctx)
@@ -120,7 +120,7 @@ func TestUpdateUserRole(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{
 			{
-				ID:        1,
+				ID:        "550e8400-e29b-41d4-a716-446655440001",
 				Name:      "Test Project",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
@@ -139,12 +139,12 @@ func TestUpdateUserRole(t *testing.T) {
 	body, _ := json.Marshal(reqBody)
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPut, "/projects/1/members/user-id", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPut, "/projects/550e8400-e29b-41d4-a716-446655440001/members/user-id", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("id", "user_id")
-	c.SetParamValues("1", "user-id")
+	c.SetParamValues("550e8400-e29b-41d4-a716-446655440001", "user-id")
 	c.Set("user", user)
 
 	err := UpdateUserRole(c, ctx)
@@ -165,7 +165,7 @@ func TestGetProjectUsers(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{
 			{
-				ID:        1,
+				ID:        "550e8400-e29b-41d4-a716-446655440001",
 				Name:      "Test Project",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
@@ -179,11 +179,11 @@ func TestGetProjectUsers(t *testing.T) {
 	ctx := NewHandlerContext(mock, "test-secret", accessControl)
 
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/projects/1/members", nil)
+	req := httptest.NewRequest(http.MethodGet, "/projects/550e8400-e29b-41d4-a716-446655440001/members", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetParamNames("id")
-	c.SetParamValues("1")
+	c.SetParamValues("550e8400-e29b-41d4-a716-446655440001")
 	c.Set("user", user)
 
 	err := GetProjectUsers(c, ctx)
@@ -207,7 +207,7 @@ func TestListUserProjects(t *testing.T) {
 	mock := &MockQueries{
 		projects: []database.Project{
 			{
-				ID:        1,
+				ID:        "550e8400-e29b-41d4-a716-446655440001",
 				Name:      "Project 1",
 				OwnerID:   user.UserID,
 				CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},

@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	database "ytsruh.com/envoy/server/database/generated"
 	"ytsruh.com/envoy/server/utils"
@@ -23,7 +24,7 @@ type MockQueries struct {
 
 func (m *MockQueries) CreateProject(ctx context.Context, arg database.CreateProjectParams) (database.Project, error) {
 	project := database.Project{
-		ID:          int64(len(m.projects) + 1),
+		ID:          uuid.New().String(),
 		Name:        arg.Name,
 		Description: arg.Description,
 		GitRepo:     arg.GitRepo,
@@ -36,7 +37,7 @@ func (m *MockQueries) CreateProject(ctx context.Context, arg database.CreateProj
 	return project, nil
 }
 
-func (m *MockQueries) GetProject(ctx context.Context, id int64) (database.Project, error) {
+func (m *MockQueries) GetProject(ctx context.Context, id string) (database.Project, error) {
 	for _, p := range m.projects {
 		if p.ID == id {
 			return p, nil
@@ -150,7 +151,7 @@ func (m *MockQueries) UpdateUserRole(ctx context.Context, arg database.UpdateUse
 	return nil
 }
 
-func (m *MockQueries) GetProjectUsers(ctx context.Context, projectID int64) ([]database.ProjectUser, error) {
+func (m *MockQueries) GetProjectUsers(ctx context.Context, projectID string) ([]database.ProjectUser, error) {
 	return []database.ProjectUser{}, nil
 }
 
@@ -214,11 +215,11 @@ func (m *MockQueries) CreateEnvironment(ctx context.Context, arg database.Create
 	return database.Environment{}, nil
 }
 
-func (m *MockQueries) GetEnvironment(ctx context.Context, id int64) (database.Environment, error) {
+func (m *MockQueries) GetEnvironment(ctx context.Context, id string) (database.Environment, error) {
 	return database.Environment{}, nil
 }
 
-func (m *MockQueries) ListEnvironmentsByProject(ctx context.Context, projectID int64) ([]database.Environment, error) {
+func (m *MockQueries) ListEnvironmentsByProject(ctx context.Context, projectID string) ([]database.Environment, error) {
 	return []database.Environment{}, nil
 }
 
@@ -242,7 +243,7 @@ func (m *MockQueries) CreateEnvironmentVariable(ctx context.Context, arg databas
 	return database.EnvironmentVariable{}, nil
 }
 
-func (m *MockQueries) DeleteEnvironmentVariable(ctx context.Context, id int64) error {
+func (m *MockQueries) DeleteEnvironmentVariable(ctx context.Context, id string) error {
 	return nil
 }
 
@@ -250,11 +251,11 @@ func (m *MockQueries) GetAccessibleEnvironmentVariable(ctx context.Context, arg 
 	return database.EnvironmentVariable{}, nil
 }
 
-func (m *MockQueries) GetEnvironmentVariable(ctx context.Context, id int64) (database.EnvironmentVariable, error) {
+func (m *MockQueries) GetEnvironmentVariable(ctx context.Context, id string) (database.EnvironmentVariable, error) {
 	return database.EnvironmentVariable{}, nil
 }
 
-func (m *MockQueries) ListEnvironmentVariablesByEnvironment(ctx context.Context, environmentID int64) ([]database.EnvironmentVariable, error) {
+func (m *MockQueries) ListEnvironmentVariablesByEnvironment(ctx context.Context, environmentID string) ([]database.EnvironmentVariable, error) {
 	return []database.EnvironmentVariable{}, nil
 }
 

@@ -306,7 +306,7 @@ func TestService_GetQueriesReturnsValidQuerier(t *testing.T) {
 
 	// Test that we can call environment methods on the returned querier
 	ctx := context.Background()
-	envs, err := queries.ListEnvironmentsByProject(ctx, "1")
+	envs, err := queries.ListEnvironmentsByProject(ctx, "550e8400-e29b-41d4-a716-4466554401")
 	// This should return empty list, not an error
 	if err != nil {
 		t.Errorf("Expected no error when listing environments from empty database, got: %v", err)

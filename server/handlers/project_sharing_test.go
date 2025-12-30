@@ -12,6 +12,7 @@ import (
 	"github.com/labstack/echo/v4"
 	database "ytsruh.com/envoy/server/database/generated"
 	"ytsruh.com/envoy/server/utils"
+	shared "ytsruh.com/envoy/shared"
 )
 
 func TestAddUserToProject(t *testing.T) {
@@ -234,7 +235,7 @@ func TestListUserProjects(t *testing.T) {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, rec.Code)
 	}
 
-	var resp []UserProjectResponse
+	var resp []shared.UserProjectResponse
 	json.Unmarshal(rec.Body.Bytes(), &resp)
 	if len(resp) != 1 {
 		t.Errorf("Expected 1 project, got %d", len(resp))

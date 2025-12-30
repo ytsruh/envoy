@@ -12,6 +12,7 @@ import (
 	database "ytsruh.com/envoy/server/database/generated"
 	"ytsruh.com/envoy/server/middleware"
 	"ytsruh.com/envoy/server/utils"
+	shared "ytsruh.com/envoy/shared"
 )
 
 type CreateProjectRequest struct {
@@ -27,13 +28,13 @@ type UpdateProjectRequest struct {
 }
 
 type ProjectResponse struct {
-	ID          int64     `json:"id"`
-	Name        string    `json:"name"`
-	Description *string   `json:"description"`
-	GitRepo     *string   `json:"git_repo"`
-	OwnerID     string    `json:"owner_id"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          int64            `json:"id"`
+	Name        string           `json:"name"`
+	Description *string          `json:"description"`
+	GitRepo     *string          `json:"git_repo"`
+	OwnerID     shared.UserID    `json:"owner_id"`
+	CreatedAt   shared.Timestamp `json:"created_at"`
+	UpdatedAt   shared.Timestamp `json:"updated_at"`
 }
 
 func CreateProject(c echo.Context, ctx *HandlerContext) error {
@@ -80,11 +81,11 @@ func CreateProject(c echo.Context, ctx *HandlerContext) error {
 	resp := ProjectResponse{
 		ID:          project.ID,
 		Name:        project.Name,
-		Description: NullStringToStringPtr(project.Description),
-		GitRepo:     NullStringToStringPtr(project.GitRepo),
-		OwnerID:     project.OwnerID,
-		CreatedAt:   project.CreatedAt.Time,
-		UpdatedAt:   project.UpdatedAt.(time.Time),
+		Description: shared.NullStringToStringPtr(project.Description),
+		GitRepo:     shared.NullStringToStringPtr(project.GitRepo),
+		OwnerID:     shared.UserID(project.OwnerID),
+		CreatedAt:   shared.FromTime(project.CreatedAt.Time),
+		UpdatedAt:   shared.FromTime(project.UpdatedAt.(time.Time)),
 	}
 
 	return c.JSON(http.StatusCreated, resp)
@@ -118,11 +119,11 @@ func GetProject(c echo.Context, ctx *HandlerContext) error {
 	resp := ProjectResponse{
 		ID:          project.ID,
 		Name:        project.Name,
-		Description: NullStringToStringPtr(project.Description),
-		GitRepo:     NullStringToStringPtr(project.GitRepo),
-		OwnerID:     project.OwnerID,
-		CreatedAt:   project.CreatedAt.Time,
-		UpdatedAt:   project.UpdatedAt.(time.Time),
+		Description: shared.NullStringToStringPtr(project.Description),
+		GitRepo:     shared.NullStringToStringPtr(project.GitRepo),
+		OwnerID:     shared.UserID(project.OwnerID),
+		CreatedAt:   shared.FromTime(project.CreatedAt.Time),
+		UpdatedAt:   shared.FromTime(project.UpdatedAt.(time.Time)),
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -150,11 +151,11 @@ func ListProjects(c echo.Context, ctx *HandlerContext) error {
 		resp = append(resp, ProjectResponse{
 			ID:          project.ID,
 			Name:        project.Name,
-			Description: NullStringToStringPtr(project.Description),
-			GitRepo:     NullStringToStringPtr(project.GitRepo),
-			OwnerID:     project.OwnerID,
-			CreatedAt:   project.CreatedAt.Time,
-			UpdatedAt:   project.UpdatedAt.(time.Time),
+			Description: shared.NullStringToStringPtr(project.Description),
+			GitRepo:     shared.NullStringToStringPtr(project.GitRepo),
+			OwnerID:     shared.UserID(project.OwnerID),
+			CreatedAt:   shared.FromTime(project.CreatedAt.Time),
+			UpdatedAt:   shared.FromTime(project.UpdatedAt.(time.Time)),
 		})
 	}
 
@@ -226,11 +227,11 @@ func UpdateProject(c echo.Context, ctx *HandlerContext) error {
 	resp := ProjectResponse{
 		ID:          updatedProject.ID,
 		Name:        updatedProject.Name,
-		Description: NullStringToStringPtr(updatedProject.Description),
-		GitRepo:     NullStringToStringPtr(updatedProject.GitRepo),
-		OwnerID:     updatedProject.OwnerID,
-		CreatedAt:   updatedProject.CreatedAt.Time,
-		UpdatedAt:   updatedProject.UpdatedAt.(time.Time),
+		Description: shared.NullStringToStringPtr(updatedProject.Description),
+		GitRepo:     shared.NullStringToStringPtr(updatedProject.GitRepo),
+		OwnerID:     shared.UserID(updatedProject.OwnerID),
+		CreatedAt:   shared.FromTime(updatedProject.CreatedAt.Time),
+		UpdatedAt:   shared.FromTime(updatedProject.UpdatedAt.(time.Time)),
 	}
 
 	return c.JSON(http.StatusOK, resp)

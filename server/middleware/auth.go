@@ -6,6 +6,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"ytsruh.com/envoy/server/utils"
+	shared "ytsruh.com/envoy/shared"
 )
 
 const UserContextKey = "user"
@@ -31,7 +32,7 @@ func JWTAuthMiddleware(jwtSecret string) echo.MiddlewareFunc {
 
 			claims, err := utils.ValidateJWT(token, jwtSecret)
 			if err != nil {
-				if err == utils.ErrExpiredToken {
+				if err == shared.ErrExpiredToken {
 					return c.JSON(http.StatusUnauthorized, map[string]string{
 						"error": "Token has expired",
 					})

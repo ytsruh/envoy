@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"ytsruh.com/envoy/cli/config"
+	shared "ytsruh.com/envoy/shared"
 )
 
 var projectsCmd = &cobra.Command{
@@ -78,13 +79,13 @@ var createProjectCmd = &cobra.Command{
 		}
 
 		fmt.Println("Project created successfully!")
-		fmt.Printf("  ID: %d\n", project.ID)
+		fmt.Printf("  ID: %d\n", shared.ProjectIDToInt64(project.ID))
 		fmt.Printf("  Name: %s\n", project.Name)
-		if project.Description != "" {
-			fmt.Printf("  Description: %s\n", project.Description)
+		if project.Description != nil && *project.Description != "" {
+			fmt.Printf("  Description: %s\n", *project.Description)
 		}
-		if project.GitRepo != "" {
-			fmt.Printf("  Git Repository: %s\n", project.GitRepo)
+		if project.GitRepo != nil && *project.GitRepo != "" {
+			fmt.Printf("  Git Repository: %s\n", *project.GitRepo)
 		}
 	},
 }
@@ -121,17 +122,17 @@ var listProjectsCmd = &cobra.Command{
 
 		fmt.Printf("Found %d project(s):\n\n", len(projects))
 		for _, p := range projects {
-			if p.ID == currentProjectID {
-				fmt.Printf("* ID: %d\n", p.ID)
+			if shared.ProjectIDToInt64(p.ID) == currentProjectID {
+				fmt.Printf("* ID: %d\n", shared.ProjectIDToInt64(p.ID))
 			} else {
-				fmt.Printf("  ID: %d\n", p.ID)
+				fmt.Printf("  ID: %d\n", shared.ProjectIDToInt64(p.ID))
 			}
 			fmt.Printf("  Name: %s\n", p.Name)
-			if p.Description != "" {
-				fmt.Printf("  Description: %s\n", p.Description)
+			if p.Description != nil && *p.Description != "" {
+				fmt.Printf("  Description: %s\n", *p.Description)
 			}
-			if p.GitRepo != "" {
-				fmt.Printf("  Git Repository: %s\n", p.GitRepo)
+			if p.GitRepo != nil && *p.GitRepo != "" {
+				fmt.Printf("  Git Repository: %s\n", *p.GitRepo)
 			}
 			fmt.Printf("  Created: %s\n", p.CreatedAt)
 			fmt.Println()
@@ -164,13 +165,13 @@ var getProjectCmd = &cobra.Command{
 		}
 
 		fmt.Println("Project Details:")
-		fmt.Printf("  ID: %d\n", project.ID)
+		fmt.Printf("  ID: %d\n", shared.ProjectIDToInt64(project.ID))
 		fmt.Printf("  Name: %s\n", project.Name)
-		if project.Description != "" {
-			fmt.Printf("  Description: %s\n", project.Description)
+		if project.Description != nil && *project.Description != "" {
+			fmt.Printf("  Description: %s\n", *project.Description)
 		}
-		if project.GitRepo != "" {
-			fmt.Printf("  Git Repository: %s\n", project.GitRepo)
+		if project.GitRepo != nil && *project.GitRepo != "" {
+			fmt.Printf("  Git Repository: %s\n", *project.GitRepo)
 		}
 		fmt.Printf("  Owner ID: %s\n", project.OwnerID)
 		fmt.Printf("  Created: %s\n", project.CreatedAt)
@@ -219,8 +220,8 @@ var updateProjectCmd = &cobra.Command{
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
 		}
-		if description == "" && project.Description != "" {
-			description = project.Description
+		if description == "" && project.Description != nil {
+			description = *project.Description
 		}
 
 		gitRepo, err := PromptString("Git repository owner/repo (leave empty to keep current)", false)
@@ -228,8 +229,8 @@ var updateProjectCmd = &cobra.Command{
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
 		}
-		if gitRepo == "" && project.GitRepo != "" {
-			gitRepo = project.GitRepo
+		if gitRepo == "" && project.GitRepo != nil {
+			gitRepo = *project.GitRepo
 		}
 
 		updatedProject, err := client.UpdateProject(projectID, name, description, gitRepo)
@@ -243,11 +244,11 @@ var updateProjectCmd = &cobra.Command{
 
 		fmt.Println("Project updated successfully!")
 		fmt.Printf("  Name: %s\n", updatedProject.Name)
-		if updatedProject.Description != "" {
-			fmt.Printf("  Description: %s\n", updatedProject.Description)
+		if updatedProject.Description != nil && *updatedProject.Description != "" {
+			fmt.Printf("  Description: %s\n", *updatedProject.Description)
 		}
-		if updatedProject.GitRepo != "" {
-			fmt.Printf("  Git Repository: %s\n", updatedProject.GitRepo)
+		if updatedProject.GitRepo != nil && *updatedProject.GitRepo != "" {
+			fmt.Printf("  Git Repository: %s\n", *updatedProject.GitRepo)
 		}
 	},
 }

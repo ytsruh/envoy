@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	database "ytsruh.com/envoy/server/database/generated"
+	shared "ytsruh.com/envoy/shared"
 )
 
 type AccessControlService interface {
@@ -34,7 +35,7 @@ func (s *AccessControlServiceImpl) RequireOwner(ctx context.Context, projectID i
 		return fmt.Errorf("failed to check ownership: %w", err)
 	}
 	if count == 0 {
-		return ErrAccessDenied
+		return shared.ErrAccessDenied
 	}
 	return nil
 }
@@ -49,7 +50,7 @@ func (s *AccessControlServiceImpl) RequireEditor(ctx context.Context, projectID 
 		return fmt.Errorf("failed to check editor permissions: %w", err)
 	}
 	if count == 0 {
-		return ErrAccessDenied
+		return shared.ErrAccessDenied
 	}
 	return nil
 }
@@ -61,7 +62,7 @@ func (s *AccessControlServiceImpl) RequireViewer(ctx context.Context, projectID 
 		UserID:  userID,
 	})
 	if err == sql.ErrNoRows {
-		return ErrAccessDenied
+		return shared.ErrAccessDenied
 	}
 	if err != nil {
 		return fmt.Errorf("failed to check viewer permissions: %w", err)
@@ -88,7 +89,7 @@ func (s *AccessControlServiceImpl) GetRole(ctx context.Context, projectID int64,
 		UserID:    userID,
 	})
 	if err == sql.ErrNoRows {
-		return "", ErrNotMember
+		return "", shared.ErrNotMember
 	}
 	if err != nil {
 		return "", fmt.Errorf("failed to get project membership: %w", err)

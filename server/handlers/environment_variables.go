@@ -12,6 +12,7 @@ import (
 	database "ytsruh.com/envoy/server/database/generated"
 	"ytsruh.com/envoy/server/middleware"
 	"ytsruh.com/envoy/server/utils"
+	shared "ytsruh.com/envoy/shared"
 )
 
 type CreateEnvironmentVariableRequest struct {
@@ -27,13 +28,13 @@ type UpdateEnvironmentVariableRequest struct {
 }
 
 type EnvironmentVariableResponse struct {
-	ID            int64     `json:"id"`
-	EnvironmentID int64     `json:"environment_id"`
-	Key           string    `json:"key"`
-	Value         string    `json:"value"`
-	Description   *string   `json:"description"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID            shared.EnvironmentVariableID `json:"id"`
+	EnvironmentID shared.EnvironmentID         `json:"environment_id"`
+	Key           string                       `json:"key"`
+	Value         string                       `json:"value"`
+	Description   *string                      `json:"description"`
+	CreatedAt     shared.Timestamp             `json:"created_at"`
+	UpdatedAt     shared.Timestamp             `json:"updated_at"`
 }
 
 func CreateEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
@@ -82,13 +83,13 @@ func CreateEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
 	}
 
 	resp := EnvironmentVariableResponse{
-		ID:            variable.ID,
-		EnvironmentID: variable.EnvironmentID,
+		ID:            shared.EnvironmentVariableID(variable.ID),
+		EnvironmentID: shared.EnvironmentID(variable.EnvironmentID),
 		Key:           variable.Key,
 		Value:         variable.Value,
-		Description:   NullStringToStringPtr(variable.Description),
-		CreatedAt:     variable.CreatedAt.Time,
-		UpdatedAt:     variable.UpdatedAt.Time,
+		Description:   shared.NullStringToStringPtr(variable.Description),
+		CreatedAt:     shared.FromTime(variable.CreatedAt.Time),
+		UpdatedAt:     shared.FromTime(variable.UpdatedAt.Time),
 	}
 
 	return c.JSON(http.StatusCreated, resp)
@@ -120,13 +121,13 @@ func GetEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
 	}
 
 	resp := EnvironmentVariableResponse{
-		ID:            variable.ID,
-		EnvironmentID: variable.EnvironmentID,
+		ID:            shared.EnvironmentVariableID(variable.ID),
+		EnvironmentID: shared.EnvironmentID(variable.EnvironmentID),
 		Key:           variable.Key,
 		Value:         variable.Value,
-		Description:   NullStringToStringPtr(variable.Description),
-		CreatedAt:     variable.CreatedAt.Time,
-		UpdatedAt:     variable.UpdatedAt.Time,
+		Description:   shared.NullStringToStringPtr(variable.Description),
+		CreatedAt:     shared.FromTime(variable.CreatedAt.Time),
+		UpdatedAt:     shared.FromTime(variable.UpdatedAt.Time),
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -163,13 +164,13 @@ func ListEnvironmentVariables(c echo.Context, ctx *HandlerContext) error {
 	var resp []EnvironmentVariableResponse
 	for _, v := range variables {
 		resp = append(resp, EnvironmentVariableResponse{
-			ID:            v.ID,
-			EnvironmentID: v.EnvironmentID,
+			ID:            shared.EnvironmentVariableID(v.ID),
+			EnvironmentID: shared.EnvironmentID(v.EnvironmentID),
 			Key:           v.Key,
 			Value:         v.Value,
-			Description:   NullStringToStringPtr(v.Description),
-			CreatedAt:     v.CreatedAt.Time,
-			UpdatedAt:     v.UpdatedAt.Time,
+			Description:   shared.NullStringToStringPtr(v.Description),
+			CreatedAt:     shared.FromTime(v.CreatedAt.Time),
+			UpdatedAt:     shared.FromTime(v.UpdatedAt.Time),
 		})
 	}
 
@@ -221,13 +222,13 @@ func UpdateEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
 	}
 
 	resp := EnvironmentVariableResponse{
-		ID:            variable.ID,
-		EnvironmentID: variable.EnvironmentID,
+		ID:            shared.EnvironmentVariableID(variable.ID),
+		EnvironmentID: shared.EnvironmentID(variable.EnvironmentID),
 		Key:           variable.Key,
 		Value:         variable.Value,
-		Description:   NullStringToStringPtr(variable.Description),
-		CreatedAt:     variable.CreatedAt.Time,
-		UpdatedAt:     variable.UpdatedAt.Time,
+		Description:   shared.NullStringToStringPtr(variable.Description),
+		CreatedAt:     shared.FromTime(variable.CreatedAt.Time),
+		UpdatedAt:     shared.FromTime(variable.UpdatedAt.Time),
 	}
 
 	return c.JSON(http.StatusOK, resp)

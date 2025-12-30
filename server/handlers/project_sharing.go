@@ -12,6 +12,7 @@ import (
 	database "ytsruh.com/envoy/server/database/generated"
 	"ytsruh.com/envoy/server/middleware"
 	"ytsruh.com/envoy/server/utils"
+	shared "ytsruh.com/envoy/shared"
 )
 
 type AddUserRequest struct {
@@ -27,15 +28,6 @@ type ProjectUserResponse struct {
 	UserID    string    `json:"user_id"`
 	Role      string    `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
-}
-
-type UserProjectResponse struct {
-	ID          int64     `json:"id"`
-	Name        string    `json:"name"`
-	Description *string   `json:"description"`
-	OwnerID     string    `json:"owner_id"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 func AddUserToProject(c echo.Context, ctx *HandlerContext) error {
@@ -237,15 +229,16 @@ func ListUserProjects(c echo.Context, ctx *HandlerContext) error {
 		return SendErrorResponse(c, http.StatusInternalServerError, fmt.Errorf("failed to fetch projects"))
 	}
 
-	var resp []UserProjectResponse
+	var resp []shared.UserProjectResponse
 	for _, project := range projects {
-		resp = append(resp, UserProjectResponse{
+		resp = append(resp, shared.UserProjectResponse{
 			ID:          project.ID,
 			Name:        project.Name,
-			Description: NullStringToStringPtr(project.Description),
-			OwnerID:     project.OwnerID,
-			CreatedAt:   project.CreatedAt.Time,
-			UpdatedAt:   project.UpdatedAt.(time.Time),
+			Description: shared.NullStringToStringPtr(project.Description),
+			GitRepo:     shared.NullStringToStringPtr(project.GitRepo),
+			OwnerID:     shared.UserID(project.OwnerID),
+			CreatedAt:   shared.FromTime(project.CreatedAt.Time),
+			UpdatedAt:   shared.FromTime(project.UpdatedAt.(time.Time)),
 		})
 	}
 

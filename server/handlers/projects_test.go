@@ -12,6 +12,7 @@ import (
 	"github.com/labstack/echo/v4"
 	database "ytsruh.com/envoy/server/database/generated"
 	"ytsruh.com/envoy/server/utils"
+	shared "ytsruh.com/envoy/shared"
 )
 
 type MockQueries struct {
@@ -306,7 +307,7 @@ func TestCreateProject(t *testing.T) {
 		t.Errorf("Expected name 'Test Project', got '%s'", response.Name)
 	}
 
-	if response.OwnerID != claims.UserID {
+	if shared.UserIDToString(response.OwnerID) != claims.UserID {
 		t.Errorf("Expected owner ID '%s', got '%s'", claims.UserID, response.OwnerID)
 	}
 }

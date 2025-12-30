@@ -12,29 +12,12 @@ import (
 	database "ytsruh.com/envoy/server/database/generated"
 	"ytsruh.com/envoy/server/middleware"
 	"ytsruh.com/envoy/server/utils"
+	shared "ytsruh.com/envoy/shared"
 )
 
-type RegisterRequest struct {
-	Name     string `json:"name" validate:"required"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=8"`
-}
-
-type LoginRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required"`
-}
-
 type AuthResponse struct {
-	Token string   `json:"token"`
-	User  UserData `json:"user"`
-}
-
-type UserData struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	CreatedAt time.Time `json:"created_at"`
+	Token string `json:"token"`
+	User  shared.RegisterResponse
 }
 
 type ProfileResponse struct {
@@ -45,7 +28,7 @@ type ProfileResponse struct {
 }
 
 func Register(c echo.Context, ctx *HandlerContext) error {
-	var req RegisterRequest
+	var req shared.RegisterRequest
 	if err := c.Bind(&req); err != nil {
 		return SendErrorResponse(c, http.StatusBadRequest, err)
 	}
@@ -91,11 +74,11 @@ func Register(c echo.Context, ctx *HandlerContext) error {
 
 	authResp := AuthResponse{
 		Token: token,
-		User: UserData{
-			ID:        user.ID,
+		User: shared.RegisterResponse{
+			UserID:    shared.UserID(user.ID),
 			Name:      user.Name,
 			Email:     user.Email,
-			CreatedAt: user.CreatedAt.Time,
+			CreatedAt: shared.FromTime(user.CreatedAt.Time),
 		},
 	}
 
@@ -103,7 +86,7 @@ func Register(c echo.Context, ctx *HandlerContext) error {
 }
 
 func Login(c echo.Context, ctx *HandlerContext) error {
-	var req LoginRequest
+	var req shared.LoginRequest
 	if err := c.Bind(&req); err != nil {
 		return SendErrorResponse(c, http.StatusBadRequest, err)
 	}
@@ -133,11 +116,11 @@ func Login(c echo.Context, ctx *HandlerContext) error {
 
 	authResp := AuthResponse{
 		Token: token,
-		User: UserData{
-			ID:        user.ID,
+		User: shared.RegisterResponse{
+			UserID:    shared.UserID(user.ID),
 			Name:      user.Name,
 			Email:     user.Email,
-			CreatedAt: user.CreatedAt.Time,
+			CreatedAt: shared.FromTime(user.CreatedAt.Time),
 		},
 	}
 

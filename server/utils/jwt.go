@@ -5,16 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
-)
 
-var (
-	ErrInvalidToken     = errors.New("invalid token")
-	ErrExpiredToken     = errors.New("token has expired")
-	ErrInvalidSignature = errors.New("invalid token signature")
+	shared "ytsruh.com/envoy/shared"
 )
 
 // JWTClaims represents the claims in a JWT token
@@ -73,7 +68,7 @@ func GenerateJWT(userID, email, secret string) (string, error) {
 func ValidateJWT(token, secret string) (*JWTClaims, error) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
-		return nil, ErrInvalidToken
+		return nil, shared.ErrInvalidToken
 	}
 
 	headerEncoded := parts[0]
@@ -84,7 +79,7 @@ func ValidateJWT(token, secret string) (*JWTClaims, error) {
 	expectedSignature := createSignature(message, secret)
 
 	if signature != expectedSignature {
-		return nil, ErrInvalidSignature
+		return nil, shared.ErrInvalidSignature
 	}
 
 	claimsJSON, err := base64.RawURLEncoding.DecodeString(claimsEncoded)
@@ -98,7 +93,7 @@ func ValidateJWT(token, secret string) (*JWTClaims, error) {
 	}
 
 	if time.Now().Unix() > claims.Exp {
-		return nil, ErrExpiredToken
+		return nil, shared.ErrExpiredToken
 	}
 
 	return &claims, nil

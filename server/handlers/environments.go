@@ -12,6 +12,7 @@ import (
 	database "ytsruh.com/envoy/server/database/generated"
 	"ytsruh.com/envoy/server/middleware"
 	"ytsruh.com/envoy/server/utils"
+	shared "ytsruh.com/envoy/shared"
 )
 
 type CreateEnvironmentRequest struct {
@@ -25,12 +26,12 @@ type UpdateEnvironmentRequest struct {
 }
 
 type EnvironmentResponse struct {
-	ID          int64     `json:"id"`
-	ProjectID   int64     `json:"project_id"`
-	Name        string    `json:"name"`
-	Description *string   `json:"description"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          shared.ProjectID `json:"id"`
+	ProjectID   shared.ProjectID `json:"project_id"`
+	Name        string           `json:"name"`
+	Description *string          `json:"description"`
+	CreatedAt   shared.Timestamp `json:"created_at"`
+	UpdatedAt   shared.Timestamp `json:"updated_at"`
 }
 
 func CreateEnvironment(c echo.Context, ctx *HandlerContext) error {
@@ -73,12 +74,12 @@ func CreateEnvironment(c echo.Context, ctx *HandlerContext) error {
 	}
 
 	resp := EnvironmentResponse{
-		ID:          environment.ID,
-		ProjectID:   environment.ProjectID,
+		ID:          shared.ProjectID(environment.ID),
+		ProjectID:   shared.ProjectID(environment.ProjectID),
 		Name:        environment.Name,
-		Description: NullStringToStringPtr(environment.Description),
-		CreatedAt:   environment.CreatedAt.Time,
-		UpdatedAt:   environment.UpdatedAt.Time,
+		Description: shared.NullStringToStringPtr(environment.Description),
+		CreatedAt:   shared.FromTime(environment.CreatedAt.Time),
+		UpdatedAt:   shared.FromTime(environment.UpdatedAt.Time),
 	}
 
 	return c.JSON(http.StatusCreated, resp)
@@ -110,12 +111,12 @@ func GetEnvironment(c echo.Context, ctx *HandlerContext) error {
 	}
 
 	resp := EnvironmentResponse{
-		ID:          environment.ID,
-		ProjectID:   environment.ProjectID,
+		ID:          shared.ProjectID(environment.ID),
+		ProjectID:   shared.ProjectID(environment.ProjectID),
 		Name:        environment.Name,
-		Description: NullStringToStringPtr(environment.Description),
-		CreatedAt:   environment.CreatedAt.Time,
-		UpdatedAt:   environment.UpdatedAt.Time,
+		Description: shared.NullStringToStringPtr(environment.Description),
+		CreatedAt:   shared.FromTime(environment.CreatedAt.Time),
+		UpdatedAt:   shared.FromTime(environment.UpdatedAt.Time),
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -147,12 +148,12 @@ func ListEnvironments(c echo.Context, ctx *HandlerContext) error {
 	var resp []EnvironmentResponse
 	for _, env := range environments {
 		resp = append(resp, EnvironmentResponse{
-			ID:          env.ID,
-			ProjectID:   env.ProjectID,
+			ID:          shared.ProjectID(env.ID),
+			ProjectID:   shared.ProjectID(env.ProjectID),
 			Name:        env.Name,
-			Description: NullStringToStringPtr(env.Description),
-			CreatedAt:   env.CreatedAt.Time,
-			UpdatedAt:   env.UpdatedAt.Time,
+			Description: shared.NullStringToStringPtr(env.Description),
+			CreatedAt:   shared.FromTime(env.CreatedAt.Time),
+			UpdatedAt:   shared.FromTime(env.UpdatedAt.Time),
 		})
 	}
 
@@ -194,12 +195,12 @@ func UpdateEnvironment(c echo.Context, ctx *HandlerContext) error {
 	}
 
 	resp := EnvironmentResponse{
-		ID:          environment.ID,
-		ProjectID:   environment.ProjectID,
+		ID:          shared.ProjectID(environment.ID),
+		ProjectID:   shared.ProjectID(environment.ProjectID),
 		Name:        environment.Name,
-		Description: NullStringToStringPtr(environment.Description),
-		CreatedAt:   environment.CreatedAt.Time,
-		UpdatedAt:   environment.UpdatedAt.Time,
+		Description: shared.NullStringToStringPtr(environment.Description),
+		CreatedAt:   shared.FromTime(environment.CreatedAt.Time),
+		UpdatedAt:   shared.FromTime(environment.UpdatedAt.Time),
 	}
 
 	return c.JSON(http.StatusOK, resp)

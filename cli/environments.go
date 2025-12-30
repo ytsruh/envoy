@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"ytsruh.com/envoy/cli/config"
+	shared "ytsruh.com/envoy/shared"
 )
 
 var environmentsCmd = &cobra.Command{
@@ -85,12 +86,12 @@ var createEnvironmentCmd = &cobra.Command{
 		}
 
 		fmt.Println("Environment created successfully!")
-		fmt.Printf("  ID: %d\n", environment.ID)
+		fmt.Printf("  ID: %d\n", shared.ProjectIDToInt64(environment.ID))
 		fmt.Printf("  Name: %s\n", environment.Name)
-		if environment.Description != "" {
-			fmt.Printf("  Description: %s\n", environment.Description)
+		if environment.Description != nil {
+			fmt.Printf("  Description: %s\n", *environment.Description)
 		}
-		fmt.Printf("  Project ID: %d\n", environment.ProjectID)
+		fmt.Printf("  Project ID: %d\n", shared.ProjectIDToInt64(environment.ProjectID))
 	},
 }
 
@@ -150,14 +151,14 @@ var listEnvironmentsCmd = &cobra.Command{
 
 		fmt.Printf("Found %d environment(s):\n\n", len(environments))
 		for _, env := range environments {
-			if env.ID == currentEnvironmentID {
-				fmt.Printf("* ID: %d\n", env.ID)
+			if shared.ProjectIDToInt64(env.ID) == currentEnvironmentID {
+				fmt.Printf("* ID: %d\n", shared.ProjectIDToInt64(env.ID))
 			} else {
-				fmt.Printf("  ID: %d\n", env.ID)
+				fmt.Printf("  ID: %d\n", shared.ProjectIDToInt64(env.ID))
 			}
 			fmt.Printf("  Name: %s\n", env.Name)
-			if env.Description != "" {
-				fmt.Printf("  Description: %s\n", env.Description)
+			if env.Description != nil && *env.Description != "" {
+				fmt.Printf("  Description: %s\n", *env.Description)
 			}
 			fmt.Printf("  Created: %s\n", env.CreatedAt)
 			fmt.Println()
@@ -219,12 +220,12 @@ var getEnvironmentCmd = &cobra.Command{
 		}
 
 		fmt.Println("Environment Details:")
-		fmt.Printf("  ID: %d\n", environment.ID)
+		fmt.Printf("  ID: %d\n", shared.ProjectIDToInt64(environment.ID))
 		fmt.Printf("  Name: %s\n", environment.Name)
-		if environment.Description != "" {
-			fmt.Printf("  Description: %s\n", environment.Description)
+		if environment.Description != nil {
+			fmt.Printf("  Description: %s\n", *environment.Description)
 		}
-		fmt.Printf("  Project ID: %d\n", environment.ProjectID)
+		fmt.Printf("  Project ID: %d\n", shared.ProjectIDToInt64(environment.ProjectID))
 		fmt.Printf("  Created: %s\n", environment.CreatedAt)
 		fmt.Printf("  Updated: %s\n", environment.UpdatedAt)
 	},
@@ -294,8 +295,8 @@ var updateEnvironmentCmd = &cobra.Command{
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
 		}
-		if description == "" && environment.Description != "" {
-			description = environment.Description
+		if description == "" && environment.Description != nil {
+			description = *environment.Description
 		}
 
 		updatedEnvironment, err := client.UpdateEnvironment(projectID, environmentID, name, description)
@@ -309,8 +310,8 @@ var updateEnvironmentCmd = &cobra.Command{
 
 		fmt.Println("Environment updated successfully!")
 		fmt.Printf("  Name: %s\n", updatedEnvironment.Name)
-		if updatedEnvironment.Description != "" {
-			fmt.Printf("  Description: %s\n", updatedEnvironment.Description)
+		if updatedEnvironment.Description != nil {
+			fmt.Printf("  Description: %s\n", *updatedEnvironment.Description)
 		}
 	},
 }

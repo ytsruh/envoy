@@ -3,6 +3,8 @@ package utils
 import (
 	"testing"
 	"time"
+
+	shared "ytsruh.com/envoy/shared"
 )
 
 func TestGenerateJWT(t *testing.T) {
@@ -68,17 +70,17 @@ func TestValidateJWTInvalidToken(t *testing.T) {
 		{
 			name:  "empty token",
 			token: "",
-			want:  ErrInvalidToken,
+			want:  shared.ErrInvalidToken,
 		},
 		{
 			name:  "malformed token",
 			token: "invalid.token",
-			want:  ErrInvalidToken,
+			want:  shared.ErrInvalidToken,
 		},
 		{
 			name:  "token with invalid format",
 			token: "header.payload",
-			want:  ErrInvalidToken,
+			want:  shared.ErrInvalidToken,
 		},
 	}
 
@@ -104,8 +106,8 @@ func TestValidateJWTInvalidSignature(t *testing.T) {
 	}
 
 	_, err = ValidateJWT(token, wrongSecret)
-	if err != ErrInvalidSignature {
-		t.Errorf("ValidateJWT() with wrong secret error = %v, want %v", err, ErrInvalidSignature)
+	if err != shared.ErrInvalidSignature {
+		t.Errorf("ValidateJWT() with wrong secret error = %v, want %v", err, shared.ErrInvalidSignature)
 	}
 }
 

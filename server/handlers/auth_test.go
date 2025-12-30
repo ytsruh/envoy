@@ -12,6 +12,7 @@ import (
 	"github.com/labstack/echo/v4"
 	database "ytsruh.com/envoy/server/database/generated"
 	"ytsruh.com/envoy/server/utils"
+	shared "ytsruh.com/envoy/shared"
 )
 
 func TestRegister(t *testing.T) {
@@ -26,7 +27,7 @@ func TestRegister(t *testing.T) {
 	}{
 		{
 			name: "successful registration",
-			requestBody: RegisterRequest{
+			requestBody: shared.RegisterRequest{
 				Name:     "John Doe",
 				Email:    "john@example.com",
 				Password: "password123",
@@ -54,7 +55,7 @@ func TestRegister(t *testing.T) {
 		},
 		{
 			name: "duplicate email",
-			requestBody: RegisterRequest{
+			requestBody: shared.RegisterRequest{
 				Name:     "John Doe",
 				Email:    "john@example.com",
 				Password: "password123",
@@ -81,7 +82,7 @@ func TestRegister(t *testing.T) {
 		},
 		{
 			name: "invalid email format",
-			requestBody: RegisterRequest{
+			requestBody: shared.RegisterRequest{
 				Name:     "John Doe",
 				Email:    "invalid-email",
 				Password: "password123",
@@ -98,7 +99,7 @@ func TestRegister(t *testing.T) {
 		},
 		{
 			name: "password too short",
-			requestBody: RegisterRequest{
+			requestBody: shared.RegisterRequest{
 				Name:     "John Doe",
 				Email:    "john@example.com",
 				Password: "short",
@@ -115,7 +116,7 @@ func TestRegister(t *testing.T) {
 		},
 		{
 			name:           "missing name",
-			requestBody:    RegisterRequest{Email: "john@example.com", Password: "password123"},
+			requestBody:    shared.RegisterRequest{Email: "john@example.com", Password: "password123"},
 			setupMock:      func(m *MockQueries) {},
 			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, rec *httptest.ResponseRecorder) {
@@ -179,7 +180,7 @@ func TestLogin(t *testing.T) {
 	}{
 		{
 			name: "successful login",
-			requestBody: LoginRequest{
+			requestBody: shared.LoginRequest{
 				Email:    "john@example.com",
 				Password: "password123",
 			},
@@ -213,7 +214,7 @@ func TestLogin(t *testing.T) {
 		},
 		{
 			name: "user not found",
-			requestBody: LoginRequest{
+			requestBody: shared.LoginRequest{
 				Email:    "nonexistent@example.com",
 				Password: "password123",
 			},
@@ -234,7 +235,7 @@ func TestLogin(t *testing.T) {
 		},
 		{
 			name: "wrong password",
-			requestBody: LoginRequest{
+			requestBody: shared.LoginRequest{
 				Email:    "john@example.com",
 				Password: "wrongpassword",
 			},
@@ -262,7 +263,7 @@ func TestLogin(t *testing.T) {
 		},
 		{
 			name: "invalid email format",
-			requestBody: LoginRequest{
+			requestBody: shared.LoginRequest{
 				Email:    "invalid-email",
 				Password: "password123",
 			},

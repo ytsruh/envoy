@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"ytsruh.com/envoy/cli/config"
+	shared "ytsruh.com/envoy/shared"
 )
 
 type Client struct {
@@ -22,7 +23,7 @@ type ErrorResponse struct {
 }
 
 var (
-	ErrExpiredToken = fmt.Errorf("token has expired")
+	ErrExpiredToken = shared.ErrExpiredToken
 	ErrNoToken      = fmt.Errorf("not logged in")
 )
 
@@ -118,10 +119,10 @@ func (c *Client) decodeResponse(resp *http.Response, v interface{}) error {
 }
 
 func (c *Client) Register(name, email, password string) (*AuthResponse, error) {
-	reqBody := map[string]any{
-		"name":     name,
-		"email":    email,
-		"password": password,
+	reqBody := shared.RegisterRequest{
+		Name:     name,
+		Email:    email,
+		Password: password,
 	}
 
 	resp, err := c.doRequest("POST", "/auth/register", reqBody, false)
@@ -144,9 +145,9 @@ func (c *Client) Register(name, email, password string) (*AuthResponse, error) {
 }
 
 func (c *Client) Login(email, password string) (*AuthResponse, error) {
-	reqBody := map[string]any{
-		"email":    email,
-		"password": password,
+	reqBody := shared.LoginRequest{
+		Email:    email,
+		Password: password,
 	}
 
 	resp, err := c.doRequest("POST", "/auth/login", reqBody, false)
@@ -188,9 +189,13 @@ func (c *Client) CreateProject(name, description, gitRepo string) (*ProjectRespo
 	}
 	if description != "" {
 		reqBody["description"] = description
+	} else {
+		reqBody["description"] = nil
 	}
 	if gitRepo != "" {
 		reqBody["git_repo"] = gitRepo
+	} else {
+		reqBody["git_repo"] = nil
 	}
 
 	resp, err := c.doRequest("POST", "/projects", reqBody, true)
@@ -240,9 +245,13 @@ func (c *Client) UpdateProject(projectID int64, name, description, gitRepo strin
 	}
 	if description != "" {
 		reqBody["description"] = description
+	} else {
+		reqBody["description"] = nil
 	}
 	if gitRepo != "" {
 		reqBody["git_repo"] = gitRepo
+	} else {
+		reqBody["git_repo"] = nil
 	}
 
 	resp, err := c.doRequest("PUT", fmt.Sprintf("/projects/%d", projectID), reqBody, true)
@@ -284,6 +293,8 @@ func (c *Client) CreateEnvironment(projectID int64, name, description string) (*
 	}
 	if description != "" {
 		reqBody["description"] = description
+	} else {
+		reqBody["description"] = nil
 	}
 
 	resp, err := c.doRequest("POST", fmt.Sprintf("/projects/%d/environments", projectID), reqBody, true)
@@ -333,6 +344,8 @@ func (c *Client) UpdateEnvironment(projectID, environmentID int64, name, descrip
 	}
 	if description != "" {
 		reqBody["description"] = description
+	} else {
+		reqBody["description"] = nil
 	}
 
 	resp, err := c.doRequest("PUT", fmt.Sprintf("/projects/%d/environments/%d", projectID, environmentID), reqBody, true)
@@ -455,15 +468,8 @@ func (c *Client) DeleteEnvironmentVariable(projectID, environmentID, variableID 
 }
 
 type AuthResponse struct {
-	Token string   `json:"token"`
-	User  UserData `json:"user"`
-}
-
-type UserData struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Email     string `json:"email"`
-	CreatedAt string `json:"created_at"`
+	Token string `json:"token"`
+	User  shared.RegisterResponse
 }
 
 type ProfileResponse struct {
@@ -474,29 +480,30 @@ type ProfileResponse struct {
 }
 
 type ProjectResponse struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	GitRepo     string `json:"git_repo,omitempty"`
-	OwnerID     string `json:"owner_id"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
+	ID          shared.ProjectID `json:"id"`
+	Name        string           `json:"name"`
+	Description *string          `json:"description"`
+	GitRepo     *string          `json:"git_repo"`
+	OwnerID     shared.UserID    `json:"owner_id"`
+	CreatedAt   shared.Timestamp `json:"created_at"`
+	UpdatedAt   shared.Timestamp `json:"updated_at"`
 }
 
 type EnvironmentResponse struct {
-	ID          int64  `json:"id"`
-	ProjectID   int64  `json:"project_id"`
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
+	ID          shared.ProjectID `json:"id"`
+	ProjectID   shared.ProjectID `json:"project_id"`
+	Name        string           `json:"name"`
+	Description *string          `json:"description"`
+	CreatedAt   shared.Timestamp `json:"created_at"`
+	UpdatedAt   shared.Timestamp `json:"updated_at"`
 }
 
 type EnvironmentVariableResponse struct {
-	ID            int64  `json:"id"`
-	EnvironmentID int64  `json:"environment_id"`
-	Key           string `json:"key"`
-	Value         string `json:"value"`
-	CreatedAt     string `json:"created_at"`
-	UpdatedAt     string `json:"updated_at"`
+	ID            shared.EnvironmentVariableID `json:"id"`
+	EnvironmentID shared.EnvironmentID         `json:"environment_id"`
+	Key           string                       `json:"key"`
+	Value         string                       `json:"value"`
+	Description   *string                      `json:"description"`
+	CreatedAt     shared.Timestamp             `json:"created_at"`
+	UpdatedAt     shared.Timestamp             `json:"updated_at"`
 }

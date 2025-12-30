@@ -46,10 +46,6 @@ start: build
 		@echo "Starting $(BINARY)..."
 		./$(BINARY)
 
-# Build CLI binary
-build-cli:
-	$(GOBUILD) -tags=cli -o $(CLI_BINARY) $(CMD_DIR)/cli.go
-
 # Run the CLI (development)
 run-cli:
 	$(GORUN) -tags=cli $(CMD_DIR)/cli.go
@@ -66,6 +62,6 @@ help:
 	@echo "  make test         - run all tests (go test ./...)"
 	@echo "  make test-ci      - run all tests with race detector and coverage"
 	@echo "  make start        - build and run the binary"
-	@echo "  make build-cli    - build the CLI binary"
+	@echo "  make build        - build the binaries"
 	@echo "  make run-cli      - run the CLI (development)"
 	@echo "  make generate     - generate SQL queries"

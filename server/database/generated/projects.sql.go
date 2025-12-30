@@ -11,12 +11,13 @@ import (
 )
 
 const createProject = `-- name: CreateProject :one
-INSERT INTO projects (name, description, git_repo, owner_id, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO projects (id, name, description, git_repo, owner_id, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
 RETURNING id, name, description, git_repo, owner_id, created_at, updated_at, deleted_at
 `
 
 type CreateProjectParams struct {
+	ID          string
 	Name        string
 	Description sql.NullString
 	GitRepo     sql.NullString
@@ -27,6 +28,7 @@ type CreateProjectParams struct {
 
 func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error) {
 	row := q.db.QueryRowContext(ctx, createProject,
+		arg.ID,
 		arg.Name,
 		arg.Description,
 		arg.GitRepo,
@@ -56,7 +58,7 @@ WHERE id = ? AND owner_id = ? AND deleted_at IS NULL
 
 type DeleteProjectParams struct {
 	DeletedAt sql.NullTime
-	ID        int64
+	ID        string
 	OwnerID   string
 }
 
@@ -71,7 +73,7 @@ FROM projects
 WHERE id = ? AND deleted_at IS NULL
 `
 
-func (q *Queries) GetProject(ctx context.Context, id int64) (Project, error) {
+func (q *Queries) GetProject(ctx context.Context, id string) (Project, error) {
 	row := q.db.QueryRowContext(ctx, getProject, id)
 	var i Project
 	err := row.Scan(
@@ -165,7 +167,7 @@ type UpdateProjectParams struct {
 	Description sql.NullString
 	GitRepo     sql.NullString
 	UpdatedAt   interface{}
-	ID          int64
+	ID          string
 	OwnerID     string
 }
 

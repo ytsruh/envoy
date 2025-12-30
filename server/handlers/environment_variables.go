@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -38,15 +37,8 @@ type EnvironmentVariableResponse struct {
 }
 
 func CreateEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
-	projectID, err := strconv.ParseInt(c.Param("project_id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
-	}
-
-	environmentID, err := strconv.ParseInt(c.Param("environment_id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid environment ID"))
-	}
+	projectID := c.Param("project_id")
+	environmentID := c.Param("environment_id")
 
 	claims, ok := middleware.GetUserFromContext(c)
 	if !ok {
@@ -70,7 +62,9 @@ func CreateEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
 	defer cancel()
 
 	now := time.Now()
+	variableID := utils.GenerateUUID()
 	variable, err := ctx.Queries.CreateEnvironmentVariable(dbCtx, database.CreateEnvironmentVariableParams{
+		ID:            variableID,
 		Key:           req.Key,
 		Value:         req.Value,
 		Description:   sql.NullString{String: req.Description, Valid: req.Description != ""},
@@ -96,10 +90,7 @@ func CreateEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
 }
 
 func GetEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid environment variable ID"))
-	}
+	id := c.Param("id")
 
 	claims, ok := middleware.GetUserFromContext(c)
 	if !ok {
@@ -134,15 +125,8 @@ func GetEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
 }
 
 func ListEnvironmentVariables(c echo.Context, ctx *HandlerContext) error {
-	projectID, err := strconv.ParseInt(c.Param("project_id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
-	}
-
-	environmentID, err := strconv.ParseInt(c.Param("environment_id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid environment ID"))
-	}
+	projectID := c.Param("project_id")
+	environmentID := c.Param("environment_id")
 
 	claims, ok := middleware.GetUserFromContext(c)
 	if !ok {
@@ -178,15 +162,8 @@ func ListEnvironmentVariables(c echo.Context, ctx *HandlerContext) error {
 }
 
 func UpdateEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
-	projectID, err := strconv.ParseInt(c.Param("project_id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
-	}
-
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid environment variable ID"))
-	}
+	projectID := c.Param("project_id")
+	id := c.Param("id")
 
 	claims, ok := middleware.GetUserFromContext(c)
 	if !ok {
@@ -235,15 +212,8 @@ func UpdateEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
 }
 
 func DeleteEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
-	projectID, err := strconv.ParseInt(c.Param("project_id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
-	}
-
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid environment variable ID"))
-	}
+	projectID := c.Param("project_id")
+	id := c.Param("id")
 
 	claims, ok := middleware.GetUserFromContext(c)
 	if !ok {
@@ -257,7 +227,7 @@ func DeleteEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
 	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err = ctx.Queries.DeleteEnvironmentVariable(dbCtx, id)
+	err := ctx.Queries.DeleteEnvironmentVariable(dbCtx, id)
 	if err != nil {
 		return SendErrorResponse(c, http.StatusInternalServerError, fmt.Errorf("failed to delete environment variable"))
 	}

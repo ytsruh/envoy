@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"os"
-	"strconv"
 
 	"github.com/spf13/cobra"
 	"ytsruh.com/envoy/cli/config"
@@ -37,7 +36,7 @@ var createEnvironmentCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if projectID == 0 {
+		if projectID == "" {
 			fmt.Println("No current project set.")
 			fmt.Println("Please set a project with:")
 			fmt.Println("  envoy projects use <id>")
@@ -53,7 +52,7 @@ var createEnvironmentCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Printf("Creating environment for project: %s (ID: %d)\n", project.Name, project.ID)
+		fmt.Printf("Creating environment for project: %s (ID: %s)\n", project.Name, project.ID)
 		confirmed, err := Confirm("Is this correct?")
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
@@ -87,12 +86,12 @@ var createEnvironmentCmd = &cobra.Command{
 		}
 
 		fmt.Println("Environment created successfully!")
-		fmt.Printf("  ID: %d\n", shared.ProjectIDToInt64(environment.ID))
+		fmt.Printf("  ID: %s\n", environment.ID)
 		fmt.Printf("  Name: %s\n", environment.Name)
 		if environment.Description != nil {
 			fmt.Printf("  Description: %s\n", *environment.Description)
 		}
-		fmt.Printf("  Project ID: %d\n", shared.ProjectIDToInt64(environment.ProjectID))
+		fmt.Printf("  Project ID: %s\n", environment.ProjectID)
 	},
 }
 
@@ -113,20 +112,16 @@ var listEnvironmentsCmd = &cobra.Command{
 
 		currentEnvironmentID, _ := config.GetEnvironmentID()
 
-		var projectID int64
+		var projectID string
 		if len(args) > 0 {
-			projectID, err = strconv.ParseInt(args[0], 10, 64)
-			if err != nil {
-				fmt.Fprintf(cmd.OutOrStderr(), "Invalid project ID: %v\n", err)
-				os.Exit(1)
-			}
+			projectID = args[0]
 		} else {
 			projectID, err = config.GetProjectID()
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
-			if projectID == 0 {
+			if projectID == "" {
 				fmt.Println("No current project set.")
 				fmt.Println("Please set a project with:")
 				fmt.Println("  envoy projects use <id>")
@@ -152,10 +147,10 @@ var listEnvironmentsCmd = &cobra.Command{
 
 		fmt.Printf("Found %d environment(s):\n\n", len(environments))
 		for _, env := range environments {
-			if shared.ProjectIDToInt64(env.ID) == currentEnvironmentID {
-				fmt.Printf("* ID: %d\n", shared.ProjectIDToInt64(env.ID))
+			if string(env.ID) == currentEnvironmentID {
+				fmt.Printf("* ID: %s\n", env.ID)
 			} else {
-				fmt.Printf("  ID: %d\n", shared.ProjectIDToInt64(env.ID))
+				fmt.Printf("  ID: %s\n", env.ID)
 			}
 			fmt.Printf("  Name: %s\n", env.Name)
 			if env.Description != nil && *env.Description != "" {
@@ -173,11 +168,7 @@ var getEnvironmentCmd = &cobra.Command{
 	Long:  "Get detailed information about a specific environment",
 	Args:  cobra.RangeArgs(1, 2),
 	Run: func(cmd *cobra.Command, args []string) {
-		environmentID, err := strconv.ParseInt(args[0], 10, 64)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Invalid environment ID: %v\n", err)
-			os.Exit(1)
-		}
+		environmentID := args[0]
 
 		client, err := controllers.RequireToken()
 		if err != nil {
@@ -188,20 +179,16 @@ var getEnvironmentCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		var projectID int64
+		var projectID string
 		if len(args) > 1 {
-			projectID, err = strconv.ParseInt(args[1], 10, 64)
-			if err != nil {
-				fmt.Fprintf(cmd.OutOrStderr(), "Invalid project ID: %v\n", err)
-				os.Exit(1)
-			}
+			projectID = args[1]
 		} else {
 			projectID, err = config.GetProjectID()
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
-			if projectID == 0 {
+			if projectID == "" {
 				fmt.Println("No current project set.")
 				fmt.Println("Please set a project with:")
 				fmt.Println("  envoy projects use <id>")
@@ -221,12 +208,12 @@ var getEnvironmentCmd = &cobra.Command{
 		}
 
 		fmt.Println("Environment Details:")
-		fmt.Printf("  ID: %d\n", shared.ProjectIDToInt64(environment.ID))
+		fmt.Printf("  ID: %s\n", environment.ID)
 		fmt.Printf("  Name: %s\n", environment.Name)
 		if environment.Description != nil {
 			fmt.Printf("  Description: %s\n", *environment.Description)
 		}
-		fmt.Printf("  Project ID: %d\n", shared.ProjectIDToInt64(environment.ProjectID))
+		fmt.Printf("  Project ID: %s\n", environment.ProjectID)
 		fmt.Printf("  Created: %s\n", environment.CreatedAt)
 		fmt.Printf("  Updated: %s\n", environment.UpdatedAt)
 	},
@@ -238,11 +225,7 @@ var updateEnvironmentCmd = &cobra.Command{
 	Long:  "Update environment name and description",
 	Args:  cobra.RangeArgs(1, 2),
 	Run: func(cmd *cobra.Command, args []string) {
-		environmentID, err := strconv.ParseInt(args[0], 10, 64)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Invalid environment ID: %v\n", err)
-			os.Exit(1)
-		}
+		environmentID := args[0]
 
 		client, err := controllers.RequireToken()
 		if err != nil {
@@ -253,20 +236,16 @@ var updateEnvironmentCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		var projectID int64
+		var projectID string
 		if len(args) > 1 {
-			projectID, err = strconv.ParseInt(args[1], 10, 64)
-			if err != nil {
-				fmt.Fprintf(cmd.OutOrStderr(), "Invalid project ID: %v\n", err)
-				os.Exit(1)
-			}
+			projectID = args[1]
 		} else {
 			projectID, err = config.GetProjectID()
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
-			if projectID == 0 {
+			if projectID == "" {
 				fmt.Println("No current project set.")
 				fmt.Println("Please set a project with:")
 				fmt.Println("  envoy projects use <id>")
@@ -323,11 +302,7 @@ var deleteEnvironmentCmd = &cobra.Command{
 	Long:  "Delete an environment permanently",
 	Args:  cobra.RangeArgs(1, 2),
 	Run: func(cmd *cobra.Command, args []string) {
-		environmentID, err := strconv.ParseInt(args[0], 10, 64)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Invalid environment ID: %v\n", err)
-			os.Exit(1)
-		}
+		environmentID := args[0]
 
 		client, err := controllers.RequireToken()
 		if err != nil {
@@ -338,20 +313,16 @@ var deleteEnvironmentCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		var projectID int64
+		var projectID string
 		if len(args) > 1 {
-			projectID, err = strconv.ParseInt(args[1], 10, 64)
-			if err != nil {
-				fmt.Fprintf(cmd.OutOrStderr(), "Invalid project ID: %v\n", err)
-				os.Exit(1)
-			}
+			projectID = args[1]
 		} else {
 			projectID, err = config.GetProjectID()
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
-			if projectID == 0 {
+			if projectID == "" {
 				fmt.Println("No current project set.")
 				fmt.Println("Please set a project with:")
 				fmt.Println("  envoy projects use <id>")
@@ -370,7 +341,7 @@ var deleteEnvironmentCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Printf("Are you sure you want to delete environment '%s' (ID: %d)?\n", environment.Name, environment.ID)
+		fmt.Printf("Are you sure you want to delete environment '%s' (ID: %s)?\n", environment.Name, environment.ID)
 		confirmed, err := Confirm("This action cannot be undone")
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
@@ -397,14 +368,10 @@ var deleteEnvironmentCmd = &cobra.Command{
 var useEnvironmentCmd = &cobra.Command{
 	Use:   "use <id>",
 	Short: "Set current environment",
-	Long:  "Set the current environment for subsequent commands",
+	Long:  "Set current environment for subsequent commands",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		environmentID, err := strconv.ParseInt(args[0], 10, 64)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Invalid environment ID: %v\n", err)
-			os.Exit(1)
-		}
+		environmentID := args[0]
 
 		projectID, err := config.GetProjectID()
 		if err != nil {
@@ -412,7 +379,7 @@ var useEnvironmentCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if projectID == 0 {
+		if projectID == "" {
 			fmt.Println("No current project set.")
 			fmt.Println("Please set a project first with:")
 			fmt.Println("  envoy projects use <id>")
@@ -442,7 +409,7 @@ var useEnvironmentCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Printf("Now using environment: %s (ID: %d)\n", environment.Name, environment.ID)
+		fmt.Printf("Now using environment: %s (ID: %s)\n", environment.Name, environment.ID)
 	},
 }
 

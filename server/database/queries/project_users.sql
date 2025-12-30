@@ -1,6 +1,6 @@
 -- name: AddUserToProject :one
-INSERT INTO project_users (project_id, user_id, role, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO project_users (id, project_id, user_id, role, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?)
 RETURNING id, project_id, user_id, role, created_at, updated_at;
 
 -- name: RemoveUserFromProject :exec

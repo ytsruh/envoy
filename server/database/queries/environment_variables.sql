@@ -1,6 +1,6 @@
 -- name: CreateEnvironmentVariable :one
-INSERT INTO environment_variables (environment_id, key, value, description, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO environment_variables (id, environment_id, key, value, description, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
 RETURNING id, environment_id, key, value, description, created_at, updated_at;
 
 -- name: GetEnvironmentVariable :one

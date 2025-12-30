@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -31,10 +30,7 @@ type ProjectUserResponse struct {
 }
 
 func AddUserToProject(c echo.Context, ctx *HandlerContext) error {
-	projectID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
-	}
+	projectID := c.Param("id")
 
 	var req AddUserRequest
 	if err := c.Bind(&req); err != nil {
@@ -71,7 +67,9 @@ func AddUserToProject(c echo.Context, ctx *HandlerContext) error {
 		return SendErrorResponse(c, http.StatusInternalServerError, fmt.Errorf("failed to fetch user"))
 	}
 
+	projectUserID := utils.GenerateUUID()
 	projectUser, err := ctx.Queries.AddUserToProject(dbCtx, database.AddUserToProjectParams{
+		ID:        projectUserID,
 		ProjectID: projectID,
 		UserID:    req.UserID,
 		Role:      req.Role,
@@ -90,10 +88,7 @@ func AddUserToProject(c echo.Context, ctx *HandlerContext) error {
 }
 
 func RemoveUserFromProject(c echo.Context, ctx *HandlerContext) error {
-	projectID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
-	}
+	projectID := c.Param("id")
 
 	userID := c.Param("user_id")
 	if userID == "" {
@@ -131,10 +126,7 @@ func RemoveUserFromProject(c echo.Context, ctx *HandlerContext) error {
 }
 
 func UpdateUserRole(c echo.Context, ctx *HandlerContext) error {
-	projectID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
-	}
+	projectID := c.Param("id")
 
 	userID := c.Param("user_id")
 	if userID == "" {
@@ -182,10 +174,7 @@ func UpdateUserRole(c echo.Context, ctx *HandlerContext) error {
 }
 
 func GetProjectUsers(c echo.Context, ctx *HandlerContext) error {
-	projectID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
-	}
+	projectID := c.Param("id")
 
 	_, ok := middleware.GetUserFromContext(c)
 	if !ok {

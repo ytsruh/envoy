@@ -11,13 +11,14 @@ import (
 )
 
 const addUserToProject = `-- name: AddUserToProject :one
-INSERT INTO project_users (project_id, user_id, role, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO project_users (id, project_id, user_id, role, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?)
 RETURNING id, project_id, user_id, role, created_at, updated_at
 `
 
 type AddUserToProjectParams struct {
-	ProjectID int64
+	ID        string
+	ProjectID string
 	UserID    string
 	Role      string
 	CreatedAt sql.NullTime
@@ -26,6 +27,7 @@ type AddUserToProjectParams struct {
 
 func (q *Queries) AddUserToProject(ctx context.Context, arg AddUserToProjectParams) (ProjectUser, error) {
 	row := q.db.QueryRowContext(ctx, addUserToProject,
+		arg.ID,
 		arg.ProjectID,
 		arg.UserID,
 		arg.Role,
@@ -56,7 +58,7 @@ AND (
 `
 
 type CanUserModifyProjectParams struct {
-	ID      int64
+	ID      string
 	OwnerID string
 	UserID  string
 }
@@ -79,7 +81,7 @@ AND (p.owner_id = ? OR EXISTS (
 `
 
 type GetAccessibleProjectParams struct {
-	ID      int64
+	ID      string
 	OwnerID string
 	UserID  string
 }
@@ -107,7 +109,7 @@ WHERE pu.project_id = ? AND pu.user_id = ?
 `
 
 type GetProjectMemberRoleParams struct {
-	ProjectID int64
+	ProjectID string
 	UserID    string
 }
 
@@ -125,7 +127,7 @@ WHERE pu.project_id = ? AND pu.user_id = ?
 `
 
 type GetProjectMembershipParams struct {
-	ProjectID int64
+	ProjectID string
 	UserID    string
 }
 
@@ -151,7 +153,7 @@ WHERE pu.project_id = ?
 ORDER BY pu.created_at ASC
 `
 
-func (q *Queries) GetProjectUsers(ctx context.Context, projectID int64) ([]ProjectUser, error) {
+func (q *Queries) GetProjectUsers(ctx context.Context, projectID string) ([]ProjectUser, error) {
 	rows, err := q.db.QueryContext(ctx, getProjectUsers, projectID)
 	if err != nil {
 		return nil, err
@@ -233,7 +235,7 @@ WHERE id = ? AND owner_id = ? AND deleted_at IS NULL
 `
 
 type IsProjectOwnerParams struct {
-	ID      int64
+	ID      string
 	OwnerID string
 }
 
@@ -250,7 +252,7 @@ WHERE project_id = ? AND user_id = ?
 `
 
 type RemoveUserFromProjectParams struct {
-	ProjectID int64
+	ProjectID string
 	UserID    string
 }
 
@@ -268,7 +270,7 @@ WHERE project_id = ? AND user_id = ?
 type UpdateUserRoleParams struct {
 	Role      string
 	UpdatedAt interface{}
-	ProjectID int64
+	ProjectID string
 	UserID    string
 }
 

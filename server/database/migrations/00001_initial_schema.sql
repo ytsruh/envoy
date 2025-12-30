@@ -10,7 +10,7 @@ CREATE TABLE users (
 );
 
 CREATE TABLE projects (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id text PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT,
   git_repo TEXT,
@@ -23,8 +23,8 @@ CREATE TABLE projects (
 );
 
 CREATE TABLE project_users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  project_id INTEGER NOT NULL,
+  id text PRIMARY KEY,
+  project_id text NOT NULL,
   user_id text NOT NULL,
   role text NOT NULL DEFAULT 'viewer',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

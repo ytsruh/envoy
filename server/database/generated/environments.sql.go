@@ -23,7 +23,7 @@ AND (
 `
 
 type CanUserModifyEnvironmentParams struct {
-	ID      int64
+	ID      string
 	OwnerID string
 	UserID  string
 }
@@ -36,13 +36,14 @@ func (q *Queries) CanUserModifyEnvironment(ctx context.Context, arg CanUserModif
 }
 
 const createEnvironment = `-- name: CreateEnvironment :one
-INSERT INTO environments (project_id, name, description, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO environments (id, project_id, name, description, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?)
 RETURNING id, project_id, name, description, created_at, updated_at, deleted_at
 `
 
 type CreateEnvironmentParams struct {
-	ProjectID   int64
+	ID          string
+	ProjectID   string
 	Name        string
 	Description sql.NullString
 	CreatedAt   sql.NullTime
@@ -51,6 +52,7 @@ type CreateEnvironmentParams struct {
 
 func (q *Queries) CreateEnvironment(ctx context.Context, arg CreateEnvironmentParams) (Environment, error) {
 	row := q.db.QueryRowContext(ctx, createEnvironment,
+		arg.ID,
 		arg.ProjectID,
 		arg.Name,
 		arg.Description,
@@ -78,7 +80,7 @@ WHERE id = ? AND deleted_at IS NULL
 
 type DeleteEnvironmentParams struct {
 	DeletedAt sql.NullTime
-	ID        int64
+	ID        string
 }
 
 func (q *Queries) DeleteEnvironment(ctx context.Context, arg DeleteEnvironmentParams) error {
@@ -101,7 +103,7 @@ AND (EXISTS (
 `
 
 type GetAccessibleEnvironmentParams struct {
-	ID      int64
+	ID      string
 	OwnerID string
 	UserID  string
 }
@@ -127,7 +129,7 @@ FROM environments
 WHERE id = ? AND deleted_at IS NULL
 `
 
-func (q *Queries) GetEnvironment(ctx context.Context, id int64) (Environment, error) {
+func (q *Queries) GetEnvironment(ctx context.Context, id string) (Environment, error) {
 	row := q.db.QueryRowContext(ctx, getEnvironment, id)
 	var i Environment
 	err := row.Scan(
@@ -149,7 +151,7 @@ WHERE project_id = ? AND deleted_at IS NULL
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListEnvironmentsByProject(ctx context.Context, projectID int64) ([]Environment, error) {
+func (q *Queries) ListEnvironmentsByProject(ctx context.Context, projectID string) ([]Environment, error) {
 	rows, err := q.db.QueryContext(ctx, listEnvironmentsByProject, projectID)
 	if err != nil {
 		return nil, err
@@ -191,7 +193,7 @@ type UpdateEnvironmentParams struct {
 	Name        string
 	Description sql.NullString
 	UpdatedAt   sql.NullTime
-	ID          int64
+	ID          string
 }
 
 func (q *Queries) UpdateEnvironment(ctx context.Context, arg UpdateEnvironmentParams) (Environment, error) {

@@ -26,13 +26,13 @@ type EnvironmentVariableResponse struct {
 	UpdatedAt     shared.Timestamp             `json:"updated_at"`
 }
 
-func (v *VariablesController) CreateEnvironmentVariable(projectID, environmentID int64, key, value string) (*EnvironmentVariableResponse, error) {
+func (v *VariablesController) CreateEnvironmentVariable(projectID, environmentID string, key, value string) (*EnvironmentVariableResponse, error) {
 	reqBody := map[string]any{
 		"key":   key,
 		"value": value,
 	}
 
-	resp, err := v.doRequest("POST", fmt.Sprintf("/projects/%d/environments/%d/variables", projectID, environmentID), reqBody, true)
+	resp, err := v.doRequest("POST", fmt.Sprintf("/projects/%s/environments/%s/variables", projectID, environmentID), reqBody, true)
 	if err != nil {
 		return nil, err
 	}
@@ -45,8 +45,8 @@ func (v *VariablesController) CreateEnvironmentVariable(projectID, environmentID
 	return &varResp, nil
 }
 
-func (v *VariablesController) ListEnvironmentVariables(projectID, environmentID int64) ([]EnvironmentVariableResponse, error) {
-	resp, err := v.doRequest("GET", fmt.Sprintf("/projects/%d/environments/%d/variables", projectID, environmentID), nil, true)
+func (v *VariablesController) ListEnvironmentVariables(projectID, environmentID string) ([]EnvironmentVariableResponse, error) {
+	resp, err := v.doRequest("GET", fmt.Sprintf("/projects/%s/environments/%s/variables", projectID, environmentID), nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +59,8 @@ func (v *VariablesController) ListEnvironmentVariables(projectID, environmentID 
 	return variables, nil
 }
 
-func (v *VariablesController) GetEnvironmentVariable(projectID, environmentID, variableID int64) (*EnvironmentVariableResponse, error) {
-	resp, err := v.doRequest("GET", fmt.Sprintf("/projects/%d/environments/%d/variables/%d", projectID, environmentID, variableID), nil, true)
+func (v *VariablesController) GetEnvironmentVariable(projectID, environmentID, variableID string) (*EnvironmentVariableResponse, error) {
+	resp, err := v.doRequest("GET", fmt.Sprintf("/projects/%s/environments/%s/variables/%s", projectID, environmentID, variableID), nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -73,13 +73,13 @@ func (v *VariablesController) GetEnvironmentVariable(projectID, environmentID, v
 	return &varResp, nil
 }
 
-func (v *VariablesController) UpdateEnvironmentVariable(projectID, environmentID, variableID int64, key, value string) (*EnvironmentVariableResponse, error) {
+func (v *VariablesController) UpdateEnvironmentVariable(projectID, environmentID, variableID string, key, value string) (*EnvironmentVariableResponse, error) {
 	reqBody := map[string]any{
 		"key":   key,
 		"value": value,
 	}
 
-	resp, err := v.doRequest("PUT", fmt.Sprintf("/projects/%d/environments/%d/variables/%d", projectID, environmentID, variableID), reqBody, true)
+	resp, err := v.doRequest("PUT", fmt.Sprintf("/projects/%s/environments/%s/variables/%s", projectID, environmentID, variableID), reqBody, true)
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +92,8 @@ func (v *VariablesController) UpdateEnvironmentVariable(projectID, environmentID
 	return &varResp, nil
 }
 
-func (v *VariablesController) DeleteEnvironmentVariable(projectID, environmentID, variableID int64) error {
-	resp, err := v.doRequest("DELETE", fmt.Sprintf("/projects/%d/environments/%d/variables/%d", projectID, environmentID, variableID), nil, true)
+func (v *VariablesController) DeleteEnvironmentVariable(projectID, environmentID, variableID string) error {
+	resp, err := v.doRequest("DELETE", fmt.Sprintf("/projects/%s/environments/%s/variables/%s", projectID, environmentID, variableID), nil, true)
 	if err != nil {
 		return err
 	}

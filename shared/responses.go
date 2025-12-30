@@ -19,11 +19,11 @@ type ProjectResponse struct {
 
 // EnvironmentResponse represents an environment within a project.
 type EnvironmentResponse struct {
-	ID        ProjectID `json:"id"`
-	ProjectID ProjectID `json:"project_id"`
-	Name      string    `json:"name"`
-	CreatedAt Timestamp `json:"created_at"`
-	UpdatedAt Timestamp `json:"updated_at"`
+	ID        EnvironmentID `json:"id"`
+	ProjectID ProjectID     `json:"project_id"`
+	Name      string        `json:"name"`
+	CreatedAt Timestamp     `json:"created_at"`
+	UpdatedAt Timestamp     `json:"updated_at"`
 }
 
 // EnvironmentVariableResponse represents an environment variable.
@@ -39,7 +39,7 @@ type EnvironmentVariableResponse struct {
 
 // ProjectShareResponse represents a user's access to a shared project.
 type ProjectShareResponse struct {
-	ID        int64     `json:"id"`
+	ID        string    `json:"id"`
 	ProjectID ProjectID `json:"project_id"`
 	UserID    UserID    `json:"user_id"`
 	Role      Role      `json:"role"`
@@ -48,7 +48,7 @@ type ProjectShareResponse struct {
 
 // UserProjectResponse represents a project that a user has access to.
 type UserProjectResponse struct {
-	ID          int64     `json:"id"`
+	ID          string    `json:"id"`
 	Name        string    `json:"name"`
 	Description *string   `json:"description"`
 	GitRepo     *string   `json:"git_repo"`

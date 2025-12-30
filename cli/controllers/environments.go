@@ -17,15 +17,15 @@ func NewEnvironmentsController(base *BaseClient) *EnvironmentsController {
 }
 
 type EnvironmentResponse struct {
-	ID          shared.ProjectID `json:"id"`
-	ProjectID   shared.ProjectID `json:"project_id"`
-	Name        string           `json:"name"`
-	Description *string          `json:"description"`
-	CreatedAt   shared.Timestamp `json:"created_at"`
-	UpdatedAt   shared.Timestamp `json:"updated_at"`
+	ID          shared.EnvironmentID `json:"id"`
+	ProjectID   shared.ProjectID     `json:"project_id"`
+	Name        string               `json:"name"`
+	Description *string              `json:"description"`
+	CreatedAt   shared.Timestamp     `json:"created_at"`
+	UpdatedAt   shared.Timestamp     `json:"updated_at"`
 }
 
-func (e *EnvironmentsController) CreateEnvironment(projectID int64, name, description string) (*EnvironmentResponse, error) {
+func (e *EnvironmentsController) CreateEnvironment(projectID string, name, description string) (*EnvironmentResponse, error) {
 	reqBody := map[string]any{
 		"name": name,
 	}
@@ -35,7 +35,7 @@ func (e *EnvironmentsController) CreateEnvironment(projectID int64, name, descri
 		reqBody["description"] = nil
 	}
 
-	resp, err := e.doRequest("POST", fmt.Sprintf("/projects/%d/environments", projectID), reqBody, true)
+	resp, err := e.doRequest("POST", fmt.Sprintf("/projects/%s/environments", projectID), reqBody, true)
 	if err != nil {
 		return nil, err
 	}
@@ -48,8 +48,8 @@ func (e *EnvironmentsController) CreateEnvironment(projectID int64, name, descri
 	return &envResp, nil
 }
 
-func (e *EnvironmentsController) ListEnvironments(projectID int64) ([]EnvironmentResponse, error) {
-	resp, err := e.doRequest("GET", fmt.Sprintf("/projects/%d/environments", projectID), nil, true)
+func (e *EnvironmentsController) ListEnvironments(projectID string) ([]EnvironmentResponse, error) {
+	resp, err := e.doRequest("GET", fmt.Sprintf("/projects/%s/environments", projectID), nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +62,8 @@ func (e *EnvironmentsController) ListEnvironments(projectID int64) ([]Environmen
 	return environments, nil
 }
 
-func (e *EnvironmentsController) GetEnvironment(projectID, environmentID int64) (*EnvironmentResponse, error) {
-	resp, err := e.doRequest("GET", fmt.Sprintf("/projects/%d/environments/%d", projectID, environmentID), nil, true)
+func (e *EnvironmentsController) GetEnvironment(projectID, environmentID string) (*EnvironmentResponse, error) {
+	resp, err := e.doRequest("GET", fmt.Sprintf("/projects/%s/environments/%s", projectID, environmentID), nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (e *EnvironmentsController) GetEnvironment(projectID, environmentID int64) 
 	return &envResp, nil
 }
 
-func (e *EnvironmentsController) UpdateEnvironment(projectID, environmentID int64, name, description string) (*EnvironmentResponse, error) {
+func (e *EnvironmentsController) UpdateEnvironment(projectID, environmentID string, name, description string) (*EnvironmentResponse, error) {
 	reqBody := map[string]any{
 		"name": name,
 	}
@@ -86,7 +86,7 @@ func (e *EnvironmentsController) UpdateEnvironment(projectID, environmentID int6
 		reqBody["description"] = nil
 	}
 
-	resp, err := e.doRequest("PUT", fmt.Sprintf("/projects/%d/environments/%d", projectID, environmentID), reqBody, true)
+	resp, err := e.doRequest("PUT", fmt.Sprintf("/projects/%s/environments/%s", projectID, environmentID), reqBody, true)
 	if err != nil {
 		return nil, err
 	}
@@ -99,8 +99,8 @@ func (e *EnvironmentsController) UpdateEnvironment(projectID, environmentID int6
 	return &envResp, nil
 }
 
-func (e *EnvironmentsController) DeleteEnvironment(projectID, environmentID int64) error {
-	resp, err := e.doRequest("DELETE", fmt.Sprintf("/projects/%d/environments/%d", projectID, environmentID), nil, true)
+func (e *EnvironmentsController) DeleteEnvironment(projectID, environmentID string) error {
+	resp, err := e.doRequest("DELETE", fmt.Sprintf("/projects/%s/environments/%s", projectID, environmentID), nil, true)
 	if err != nil {
 		return err
 	}

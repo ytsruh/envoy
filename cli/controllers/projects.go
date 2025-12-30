@@ -68,8 +68,8 @@ func (p *ProjectsController) ListProjects() ([]ProjectResponse, error) {
 	return projects, nil
 }
 
-func (p *ProjectsController) GetProject(projectID int64) (*ProjectResponse, error) {
-	resp, err := p.doRequest("GET", fmt.Sprintf("/projects/%d", projectID), nil, true)
+func (p *ProjectsController) GetProject(projectID string) (*ProjectResponse, error) {
+	resp, err := p.doRequest("GET", fmt.Sprintf("/projects/%s", projectID), nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (p *ProjectsController) GetProject(projectID int64) (*ProjectResponse, erro
 	return &projectResp, nil
 }
 
-func (p *ProjectsController) UpdateProject(projectID int64, name, description, gitRepo string) (*ProjectResponse, error) {
+func (p *ProjectsController) UpdateProject(projectID string, name, description, gitRepo string) (*ProjectResponse, error) {
 	reqBody := map[string]any{
 		"name": name,
 	}
@@ -97,7 +97,7 @@ func (p *ProjectsController) UpdateProject(projectID int64, name, description, g
 		reqBody["git_repo"] = nil
 	}
 
-	resp, err := p.doRequest("PUT", fmt.Sprintf("/projects/%d", projectID), reqBody, true)
+	resp, err := p.doRequest("PUT", fmt.Sprintf("/projects/%s", projectID), reqBody, true)
 	if err != nil {
 		return nil, err
 	}
@@ -110,8 +110,8 @@ func (p *ProjectsController) UpdateProject(projectID int64, name, description, g
 	return &projectResp, nil
 }
 
-func (p *ProjectsController) DeleteProject(projectID int64) error {
-	resp, err := p.doRequest("DELETE", fmt.Sprintf("/api/projects/%d", projectID), nil, true)
+func (p *ProjectsController) DeleteProject(projectID string) error {
+	resp, err := p.doRequest("DELETE", fmt.Sprintf("/api/projects/%s", projectID), nil, true)
 	if err != nil {
 		return err
 	}

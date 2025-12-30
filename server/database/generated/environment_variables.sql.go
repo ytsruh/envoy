@@ -24,7 +24,7 @@ AND (
 `
 
 type CanUserModifyEnvironmentVariableParams struct {
-	ID      int64
+	ID      string
 	OwnerID string
 	UserID  string
 }
@@ -37,13 +37,14 @@ func (q *Queries) CanUserModifyEnvironmentVariable(ctx context.Context, arg CanU
 }
 
 const createEnvironmentVariable = `-- name: CreateEnvironmentVariable :one
-INSERT INTO environment_variables (environment_id, key, value, description, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO environment_variables (id, environment_id, key, value, description, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
 RETURNING id, environment_id, key, value, description, created_at, updated_at
 `
 
 type CreateEnvironmentVariableParams struct {
-	EnvironmentID int64
+	ID            string
+	EnvironmentID string
 	Key           string
 	Value         string
 	Description   sql.NullString
@@ -53,6 +54,7 @@ type CreateEnvironmentVariableParams struct {
 
 func (q *Queries) CreateEnvironmentVariable(ctx context.Context, arg CreateEnvironmentVariableParams) (EnvironmentVariable, error) {
 	row := q.db.QueryRowContext(ctx, createEnvironmentVariable,
+		arg.ID,
 		arg.EnvironmentID,
 		arg.Key,
 		arg.Value,
@@ -78,7 +80,7 @@ DELETE FROM environment_variables
 WHERE id = ?
 `
 
-func (q *Queries) DeleteEnvironmentVariable(ctx context.Context, id int64) error {
+func (q *Queries) DeleteEnvironmentVariable(ctx context.Context, id string) error {
 	_, err := q.db.ExecContext(ctx, deleteEnvironmentVariable, id)
 	return err
 }
@@ -99,7 +101,7 @@ AND (EXISTS (
 `
 
 type GetAccessibleEnvironmentVariableParams struct {
-	ID      int64
+	ID      string
 	OwnerID string
 	UserID  string
 }
@@ -125,7 +127,7 @@ FROM environment_variables
 WHERE id = ?
 `
 
-func (q *Queries) GetEnvironmentVariable(ctx context.Context, id int64) (EnvironmentVariable, error) {
+func (q *Queries) GetEnvironmentVariable(ctx context.Context, id string) (EnvironmentVariable, error) {
 	row := q.db.QueryRowContext(ctx, getEnvironmentVariable, id)
 	var i EnvironmentVariable
 	err := row.Scan(
@@ -147,7 +149,7 @@ WHERE environment_id = ?
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListEnvironmentVariablesByEnvironment(ctx context.Context, environmentID int64) ([]EnvironmentVariable, error) {
+func (q *Queries) ListEnvironmentVariablesByEnvironment(ctx context.Context, environmentID string) ([]EnvironmentVariable, error) {
 	rows, err := q.db.QueryContext(ctx, listEnvironmentVariablesByEnvironment, environmentID)
 	if err != nil {
 		return nil, err
@@ -190,7 +192,7 @@ type UpdateEnvironmentVariableParams struct {
 	Value       string
 	Description sql.NullString
 	UpdatedAt   sql.NullTime
-	ID          int64
+	ID          string
 }
 
 func (q *Queries) UpdateEnvironmentVariable(ctx context.Context, arg UpdateEnvironmentVariableParams) (EnvironmentVariable, error) {

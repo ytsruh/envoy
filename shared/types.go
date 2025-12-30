@@ -6,13 +6,13 @@ import "time"
 type UserID string
 
 // ProjectID is a unique identifier for a project.
-type ProjectID int64
+type ProjectID string
 
 // EnvironmentID is a unique identifier for an environment.
-type EnvironmentID int64
+type EnvironmentID string
 
 // EnvironmentVariableID is a unique identifier for an environment variable.
-type EnvironmentVariableID int64
+type EnvironmentVariableID string
 
 // Role represents a user's permission level within a project.
 type Role string
@@ -26,34 +26,34 @@ const (
 	RoleViewer Role = "viewer"
 )
 
-// Int64ToProjectID converts an int64 to ProjectID.
-func Int64ToProjectID(id int64) ProjectID {
+// StringToProjectID converts a string to ProjectID.
+func StringToProjectID(id string) ProjectID {
 	return ProjectID(id)
 }
 
-// ProjectIDToInt64 converts a ProjectID to int64.
-func ProjectIDToInt64(id ProjectID) int64 {
-	return int64(id)
+// ProjectIDToString converts a ProjectID to string.
+func ProjectIDToString(id ProjectID) string {
+	return string(id)
 }
 
-// Int64ToEnvironmentID converts an int64 to EnvironmentID.
-func Int64ToEnvironmentID(id int64) EnvironmentID {
+// StringToEnvironmentID converts a string to EnvironmentID.
+func StringToEnvironmentID(id string) EnvironmentID {
 	return EnvironmentID(id)
 }
 
-// EnvironmentIDToInt64 converts an EnvironmentID to int64.
-func EnvironmentIDToInt64(id EnvironmentID) int64 {
-	return int64(id)
+// EnvironmentIDToString converts an EnvironmentID to string.
+func EnvironmentIDToString(id EnvironmentID) string {
+	return string(id)
 }
 
-// Int64ToEnvironmentVariableID converts an int64 to EnvironmentVariableID.
-func Int64ToEnvironmentVariableID(id int64) EnvironmentVariableID {
+// StringToEnvironmentVariableID converts a string to EnvironmentVariableID.
+func StringToEnvironmentVariableID(id string) EnvironmentVariableID {
 	return EnvironmentVariableID(id)
 }
 
-// EnvironmentVariableIDToInt64 converts an EnvironmentVariableID to int64.
-func EnvironmentVariableIDToInt64(id EnvironmentVariableID) int64 {
-	return int64(id)
+// EnvironmentVariableIDToString converts an EnvironmentVariableID to string.
+func EnvironmentVariableIDToString(id EnvironmentVariableID) string {
+	return string(id)
 }
 
 // StringToUserID converts a string to UserID.

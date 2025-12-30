@@ -148,23 +148,23 @@ var profileCmd = &cobra.Command{
 		fmt.Printf("  Token issued at: %d\n", profile.Iat)
 		fmt.Printf("  Token expires at: %d\n", profile.Exp)
 
-		if projectID != 0 {
+		if projectID != "" {
 			project, err := client.GetProject(projectID)
 			if err != nil {
-				fmt.Printf("  Current Project: ID: %d (failed to fetch project details)\n", projectID)
+				fmt.Printf("  Current Project: ID: %s (failed to fetch project details)\n", projectID)
 			} else {
-				fmt.Printf("  Current Project: ID: %d, Name: \"%s\"\n", project.ID, project.Name)
+				fmt.Printf("  Current Project: ID: %s, Name: \"%s\"\n", project.ID, project.Name)
 			}
 		} else {
 			fmt.Println("  Current Project: None (use 'envoy projects use <id>' to set)")
 		}
 
-		if environmentID != 0 && projectID != 0 {
+		if environmentID != "" && projectID != "" {
 			environment, err := client.GetEnvironment(projectID, environmentID)
 			if err != nil {
-				fmt.Printf("  Current Environment: ID: %d (failed to fetch environment details)\n", environmentID)
+				fmt.Printf("  Current Environment: ID: %s (failed to fetch environment details)\n", environmentID)
 			} else {
-				fmt.Printf("  Current Environment: ID: %d, Name: \"%s\"\n", environment.ID, environment.Name)
+				fmt.Printf("  Current Environment: ID: %s, Name: \"%s\"\n", environment.ID, environment.Name)
 			}
 		} else {
 			fmt.Println("  Current Environment: None (use 'envoy environments use <id>' to set)")

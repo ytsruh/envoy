@@ -1,6 +1,6 @@
 -- name: CreateProject :one
-INSERT INTO projects (name, description, git_repo, owner_id, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO projects (id, name, description, git_repo, owner_id, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
 RETURNING id, name, description, git_repo, owner_id, created_at, updated_at, deleted_at;
 
 -- name: GetProject :one

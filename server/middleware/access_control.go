@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"ytsruh.com/envoy/server/utils"
@@ -16,10 +15,7 @@ func RequireProjectOwner(accessControl utils.AccessControlService) echo.Middlewa
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
 			}
 
-			projectID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-			if err != nil {
-				return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid project ID"})
-			}
+			projectID := c.Param("id")
 
 			if err := accessControl.RequireOwner(c.Request().Context(), projectID, claims.UserID); err != nil {
 				return c.JSON(http.StatusForbidden, map[string]string{"error": err.Error()})
@@ -38,10 +34,7 @@ func RequireProjectEditor(accessControl utils.AccessControlService) echo.Middlew
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
 			}
 
-			projectID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-			if err != nil {
-				return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid project ID"})
-			}
+			projectID := c.Param("id")
 
 			if err := accessControl.RequireEditor(c.Request().Context(), projectID, claims.UserID); err != nil {
 				return c.JSON(http.StatusForbidden, map[string]string{"error": err.Error()})
@@ -60,10 +53,7 @@ func RequireProjectViewer(accessControl utils.AccessControlService) echo.Middlew
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
 			}
 
-			projectID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-			if err != nil {
-				return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid project ID"})
-			}
+			projectID := c.Param("id")
 
 			if err := accessControl.RequireViewer(c.Request().Context(), projectID, claims.UserID); err != nil {
 				return c.JSON(http.StatusForbidden, map[string]string{"error": err.Error()})

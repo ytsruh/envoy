@@ -9,8 +9,8 @@ import (
 )
 
 type Environment struct {
-	ID          int64
-	ProjectID   int64
+	ID          string
+	ProjectID   string
 	Name        string
 	Description sql.NullString
 	CreatedAt   sql.NullTime
@@ -19,8 +19,8 @@ type Environment struct {
 }
 
 type EnvironmentVariable struct {
-	ID            int64
-	EnvironmentID int64
+	ID            string
+	EnvironmentID string
 	Key           string
 	Value         string
 	Description   sql.NullString
@@ -29,7 +29,7 @@ type EnvironmentVariable struct {
 }
 
 type Project struct {
-	ID          int64
+	ID          string
 	Name        string
 	Description sql.NullString
 	GitRepo     sql.NullString
@@ -40,8 +40,8 @@ type Project struct {
 }
 
 type ProjectUser struct {
-	ID        int64
-	ProjectID int64
+	ID        string
+	ProjectID string
 	UserID    string
 	Role      string
 	CreatedAt sql.NullTime

@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE environments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER NOT NULL,
+    id text PRIMARY KEY,
+    project_id text NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

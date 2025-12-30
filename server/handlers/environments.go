@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -26,19 +25,16 @@ type UpdateEnvironmentRequest struct {
 }
 
 type EnvironmentResponse struct {
-	ID          shared.ProjectID `json:"id"`
-	ProjectID   shared.ProjectID `json:"project_id"`
-	Name        string           `json:"name"`
-	Description *string          `json:"description"`
-	CreatedAt   shared.Timestamp `json:"created_at"`
-	UpdatedAt   shared.Timestamp `json:"updated_at"`
+	ID          shared.EnvironmentID `json:"id"`
+	ProjectID   shared.ProjectID     `json:"project_id"`
+	Name        string               `json:"name"`
+	Description *string              `json:"description"`
+	CreatedAt   shared.Timestamp     `json:"created_at"`
+	UpdatedAt   shared.Timestamp     `json:"updated_at"`
 }
 
 func CreateEnvironment(c echo.Context, ctx *HandlerContext) error {
-	projectID, err := strconv.ParseInt(c.Param("project_id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
-	}
+	projectID := c.Param("project_id")
 
 	claims, ok := middleware.GetUserFromContext(c)
 	if !ok {
@@ -62,7 +58,9 @@ func CreateEnvironment(c echo.Context, ctx *HandlerContext) error {
 	defer cancel()
 
 	now := time.Now()
+	environmentID := utils.GenerateUUID()
 	environment, err := ctx.Queries.CreateEnvironment(dbCtx, database.CreateEnvironmentParams{
+		ID:          environmentID,
 		Name:        req.Name,
 		Description: sql.NullString{String: req.Description, Valid: req.Description != ""},
 		ProjectID:   projectID,
@@ -74,7 +72,7 @@ func CreateEnvironment(c echo.Context, ctx *HandlerContext) error {
 	}
 
 	resp := EnvironmentResponse{
-		ID:          shared.ProjectID(environment.ID),
+		ID:          shared.EnvironmentID(environment.ID),
 		ProjectID:   shared.ProjectID(environment.ProjectID),
 		Name:        environment.Name,
 		Description: shared.NullStringToStringPtr(environment.Description),
@@ -86,10 +84,7 @@ func CreateEnvironment(c echo.Context, ctx *HandlerContext) error {
 }
 
 func GetEnvironment(c echo.Context, ctx *HandlerContext) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid environment ID"))
-	}
+	id := c.Param("id")
 
 	claims, ok := middleware.GetUserFromContext(c)
 	if !ok {
@@ -111,7 +106,7 @@ func GetEnvironment(c echo.Context, ctx *HandlerContext) error {
 	}
 
 	resp := EnvironmentResponse{
-		ID:          shared.ProjectID(environment.ID),
+		ID:          shared.EnvironmentID(environment.ID),
 		ProjectID:   shared.ProjectID(environment.ProjectID),
 		Name:        environment.Name,
 		Description: shared.NullStringToStringPtr(environment.Description),
@@ -123,10 +118,7 @@ func GetEnvironment(c echo.Context, ctx *HandlerContext) error {
 }
 
 func ListEnvironments(c echo.Context, ctx *HandlerContext) error {
-	projectID, err := strconv.ParseInt(c.Param("project_id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
-	}
+	projectID := c.Param("project_id")
 
 	claims, ok := middleware.GetUserFromContext(c)
 	if !ok {
@@ -148,7 +140,7 @@ func ListEnvironments(c echo.Context, ctx *HandlerContext) error {
 	var resp []EnvironmentResponse
 	for _, env := range environments {
 		resp = append(resp, EnvironmentResponse{
-			ID:          shared.ProjectID(env.ID),
+			ID:          shared.EnvironmentID(env.ID),
 			ProjectID:   shared.ProjectID(env.ProjectID),
 			Name:        env.Name,
 			Description: shared.NullStringToStringPtr(env.Description),
@@ -161,10 +153,7 @@ func ListEnvironments(c echo.Context, ctx *HandlerContext) error {
 }
 
 func UpdateEnvironment(c echo.Context, ctx *HandlerContext) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid environment ID"))
-	}
+	id := c.Param("id")
 
 	_, ok := middleware.GetUserFromContext(c)
 	if !ok {
@@ -184,7 +173,7 @@ func UpdateEnvironment(c echo.Context, ctx *HandlerContext) error {
 	defer cancel()
 
 	now := time.Now()
-	environment, err := ctx.Queries.UpdateEnvironment(dbCtx, database.UpdateEnvironmentParams{
+	updatedEnvironment, err := ctx.Queries.UpdateEnvironment(dbCtx, database.UpdateEnvironmentParams{
 		Name:        req.Name,
 		Description: sql.NullString{String: req.Description, Valid: req.Description != ""},
 		UpdatedAt:   sql.NullTime{Time: now, Valid: true},
@@ -195,22 +184,19 @@ func UpdateEnvironment(c echo.Context, ctx *HandlerContext) error {
 	}
 
 	resp := EnvironmentResponse{
-		ID:          shared.ProjectID(environment.ID),
-		ProjectID:   shared.ProjectID(environment.ProjectID),
-		Name:        environment.Name,
-		Description: shared.NullStringToStringPtr(environment.Description),
-		CreatedAt:   shared.FromTime(environment.CreatedAt.Time),
-		UpdatedAt:   shared.FromTime(environment.UpdatedAt.Time),
+		ID:          shared.EnvironmentID(updatedEnvironment.ID),
+		ProjectID:   shared.ProjectID(updatedEnvironment.ProjectID),
+		Name:        updatedEnvironment.Name,
+		Description: shared.NullStringToStringPtr(updatedEnvironment.Description),
+		CreatedAt:   shared.FromTime(updatedEnvironment.CreatedAt.Time),
+		UpdatedAt:   shared.FromTime(updatedEnvironment.UpdatedAt.Time),
 	}
 
 	return c.JSON(http.StatusOK, resp)
 }
 
 func DeleteEnvironment(c echo.Context, ctx *HandlerContext) error {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid environment ID"))
-	}
+	id := c.Param("id")
 
 	_, ok := middleware.GetUserFromContext(c)
 	if !ok {
@@ -220,7 +206,7 @@ func DeleteEnvironment(c echo.Context, ctx *HandlerContext) error {
 	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err = ctx.Queries.DeleteEnvironment(dbCtx, database.DeleteEnvironmentParams{
+	err := ctx.Queries.DeleteEnvironment(dbCtx, database.DeleteEnvironmentParams{
 		DeletedAt: sql.NullTime{Time: time.Now(), Valid: true},
 		ID:        id,
 	})

@@ -10,10 +10,10 @@ import (
 )
 
 type AccessControlService interface {
-	RequireOwner(ctx context.Context, projectID int64, userID string) error
-	RequireEditor(ctx context.Context, projectID int64, userID string) error
-	RequireViewer(ctx context.Context, projectID int64, userID string) error
-	GetRole(ctx context.Context, projectID int64, userID string) (string, error)
+	RequireOwner(ctx context.Context, projectID string, userID string) error
+	RequireEditor(ctx context.Context, projectID string, userID string) error
+	RequireViewer(ctx context.Context, projectID string, userID string) error
+	GetRole(ctx context.Context, projectID string, userID string) (string, error)
 }
 
 type AccessControlServiceImpl struct {
@@ -26,7 +26,7 @@ func NewAccessControlService(queries database.Querier) AccessControlService {
 	}
 }
 
-func (s *AccessControlServiceImpl) RequireOwner(ctx context.Context, projectID int64, userID string) error {
+func (s *AccessControlServiceImpl) RequireOwner(ctx context.Context, projectID string, userID string) error {
 	count, err := s.queries.IsProjectOwner(ctx, database.IsProjectOwnerParams{
 		ID:      projectID,
 		OwnerID: userID,
@@ -40,7 +40,7 @@ func (s *AccessControlServiceImpl) RequireOwner(ctx context.Context, projectID i
 	return nil
 }
 
-func (s *AccessControlServiceImpl) RequireEditor(ctx context.Context, projectID int64, userID string) error {
+func (s *AccessControlServiceImpl) RequireEditor(ctx context.Context, projectID string, userID string) error {
 	count, err := s.queries.CanUserModifyProject(ctx, database.CanUserModifyProjectParams{
 		ID:      projectID,
 		OwnerID: userID,
@@ -55,7 +55,7 @@ func (s *AccessControlServiceImpl) RequireEditor(ctx context.Context, projectID 
 	return nil
 }
 
-func (s *AccessControlServiceImpl) RequireViewer(ctx context.Context, projectID int64, userID string) error {
+func (s *AccessControlServiceImpl) RequireViewer(ctx context.Context, projectID string, userID string) error {
 	_, err := s.queries.GetAccessibleProject(ctx, database.GetAccessibleProjectParams{
 		ID:      projectID,
 		OwnerID: userID,
@@ -70,7 +70,7 @@ func (s *AccessControlServiceImpl) RequireViewer(ctx context.Context, projectID 
 	return nil
 }
 
-func (s *AccessControlServiceImpl) GetRole(ctx context.Context, projectID int64, userID string) (string, error) {
+func (s *AccessControlServiceImpl) GetRole(ctx context.Context, projectID string, userID string) (string, error) {
 	// Check if user is owner first
 	ownerCount, err := s.queries.IsProjectOwner(ctx, database.IsProjectOwnerParams{
 		ID:      projectID,

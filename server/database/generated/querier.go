@@ -18,26 +18,26 @@ type Querier interface {
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteEnvironment(ctx context.Context, arg DeleteEnvironmentParams) error
-	DeleteEnvironmentVariable(ctx context.Context, id int64) error
+	DeleteEnvironmentVariable(ctx context.Context, id string) error
 	DeleteProject(ctx context.Context, arg DeleteProjectParams) error
 	DeleteUser(ctx context.Context, arg DeleteUserParams) error
 	GetAccessibleEnvironment(ctx context.Context, arg GetAccessibleEnvironmentParams) (Environment, error)
 	GetAccessibleEnvironmentVariable(ctx context.Context, arg GetAccessibleEnvironmentVariableParams) (EnvironmentVariable, error)
 	GetAccessibleProject(ctx context.Context, arg GetAccessibleProjectParams) (Project, error)
-	GetEnvironment(ctx context.Context, id int64) (Environment, error)
-	GetEnvironmentVariable(ctx context.Context, id int64) (EnvironmentVariable, error)
-	GetProject(ctx context.Context, id int64) (Project, error)
+	GetEnvironment(ctx context.Context, id string) (Environment, error)
+	GetEnvironmentVariable(ctx context.Context, id string) (EnvironmentVariable, error)
+	GetProject(ctx context.Context, id string) (Project, error)
 	GetProjectByGitRepo(ctx context.Context, arg GetProjectByGitRepoParams) (Project, error)
 	GetProjectMemberRole(ctx context.Context, arg GetProjectMemberRoleParams) (string, error)
 	GetProjectMembership(ctx context.Context, arg GetProjectMembershipParams) (ProjectUser, error)
-	GetProjectUsers(ctx context.Context, projectID int64) ([]ProjectUser, error)
+	GetProjectUsers(ctx context.Context, projectID string) ([]ProjectUser, error)
 	GetUser(ctx context.Context, id string) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserProjects(ctx context.Context, arg GetUserProjectsParams) ([]Project, error)
 	HardDeleteUser(ctx context.Context, id string) error
 	IsProjectOwner(ctx context.Context, arg IsProjectOwnerParams) (int64, error)
-	ListEnvironmentVariablesByEnvironment(ctx context.Context, environmentID int64) ([]EnvironmentVariable, error)
-	ListEnvironmentsByProject(ctx context.Context, projectID int64) ([]Environment, error)
+	ListEnvironmentVariablesByEnvironment(ctx context.Context, environmentID string) ([]EnvironmentVariable, error)
+	ListEnvironmentsByProject(ctx context.Context, projectID string) ([]Environment, error)
 	ListProjectsByOwner(ctx context.Context, ownerID string) ([]Project, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	RemoveUserFromProject(ctx context.Context, arg RemoveUserFromProjectParams) error

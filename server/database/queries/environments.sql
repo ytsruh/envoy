@@ -1,6 +1,6 @@
 -- name: CreateEnvironment :one
-INSERT INTO environments (project_id, name, description, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO environments (id, project_id, name, description, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?)
 RETURNING id, project_id, name, description, created_at, updated_at, deleted_at;
 
 -- name: GetEnvironment :one

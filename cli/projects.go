@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"os"
-	"strconv"
 
 	"github.com/spf13/cobra"
 	"ytsruh.com/envoy/cli/config"
@@ -80,7 +79,7 @@ var createProjectCmd = &cobra.Command{
 		}
 
 		fmt.Println("Project created successfully!")
-		fmt.Printf("  ID: %d\n", shared.ProjectIDToInt64(project.ID))
+		fmt.Printf("  ID: %s\n", project.ID)
 		fmt.Printf("  Name: %s\n", project.Name)
 		if project.Description != nil && *project.Description != "" {
 			fmt.Printf("  Description: %s\n", *project.Description)
@@ -123,10 +122,10 @@ var listProjectsCmd = &cobra.Command{
 
 		fmt.Printf("Found %d project(s):\n\n", len(projects))
 		for _, p := range projects {
-			if shared.ProjectIDToInt64(p.ID) == currentProjectID {
-				fmt.Printf("* ID: %d\n", shared.ProjectIDToInt64(p.ID))
+			if string(p.ID) == currentProjectID {
+				fmt.Printf("* ID: %s\n", p.ID)
 			} else {
-				fmt.Printf("  ID: %d\n", shared.ProjectIDToInt64(p.ID))
+				fmt.Printf("  ID: %s\n", p.ID)
 			}
 			fmt.Printf("  Name: %s\n", p.Name)
 			if p.Description != nil && *p.Description != "" {
@@ -147,11 +146,7 @@ var getProjectCmd = &cobra.Command{
 	Long:  "Get detailed information about a specific project",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		projectID, err := strconv.ParseInt(args[0], 10, 64)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Invalid project ID: %v\n", err)
-			os.Exit(1)
-		}
+		projectID := args[0]
 
 		client, err := controllers.NewClient()
 		if err != nil {
@@ -166,7 +161,7 @@ var getProjectCmd = &cobra.Command{
 		}
 
 		fmt.Println("Project Details:")
-		fmt.Printf("  ID: %d\n", shared.ProjectIDToInt64(project.ID))
+		fmt.Printf("  ID: %s\n", project.ID)
 		fmt.Printf("  Name: %s\n", project.Name)
 		if project.Description != nil && *project.Description != "" {
 			fmt.Printf("  Description: %s\n", *project.Description)
@@ -186,11 +181,7 @@ var updateProjectCmd = &cobra.Command{
 	Long:  "Update project name, description, or git repository",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		projectID, err := strconv.ParseInt(args[0], 10, 64)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Invalid project ID: %v\n", err)
-			os.Exit(1)
-		}
+		projectID := args[0]
 
 		client, err := controllers.RequireToken()
 		if err != nil {
@@ -260,11 +251,7 @@ var deleteProjectCmd = &cobra.Command{
 	Long:  "Delete a project permanently",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		projectID, err := strconv.ParseInt(args[0], 10, 64)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Invalid project ID: %v\n", err)
-			os.Exit(1)
-		}
+		projectID := args[0]
 
 		client, err := controllers.RequireToken()
 		if err != nil {
@@ -284,7 +271,7 @@ var deleteProjectCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Printf("Are you sure you want to delete project '%s' (ID: %d)?\n", project.Name, project.ID)
+		fmt.Printf("Are you sure you want to delete project '%s' (ID: %s)?\n", project.Name, project.ID)
 		confirmed, err := Confirm("This action cannot be undone")
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
@@ -311,14 +298,10 @@ var deleteProjectCmd = &cobra.Command{
 var useProjectCmd = &cobra.Command{
 	Use:   "use <id>",
 	Short: "Set as current project",
-	Long:  "Set a project as the current project for environment operations",
+	Long:  "Set a project as current project for environment operations",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		projectID, err := strconv.ParseInt(args[0], 10, 64)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Invalid project ID: %v\n", err)
-			os.Exit(1)
-		}
+		projectID := args[0]
 
 		client, err := controllers.RequireToken()
 		if err != nil {
@@ -343,7 +326,7 @@ var useProjectCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Printf("Now using project: %s (ID: %d)\n", project.Name, project.ID)
+		fmt.Printf("Now using project: %s (ID: %s)\n", project.Name, project.ID)
 	},
 }
 

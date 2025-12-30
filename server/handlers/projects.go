@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -28,7 +27,7 @@ type UpdateProjectRequest struct {
 }
 
 type ProjectResponse struct {
-	ID          int64            `json:"id"`
+	ID          string           `json:"id"`
 	Name        string           `json:"name"`
 	Description *string          `json:"description"`
 	GitRepo     *string          `json:"git_repo"`
@@ -66,7 +65,9 @@ func CreateProject(c echo.Context, ctx *HandlerContext) error {
 	}
 
 	now := time.Now()
+	projectID := utils.GenerateUUID()
 	project, err := ctx.Queries.CreateProject(dbCtx, database.CreateProjectParams{
+		ID:          projectID,
 		Name:        req.Name,
 		Description: sql.NullString{String: req.Description, Valid: req.Description != ""},
 		GitRepo:     sql.NullString{String: req.GitRepo, Valid: req.GitRepo != ""},
@@ -92,10 +93,7 @@ func CreateProject(c echo.Context, ctx *HandlerContext) error {
 }
 
 func GetProject(c echo.Context, ctx *HandlerContext) error {
-	projectID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
-	}
+	projectID := c.Param("id")
 
 	claims, ok := middleware.GetUserFromContext(c)
 	if !ok {
@@ -163,10 +161,7 @@ func ListProjects(c echo.Context, ctx *HandlerContext) error {
 }
 
 func UpdateProject(c echo.Context, ctx *HandlerContext) error {
-	projectID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
-	}
+	projectID := c.Param("id")
 
 	var req UpdateProjectRequest
 	if err := c.Bind(&req); err != nil {
@@ -238,10 +233,7 @@ func UpdateProject(c echo.Context, ctx *HandlerContext) error {
 }
 
 func DeleteProject(c echo.Context, ctx *HandlerContext) error {
-	projectID, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("invalid project ID"))
-	}
+	projectID := c.Param("id")
 
 	claims, ok := middleware.GetUserFromContext(c)
 	if !ok {

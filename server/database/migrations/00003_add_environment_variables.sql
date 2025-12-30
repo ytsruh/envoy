@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE environment_variables (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    environment_id INTEGER NOT NULL,
+    id text PRIMARY KEY,
+    environment_id text NOT NULL,
     key TEXT NOT NULL,
     value TEXT NOT NULL,
     description TEXT,

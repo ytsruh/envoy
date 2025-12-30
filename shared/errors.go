@@ -48,4 +48,7 @@ var (
 
 	// ErrInvalidCredentials indicates the provided username or password is incorrect.
 	ErrInvalidCredentials = errors.New("invalid credentials")
+
+	// ErrNoToken indicates no authentication token is available.
+	ErrNoToken = errors.New("no token available")
 )

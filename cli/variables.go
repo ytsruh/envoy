@@ -7,6 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"ytsruh.com/envoy/cli/config"
+	"ytsruh.com/envoy/cli/controllers"
+	shared "ytsruh.com/envoy/shared"
 )
 
 var environmentVariablesCmd = &cobra.Command{
@@ -21,10 +23,10 @@ var importVariablesCmd = &cobra.Command{
 	Long:  "Import environment variables from .env file in current directory",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := RequireToken()
+		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			if err == ErrNoToken {
+			if err == shared.ErrNoToken {
 				fmt.Println("Please login first using 'envoy login'")
 			}
 			os.Exit(1)
@@ -123,10 +125,10 @@ var exportVariablesCmd = &cobra.Command{
 	Long:  "Export environment variables to .env file in current directory",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := RequireToken()
+		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			if err == ErrNoToken {
+			if err == shared.ErrNoToken {
 				fmt.Println("Please login first using 'envoy login'")
 			}
 			os.Exit(1)
@@ -171,7 +173,7 @@ var exportVariablesCmd = &cobra.Command{
 		variables, err := client.ListEnvironmentVariables(projectID, environmentID)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to list variables: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)
@@ -215,10 +217,10 @@ var createVariableCmd = &cobra.Command{
 	Long:  "Create a new environment variable",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := RequireToken()
+		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			if err == ErrNoToken {
+			if err == shared.ErrNoToken {
 				fmt.Println("Please login first using 'envoy login'")
 			}
 			os.Exit(1)
@@ -275,7 +277,7 @@ var createVariableCmd = &cobra.Command{
 		variable, err := client.CreateEnvironmentVariable(projectID, environmentID, key, value)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to create variable: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)
@@ -294,10 +296,10 @@ var listVariablesCmd = &cobra.Command{
 	Long:  "List all variables for an environment",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := RequireToken()
+		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			if err == ErrNoToken {
+			if err == shared.ErrNoToken {
 				fmt.Println("Please login first using 'envoy login'")
 			}
 			os.Exit(1)
@@ -342,7 +344,7 @@ var listVariablesCmd = &cobra.Command{
 		variables, err := client.ListEnvironmentVariables(projectID, environmentID)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to list variables: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)
@@ -376,10 +378,10 @@ var getVariableCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		client, err := RequireToken()
+		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			if err == ErrNoToken {
+			if err == shared.ErrNoToken {
 				fmt.Println("Please login first using 'envoy login'")
 			}
 			os.Exit(1)
@@ -424,7 +426,7 @@ var getVariableCmd = &cobra.Command{
 		variable, err := client.GetEnvironmentVariable(projectID, environmentID, variableID)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get variable: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)
@@ -452,10 +454,10 @@ var updateVariableCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		client, err := RequireToken()
+		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			if err == ErrNoToken {
+			if err == shared.ErrNoToken {
 				fmt.Println("Please login first using 'envoy login'")
 			}
 			os.Exit(1)
@@ -500,7 +502,7 @@ var updateVariableCmd = &cobra.Command{
 		variable, err := client.GetEnvironmentVariable(projectID, environmentID, variableID)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get variable: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)
@@ -521,7 +523,7 @@ var updateVariableCmd = &cobra.Command{
 		updatedVariable, err := client.UpdateEnvironmentVariable(projectID, environmentID, variableID, key, value)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to update variable: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)
@@ -545,10 +547,10 @@ var deleteVariableCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		client, err := RequireToken()
+		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			if err == ErrNoToken {
+			if err == shared.ErrNoToken {
 				fmt.Println("Please login first using 'envoy login'")
 			}
 			os.Exit(1)
@@ -593,7 +595,7 @@ var deleteVariableCmd = &cobra.Command{
 		variable, err := client.GetEnvironmentVariable(projectID, environmentID, variableID)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get variable: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)
@@ -613,7 +615,7 @@ var deleteVariableCmd = &cobra.Command{
 
 		if err := client.DeleteEnvironmentVariable(projectID, environmentID, variableID); err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to delete variable: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)

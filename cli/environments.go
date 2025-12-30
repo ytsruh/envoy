@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"ytsruh.com/envoy/cli/config"
+	"ytsruh.com/envoy/cli/controllers"
 	shared "ytsruh.com/envoy/shared"
 )
 
@@ -21,10 +22,10 @@ var createEnvironmentCmd = &cobra.Command{
 	Short: "Create a new environment",
 	Long:  "Create a new environment within the current project",
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := RequireToken()
+		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			if err == ErrNoToken {
+			if err == shared.ErrNoToken {
 				fmt.Println("Please login first using 'envoy login'")
 			}
 			os.Exit(1)
@@ -46,7 +47,7 @@ var createEnvironmentCmd = &cobra.Command{
 		project, err := client.GetProject(projectID)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)
@@ -79,7 +80,7 @@ var createEnvironmentCmd = &cobra.Command{
 		environment, err := client.CreateEnvironment(projectID, name, description)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to create environment: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)
@@ -101,10 +102,10 @@ var listEnvironmentsCmd = &cobra.Command{
 	Long:  "List all environments for a project",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := RequireToken()
+		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			if err == ErrNoToken {
+			if err == shared.ErrNoToken {
 				fmt.Println("Please login first using 'envoy login'")
 			}
 			os.Exit(1)
@@ -138,7 +139,7 @@ var listEnvironmentsCmd = &cobra.Command{
 		environments, err := client.ListEnvironments(projectID)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to list environments: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)
@@ -178,10 +179,10 @@ var getEnvironmentCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		client, err := RequireToken()
+		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			if err == ErrNoToken {
+			if err == shared.ErrNoToken {
 				fmt.Println("Please login first using 'envoy login'")
 			}
 			os.Exit(1)
@@ -213,7 +214,7 @@ var getEnvironmentCmd = &cobra.Command{
 		environment, err := client.GetEnvironment(projectID, environmentID)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get environment: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)
@@ -243,10 +244,10 @@ var updateEnvironmentCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		client, err := RequireToken()
+		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			if err == ErrNoToken {
+			if err == shared.ErrNoToken {
 				fmt.Println("Please login first using 'envoy login'")
 			}
 			os.Exit(1)
@@ -278,7 +279,7 @@ var updateEnvironmentCmd = &cobra.Command{
 		environment, err := client.GetEnvironment(projectID, environmentID)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get environment: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)
@@ -302,7 +303,7 @@ var updateEnvironmentCmd = &cobra.Command{
 		updatedEnvironment, err := client.UpdateEnvironment(projectID, environmentID, name, description)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to update environment: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)
@@ -328,10 +329,10 @@ var deleteEnvironmentCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		client, err := RequireToken()
+		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			if err == ErrNoToken {
+			if err == shared.ErrNoToken {
 				fmt.Println("Please login first using 'envoy login'")
 			}
 			os.Exit(1)
@@ -363,7 +364,7 @@ var deleteEnvironmentCmd = &cobra.Command{
 		environment, err := client.GetEnvironment(projectID, environmentID)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get environment: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)
@@ -383,7 +384,7 @@ var deleteEnvironmentCmd = &cobra.Command{
 
 		if err := client.DeleteEnvironment(projectID, environmentID); err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to delete environment: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)
@@ -418,10 +419,10 @@ var useEnvironmentCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		client, err := RequireToken()
+		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			if err == ErrNoToken {
+			if err == shared.ErrNoToken {
 				fmt.Println("Please login first using 'envoy login'")
 			}
 			os.Exit(1)
@@ -430,7 +431,7 @@ var useEnvironmentCmd = &cobra.Command{
 		environment, err := client.GetEnvironment(projectID, environmentID)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get environment: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)

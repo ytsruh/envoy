@@ -6,6 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"ytsruh.com/envoy/cli/config"
+	"ytsruh.com/envoy/cli/controllers"
+	shared "ytsruh.com/envoy/shared"
 )
 
 var registerCmd = &cobra.Command{
@@ -38,7 +40,7 @@ var registerCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		client, err := NewClient()
+		client, err := controllers.NewClient()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
@@ -74,7 +76,7 @@ var loginCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		client, err := NewClient()
+		client, err := controllers.NewClient()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
@@ -110,10 +112,10 @@ var profileCmd = &cobra.Command{
 	Short: "Show your profile information",
 	Long:  "Display your current account information",
 	Run: func(cmd *cobra.Command, args []string) {
-		client, err := RequireToken()
+		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			if err == ErrNoToken {
+			if err == shared.ErrNoToken {
 				fmt.Println("Please login first using 'envoy login'")
 			}
 			os.Exit(1)
@@ -122,7 +124,7 @@ var profileCmd = &cobra.Command{
 		profile, err := client.GetProfile()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			if err == ErrExpiredToken {
+			if err == shared.ErrExpiredToken {
 				fmt.Println("Your session has expired. Please login again using 'envoy login'")
 			}
 			os.Exit(1)

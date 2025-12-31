@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"ytsruh.com/envoy/cli/config"
@@ -17,6 +18,7 @@ var environmentVariablesCmd = &cobra.Command{
 }
 
 var importFile string
+var exportFile string
 
 var importVariablesCmd = &cobra.Command{
 	Use:   "import [environment_id]",
@@ -116,6 +118,19 @@ var importVariablesCmd = &cobra.Command{
 	},
 }
 
+func sanitizeFilename(name string) string {
+	var result []rune
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') ||
+			r == '_' || r == '-' || r == '.' {
+			result = append(result, r)
+		} else {
+			result = append(result, '_')
+		}
+	}
+	return strings.ToLower(string(result))
+}
+
 var exportVariablesCmd = &cobra.Command{
 	Use:   "export [environment_id]",
 	Short: "Export variables to .env file",
@@ -163,6 +178,20 @@ var exportVariablesCmd = &cobra.Command{
 			}
 		}
 
+		var outputFilename string
+		if exportFile == "" {
+			environment, err := client.GetEnvironment(projectID, environmentID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Warning: Failed to get environment name: %v\n", err)
+				fmt.Println("Using default filename .env")
+				outputFilename = ".env"
+			} else {
+				outputFilename = ".env." + sanitizeFilename(environment.Name)
+			}
+		} else {
+			outputFilename = exportFile
+		}
+
 		variables, err := client.ListEnvironmentVariables(projectID, environmentID)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to list variables: %v\n", err)
@@ -177,9 +206,9 @@ var exportVariablesCmd = &cobra.Command{
 			return
 		}
 
-		if _, err := os.Stat(".env"); err == nil {
-			fmt.Println("Warning: .env file already exists in current directory")
-			confirmed, err := Confirm("Overwrite existing .env file?")
+		if _, err := os.Stat(outputFilename); err == nil {
+			fmt.Printf("Warning: File '%s' already exists in current directory\n", outputFilename)
+			confirmed, err := Confirm("Overwrite existing file?")
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -195,12 +224,12 @@ var exportVariablesCmd = &cobra.Command{
 			variablesMap[v.Key] = v.Value
 		}
 
-		if err := WriteEnvFile(".env", variablesMap); err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to write .env file: %v\n", err)
+		if err := WriteEnvFile(outputFilename, variablesMap); err != nil {
+			fmt.Fprintf(cmd.OutOrStderr(), "Failed to write file '%s': %v\n", outputFilename, err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("Exported %d variable(s) to .env\n", len(variables))
+		fmt.Printf("Exported %d variable(s) to %s\n", len(variables), outputFilename)
 	},
 }
 
@@ -588,6 +617,7 @@ var deleteVariableCmd = &cobra.Command{
 
 func init() {
 	importVariablesCmd.Flags().StringVarP(&importFile, "file", "f", ".env", "Path to the .env file to import")
+	exportVariablesCmd.Flags().StringVarP(&exportFile, "file", "f", "", "Path to the export file (default: .env.<environment_name>)")
 	environmentVariablesCmd.AddCommand(importVariablesCmd)
 	environmentVariablesCmd.AddCommand(exportVariablesCmd)
 	environmentVariablesCmd.AddCommand(createVariableCmd)

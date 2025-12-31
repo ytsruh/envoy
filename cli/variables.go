@@ -16,6 +16,8 @@ var environmentVariablesCmd = &cobra.Command{
 	Long:  "Import, export, create, list, update, and delete environment variables",
 }
 
+var importFile string
+
 var importVariablesCmd = &cobra.Command{
 	Use:   "import [environment_id]",
 	Short: "Import variables from .env file",
@@ -63,23 +65,23 @@ var importVariablesCmd = &cobra.Command{
 			}
 		}
 
-		if _, err := os.Stat(".env"); os.IsNotExist(err) {
-			fmt.Println("No .env file found in current directory")
+		if _, err := os.Stat(importFile); os.IsNotExist(err) {
+			fmt.Printf("Warning: File '%s' not found\n", importFile)
 			os.Exit(1)
 		}
 
-		variables, err := ParseEnvFile(".env")
+		variables, err := ParseEnvFile(importFile)
 		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to parse .env file: %v\n", err)
+			fmt.Fprintf(cmd.OutOrStderr(), "Failed to parse file '%s': %v\n", importFile, err)
 			os.Exit(1)
 		}
 
 		if len(variables) == 0 {
-			fmt.Println("No variables found in .env file")
+			fmt.Printf("No variables found in %s\n", importFile)
 			return
 		}
 
-		fmt.Printf("Found %d variable(s) in .env file:\n\n", len(variables))
+		fmt.Printf("Found %d variable(s) in %s:\n\n", len(variables), importFile)
 		for key, value := range variables {
 			fmt.Printf("  %s=%s\n", key, value)
 		}
@@ -585,6 +587,7 @@ var deleteVariableCmd = &cobra.Command{
 }
 
 func init() {
+	importVariablesCmd.Flags().StringVarP(&importFile, "file", "f", ".env", "Path to the .env file to import")
 	environmentVariablesCmd.AddCommand(importVariablesCmd)
 	environmentVariablesCmd.AddCommand(exportVariablesCmd)
 	environmentVariablesCmd.AddCommand(createVariableCmd)

@@ -9,16 +9,17 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	dbpkg "ytsruh.com/envoy/server/database"
-	database "ytsruh.com/envoy/server/database/generated"
+	"ytsruh.com/envoy/server/cron"
+	"ytsruh.com/envoy/server/database"
+	queries "ytsruh.com/envoy/server/database/generated"
 	"ytsruh.com/envoy/server/middleware"
 	"ytsruh.com/envoy/server/utils"
 )
 
 type DBService interface {
 	GetDB() *sql.DB
-	GetQueries() database.Querier
-	Health() (*dbpkg.HealthStatus, error)
+	GetQueries() queries.Querier
+	Health() (*database.HealthStatus, error)
 	Close() error
 }
 
@@ -30,20 +31,37 @@ type Server struct {
 	jwtSecret     string
 }
 
-func New(addr string, dbService DBService, jwtSecret string) *Server {
+func New(addr string, env *utils.EnvVar) *Server {
 	e := echo.New()
+
+	// Create a DBService instance
+	dbService, err := database.NewService(env.DB_PATH)
+	if err != nil {
+		panic(err)
+	}
+	// Create an AccessControlService instance
 	accessControl := utils.NewAccessControlService(dbService.GetQueries())
-	s := &Server{
+
+	// Create a CronService instance
+	logger := log.New(log.Writer(), "", log.LstdFlags)
+	cronService := cron.New(dbService.GetDB(), logger)
+	cronService.AddJob("*/30 * * * * *", cron.DatabaseHealthCheck(dbService.GetDB(), logger))
+	cronService.Start()
+
+	// Create a Server instance
+	server := &Server{
 		router:        e,
 		dbService:     dbService,
 		accessControl: accessControl,
 		addr:          addr,
-		jwtSecret:     jwtSecret,
+		jwtSecret:     env.JWT_SECRET,
 	}
-	middleware.RegisterMiddleware(e, 30*time.Second)
-	s.RegisterRoutes()
 
-	return s
+	// Register middleware & routers
+	middleware.RegisterMiddleware(e, 30*time.Second)
+	server.RegisterRoutes()
+
+	return server
 }
 
 func gracefulShutdown(e *echo.Echo, done chan bool) {

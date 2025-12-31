@@ -11,3 +11,4 @@ A secure environment variable management tool built using Go. Project consists o
 
 - `DB_PATH` - Path to SQLite database file
 - `JWT_SECRET` - Secret key for JWT token signing (use a strong random string in production)
+- `ENVOY_SERVER_URL` - URL of the Envoy server

@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"os/signal"
 	"syscall"
@@ -33,6 +34,8 @@ type Server struct {
 
 func New(addr string, env *utils.EnvVar) *Server {
 	e := echo.New()
+	e.HideBanner = true
+	e.HidePort = true
 
 	// Create a DBService instance
 	dbService, err := database.NewService(env.DB_PATH)
@@ -88,7 +91,13 @@ func (s *Server) Start() {
 
 	go gracefulShutdown(s.router, done)
 
-	log.Printf("Server starting on %s", s.addr)
+	// Clickable link to open the server URL
+	url := fmt.Sprintf("http://localhost%s", s.addr)
+	fmt.Println("----------------------------------")
+	fmt.Println("Server started")
+	fmt.Printf("\033]8;;%s\033\\Click to open: %s\033]8;;\033\\\n", url, url)
+	fmt.Println("----------------------------------")
+
 	err := s.router.Start(s.addr)
 	if err != nil && err.Error() != "http: Server closed" {
 		panic(err)

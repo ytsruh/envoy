@@ -38,7 +38,7 @@ func New(addr string, env *utils.EnvVar) *Server {
 	e.HidePort = true
 
 	// Create a DBService instance
-	dbService, err := database.NewService(env.DB_PATH)
+	dbService, err := database.NewService(env.DB_URL, env.DB_TOKEN)
 	if err != nil {
 		panic(err)
 	}

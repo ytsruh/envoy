@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
-	_ "modernc.org/sqlite"
+	_ "github.com/tursodatabase/libsql-client-go/libsql"
 	database "ytsruh.com/envoy/server/database/generated"
 )
 
@@ -31,27 +30,12 @@ type Service struct {
 	queries *database.Queries
 }
 
-func NewService(dbPath string) (*Service, error) {
-	// Strip file: prefix for directory creation
-	filePath := dbPath
-	if len(dbPath) > 5 && dbPath[:5] == "file:" {
-		filePath = dbPath[5:]
-	}
-
-	// Ensure the data directory exists
-	dataDir := filepath.Dir(filePath)
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create data directory: %w", err)
-	}
-	// Open the database connection
-	db, err := sql.Open("sqlite", dbPath)
+func NewService(dbURL, dbToken string) (*Service, error) {
+	url := fmt.Sprintf("%s?authToken=%s", dbURL, dbToken)
+	db, err := sql.Open("libsql", url)
 	if err != nil {
-		return nil, fmt.Errorf("error creating connector: %w", err)
-	}
-
-	// Enable WAL mode for better concurrency
-	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
-		return nil, fmt.Errorf("failed to enable WAL mode: %w", err)
+		fmt.Fprintf(os.Stderr, "failed to open db %s: %s", url, err)
+		os.Exit(1)
 	}
 
 	if err := runMigrations(db); err != nil {
@@ -74,6 +58,7 @@ func (s *Service) GetQueries() database.Querier {
 	return s.queries
 }
 
+// Unused
 func (s *Service) Health() (*HealthStatus, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()

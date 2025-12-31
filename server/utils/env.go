@@ -14,8 +14,9 @@ var Config *EnvVar
 
 // EnvVar struct holds all environment variables used by the application
 type EnvVar struct {
-	DB_PATH    string
 	JWT_SECRET string
+	DB_URL     string
+	DB_TOKEN   string
 }
 
 // LoadAndValidateEnv loads environment variables from .env file (in development) or from system environment (in production) and validates that all required variables are set. Returns the loaded environment variables and an error if any required variable is missing
@@ -24,7 +25,8 @@ func LoadAndValidateEnv() (*EnvVar, error) {
 	_ = godotenv.Load()
 
 	env := EnvVar{
-		DB_PATH:    os.Getenv("DB_PATH"),
+		DB_URL:     os.Getenv("DB_URL"),
+		DB_TOKEN:   os.Getenv("DB_TOKEN"),
 		JWT_SECRET: os.Getenv("JWT_SECRET"),
 	}
 

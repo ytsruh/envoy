@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -10,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	database "ytsruh.com/envoy/server/database/generated"
-	"ytsruh.com/envoy/server/middleware"
 	"ytsruh.com/envoy/server/utils"
 	shared "ytsruh.com/envoy/shared"
 )
@@ -29,15 +27,11 @@ type ProfileResponse struct {
 
 func Register(c echo.Context, ctx *HandlerContext) error {
 	var req shared.RegisterRequest
-	if err := c.Bind(&req); err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, err)
+	if err := BindAndValidate(c, &req); err != nil {
+		return err
 	}
 
-	if err := utils.Validate(req); err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, err)
-	}
-
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
 	_, err := ctx.Queries.GetUserByEmail(dbCtx, req.Email)
@@ -87,15 +81,11 @@ func Register(c echo.Context, ctx *HandlerContext) error {
 
 func Login(c echo.Context, ctx *HandlerContext) error {
 	var req shared.LoginRequest
-	if err := c.Bind(&req); err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, err)
+	if err := BindAndValidate(c, &req); err != nil {
+		return err
 	}
 
-	if err := utils.Validate(req); err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, err)
-	}
-
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
 	user, err := ctx.Queries.GetUserByEmail(dbCtx, req.Email)
@@ -128,9 +118,9 @@ func Login(c echo.Context, ctx *HandlerContext) error {
 }
 
 func GetProfile(c echo.Context, ctx *HandlerContext) error {
-	claims, ok := middleware.GetUserFromContext(c)
-	if !ok {
-		return SendErrorResponse(c, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+	claims, err := GetUserOrUnauthorized(c)
+	if err != nil {
+		return err
 	}
 
 	profileResp := ProfileResponse{

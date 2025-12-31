@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -9,7 +8,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	database "ytsruh.com/envoy/server/database/generated"
-	"ytsruh.com/envoy/server/middleware"
 	"ytsruh.com/envoy/server/utils"
 	shared "ytsruh.com/envoy/shared"
 )
@@ -36,9 +34,9 @@ type EnvironmentResponse struct {
 func CreateEnvironment(c echo.Context, ctx *HandlerContext) error {
 	projectID := c.Param("project_id")
 
-	claims, ok := middleware.GetUserFromContext(c)
-	if !ok {
-		return SendErrorResponse(c, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+	claims, err := GetUserOrUnauthorized(c)
+	if err != nil {
+		return err
 	}
 
 	if err := ctx.AccessControl.RequireEditor(c.Request().Context(), projectID, claims.UserID); err != nil {
@@ -46,15 +44,11 @@ func CreateEnvironment(c echo.Context, ctx *HandlerContext) error {
 	}
 
 	var req CreateEnvironmentRequest
-	if err := c.Bind(&req); err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, err)
+	if err := BindAndValidate(c, &req); err != nil {
+		return err
 	}
 
-	if err := utils.Validate(req); err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, err)
-	}
-
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
 	now := time.Now()
@@ -86,12 +80,12 @@ func CreateEnvironment(c echo.Context, ctx *HandlerContext) error {
 func GetEnvironment(c echo.Context, ctx *HandlerContext) error {
 	id := c.Param("id")
 
-	claims, ok := middleware.GetUserFromContext(c)
-	if !ok {
-		return SendErrorResponse(c, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+	claims, err := GetUserOrUnauthorized(c)
+	if err != nil {
+		return err
 	}
 
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
 	environment, err := ctx.Queries.GetAccessibleEnvironment(dbCtx, database.GetAccessibleEnvironmentParams{
@@ -120,16 +114,16 @@ func GetEnvironment(c echo.Context, ctx *HandlerContext) error {
 func ListEnvironments(c echo.Context, ctx *HandlerContext) error {
 	projectID := c.Param("project_id")
 
-	claims, ok := middleware.GetUserFromContext(c)
-	if !ok {
-		return SendErrorResponse(c, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+	claims, err := GetUserOrUnauthorized(c)
+	if err != nil {
+		return err
 	}
 
 	if err := ctx.AccessControl.RequireViewer(c.Request().Context(), projectID, claims.UserID); err != nil {
 		return SendErrorResponse(c, http.StatusForbidden, err)
 	}
 
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
 	environments, err := ctx.Queries.ListEnvironmentsByProject(dbCtx, projectID)
@@ -155,21 +149,17 @@ func ListEnvironments(c echo.Context, ctx *HandlerContext) error {
 func UpdateEnvironment(c echo.Context, ctx *HandlerContext) error {
 	id := c.Param("id")
 
-	_, ok := middleware.GetUserFromContext(c)
-	if !ok {
-		return SendErrorResponse(c, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+	_, err := GetUserOrUnauthorized(c)
+	if err != nil {
+		return err
 	}
 
 	var req UpdateEnvironmentRequest
-	if err := c.Bind(&req); err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, err)
+	if err := BindAndValidate(c, &req); err != nil {
+		return err
 	}
 
-	if err := utils.Validate(req); err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, err)
-	}
-
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
 	now := time.Now()
@@ -198,12 +188,11 @@ func UpdateEnvironment(c echo.Context, ctx *HandlerContext) error {
 func DeleteEnvironment(c echo.Context, ctx *HandlerContext) error {
 	id := c.Param("id")
 
-	_, ok := middleware.GetUserFromContext(c)
-	if !ok {
-		return SendErrorResponse(c, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+	if _, err := GetUserOrUnauthorized(c); err != nil {
+		return err
 	}
 
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
 	err := ctx.Queries.DeleteEnvironment(dbCtx, database.DeleteEnvironmentParams{

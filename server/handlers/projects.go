@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -9,7 +8,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	database "ytsruh.com/envoy/server/database/generated"
-	"ytsruh.com/envoy/server/middleware"
 	"ytsruh.com/envoy/server/utils"
 	shared "ytsruh.com/envoy/shared"
 )
@@ -38,20 +36,16 @@ type ProjectResponse struct {
 
 func CreateProject(c echo.Context, ctx *HandlerContext) error {
 	var req CreateProjectRequest
-	if err := c.Bind(&req); err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, err)
+	if err := BindAndValidate(c, &req); err != nil {
+		return err
 	}
 
-	if err := utils.Validate(req); err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, err)
+	claims, err := GetUserOrUnauthorized(c)
+	if err != nil {
+		return err
 	}
 
-	claims, ok := middleware.GetUserFromContext(c)
-	if !ok {
-		return SendErrorResponse(c, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
-	}
-
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
 	if req.GitRepo != "" {
@@ -95,12 +89,12 @@ func CreateProject(c echo.Context, ctx *HandlerContext) error {
 func GetProject(c echo.Context, ctx *HandlerContext) error {
 	projectID := c.Param("id")
 
-	claims, ok := middleware.GetUserFromContext(c)
-	if !ok {
-		return SendErrorResponse(c, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+	claims, err := GetUserOrUnauthorized(c)
+	if err != nil {
+		return err
 	}
 
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
 	project, err := ctx.Queries.GetAccessibleProject(dbCtx, database.GetAccessibleProjectParams{
@@ -128,12 +122,12 @@ func GetProject(c echo.Context, ctx *HandlerContext) error {
 }
 
 func ListProjects(c echo.Context, ctx *HandlerContext) error {
-	claims, ok := middleware.GetUserFromContext(c)
-	if !ok {
-		return SendErrorResponse(c, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+	claims, err := GetUserOrUnauthorized(c)
+	if err != nil {
+		return err
 	}
 
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
 	projects, err := ctx.Queries.GetUserProjects(dbCtx, database.GetUserProjectsParams{
@@ -164,20 +158,16 @@ func UpdateProject(c echo.Context, ctx *HandlerContext) error {
 	projectID := c.Param("id")
 
 	var req UpdateProjectRequest
-	if err := c.Bind(&req); err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, err)
+	if err := BindAndValidate(c, &req); err != nil {
+		return err
 	}
 
-	if err := utils.Validate(req); err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, err)
+	claims, err := GetUserOrUnauthorized(c)
+	if err != nil {
+		return err
 	}
 
-	claims, ok := middleware.GetUserFromContext(c)
-	if !ok {
-		return SendErrorResponse(c, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
-	}
-
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
 	canModify, err := ctx.Queries.CanUserModifyProject(dbCtx, database.CanUserModifyProjectParams{
@@ -235,12 +225,12 @@ func UpdateProject(c echo.Context, ctx *HandlerContext) error {
 func DeleteProject(c echo.Context, ctx *HandlerContext) error {
 	projectID := c.Param("id")
 
-	claims, ok := middleware.GetUserFromContext(c)
-	if !ok {
-		return SendErrorResponse(c, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+	claims, err := GetUserOrUnauthorized(c)
+	if err != nil {
+		return err
 	}
 
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
 	ownerCount, err := ctx.Queries.IsProjectOwner(dbCtx, database.IsProjectOwnerParams{

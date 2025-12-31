@@ -16,8 +16,8 @@ func init() {
 	validate = validator.New()
 
 	// Register custom validation functions
-	validate.RegisterValidation("project_name", validateProjectName)
-	validate.RegisterValidation("environment_name", validateEnvironmentName)
+	validate.RegisterValidation("project_name", validateName)
+	validate.RegisterValidation("environment_name", validateName)
 	validate.RegisterValidation("env_var_value", validateEnvVarValue)
 }
 
@@ -36,29 +36,12 @@ func Validate(s interface{}) error {
 	return nil
 }
 
-// validateProjectName custom validation for project names
-func validateProjectName(fl validator.FieldLevel) bool {
+// validateName custom validation for project and environment names
+func validateName(fl validator.FieldLevel) bool {
 	name := fl.Field().String()
 	if len(name) < 1 || len(name) > 100 {
 		return false
 	}
-	// Allow letters, numbers, spaces, hyphens, and underscores
-	for _, char := range name {
-		if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
-			(char >= '0' && char <= '9') || char == ' ' || char == '-' || char == '_') {
-			return false
-		}
-	}
-	return true
-}
-
-// validateEnvironmentName custom validation for environment names
-func validateEnvironmentName(fl validator.FieldLevel) bool {
-	name := fl.Field().String()
-	if len(name) < 1 || len(name) > 100 {
-		return false
-	}
-	// Allow letters, numbers, spaces, hyphens, and underscores
 	for _, char := range name {
 		if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
 			(char >= '0' && char <= '9') || char == ' ' || char == '-' || char == '_') {
@@ -89,9 +72,7 @@ func formatValidationError(fe validator.FieldError) string {
 		return fmt.Sprintf("%s must be at most %s characters long", field, param)
 	case "email":
 		return fmt.Sprintf("%s must be a valid email address", field)
-	case "project_name":
-		return fmt.Sprintf("%s must be 1-100 characters and contain only letters, numbers, spaces, hyphens, and underscores", field)
-	case "environment_name":
+	case "project_name", "environment_name":
 		return fmt.Sprintf("%s must be 1-100 characters and contain only letters, numbers, spaces, hyphens, and underscores", field)
 	case "env_var_value":
 		return fmt.Sprintf("%s must be at most 255 characters", field)

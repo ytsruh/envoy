@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -9,7 +8,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	database "ytsruh.com/envoy/server/database/generated"
-	"ytsruh.com/envoy/server/middleware"
 	"ytsruh.com/envoy/server/utils"
 	shared "ytsruh.com/envoy/shared"
 )
@@ -40,9 +38,9 @@ func CreateEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
 	projectID := c.Param("project_id")
 	environmentID := c.Param("environment_id")
 
-	claims, ok := middleware.GetUserFromContext(c)
-	if !ok {
-		return SendErrorResponse(c, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+	claims, err := GetUserOrUnauthorized(c)
+	if err != nil {
+		return err
 	}
 
 	if err := ctx.AccessControl.RequireEditor(c.Request().Context(), projectID, claims.UserID); err != nil {
@@ -50,15 +48,11 @@ func CreateEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
 	}
 
 	var req CreateEnvironmentVariableRequest
-	if err := c.Bind(&req); err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, err)
+	if err := BindAndValidate(c, &req); err != nil {
+		return err
 	}
 
-	if err := utils.Validate(req); err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, err)
-	}
-
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
 	now := time.Now()
@@ -92,12 +86,12 @@ func CreateEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
 func GetEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
 	id := c.Param("id")
 
-	claims, ok := middleware.GetUserFromContext(c)
-	if !ok {
-		return SendErrorResponse(c, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+	claims, err := GetUserOrUnauthorized(c)
+	if err != nil {
+		return err
 	}
 
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
 	variable, err := ctx.Queries.GetAccessibleEnvironmentVariable(dbCtx, database.GetAccessibleEnvironmentVariableParams{
@@ -128,16 +122,16 @@ func ListEnvironmentVariables(c echo.Context, ctx *HandlerContext) error {
 	projectID := c.Param("project_id")
 	environmentID := c.Param("environment_id")
 
-	claims, ok := middleware.GetUserFromContext(c)
-	if !ok {
-		return SendErrorResponse(c, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+	claims, err := GetUserOrUnauthorized(c)
+	if err != nil {
+		return err
 	}
 
 	if err := ctx.AccessControl.RequireViewer(c.Request().Context(), projectID, claims.UserID); err != nil {
 		return SendErrorResponse(c, http.StatusForbidden, err)
 	}
 
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
 	variables, err := ctx.Queries.ListEnvironmentVariablesByEnvironment(dbCtx, environmentID)
@@ -165,9 +159,9 @@ func UpdateEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
 	projectID := c.Param("project_id")
 	id := c.Param("id")
 
-	claims, ok := middleware.GetUserFromContext(c)
-	if !ok {
-		return SendErrorResponse(c, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+	claims, err := GetUserOrUnauthorized(c)
+	if err != nil {
+		return err
 	}
 
 	if err := ctx.AccessControl.RequireEditor(c.Request().Context(), projectID, claims.UserID); err != nil {
@@ -175,15 +169,11 @@ func UpdateEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
 	}
 
 	var req UpdateEnvironmentVariableRequest
-	if err := c.Bind(&req); err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, err)
+	if err := BindAndValidate(c, &req); err != nil {
+		return err
 	}
 
-	if err := utils.Validate(req); err != nil {
-		return SendErrorResponse(c, http.StatusBadRequest, err)
-	}
-
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
 	now := time.Now()
@@ -215,19 +205,19 @@ func DeleteEnvironmentVariable(c echo.Context, ctx *HandlerContext) error {
 	projectID := c.Param("project_id")
 	id := c.Param("id")
 
-	claims, ok := middleware.GetUserFromContext(c)
-	if !ok {
-		return SendErrorResponse(c, http.StatusUnauthorized, fmt.Errorf("unauthorized"))
+	claims, err := GetUserOrUnauthorized(c)
+	if err != nil {
+		return err
 	}
 
 	if err := ctx.AccessControl.RequireEditor(c.Request().Context(), projectID, claims.UserID); err != nil {
 		return SendErrorResponse(c, http.StatusForbidden, err)
 	}
 
-	dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	dbCtx, cancel := GetDBContext()
 	defer cancel()
 
-	err := ctx.Queries.DeleteEnvironmentVariable(dbCtx, id)
+	err = ctx.Queries.DeleteEnvironmentVariable(dbCtx, id)
 	if err != nil {
 		return SendErrorResponse(c, http.StatusInternalServerError, fmt.Errorf("failed to delete environment variable"))
 	}

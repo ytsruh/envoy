@@ -2,7 +2,6 @@
 .DS_Store
 *.db
 /tmp
-/data
 *_templ.go
 envoy-server
 envoy-cli

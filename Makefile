@@ -9,6 +9,11 @@ GORUN	:= go run
 GOTEST := go test
 GOBUILD := go build
 
+# Version
+TAG := $(shell git describe --tags --abbrev=0 --match='v[0-9]*.[0-9]*.[0-9]*' 2>/dev/null || echo "dev")
+VERSION := $(shell echo $(TAG) | sed 's/^v//' || echo "dev")
+LDFLAGS := -ldflags "-X 'ytsruh.com/envoy/shared.Version=$(VERSION)'"
+
 # Directories
 PKGS := ./...
 CMD_DIR := ./cmd
@@ -38,8 +43,8 @@ test-ci:
 
 # Build binary
 build:
-	$(GOBUILD) -o $(BINARY) $(CMD_DIR)
-	$(GOBUILD) -tags=cli -o $(CLI_BINARY) $(CMD_DIR)/cli.go
+	$(GOBUILD) $(LDFLAGS) -o $(BINARY) $(CMD_DIR)
+	$(GOBUILD) $(LDFLAGS) -tags=cli -o $(CLI_BINARY) $(CMD_DIR)/cli.go
 
 # Start the compiled binary (production)
 start: build

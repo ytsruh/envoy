@@ -11,6 +11,7 @@ import (
 func (s *Server) RegisterRoutes() {
 	s.RegisterHealthHandler()
 	s.RegisterHomeHandler()
+	s.RegisterVersionHandler()
 	s.RegisterAuthHandlers()
 	s.RegisterProjectHandlers()
 	s.RegisterProjectSharingHandlers()
@@ -142,4 +143,10 @@ func (s *Server) RegisterEnvironmentVariableHandlers() {
 	s.router.DELETE("/projects/:project_id/environments/:environment_id/variables/:id", auth(func(c echo.Context) error {
 		return handlers.DeleteEnvironmentVariable(c, ctx)
 	}))
+}
+
+func (s *Server) RegisterVersionHandler() {
+	s.router.GET("/version", func(c echo.Context) error {
+		return handlers.Version(c, nil)
+	})
 }

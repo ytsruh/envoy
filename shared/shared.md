@@ -7,6 +7,7 @@ The shared package includes:
 - All API error definitions used throughout the system
 - Request type definitions with validation tags
 - Response type definitions with Timestamp support for JSON serialization
+- Version variable for application versioning (injected at build time)
 
 ## Usage
 ```
@@ -20,4 +21,19 @@ The shared package includes:
 	
 	// Use conversion helpers
 	s := shared.NullStringToStringPtr(ns)
+
+	// Get application version
+	v := shared.Version
+```
+
+## Version
+
+The `Version` variable contains the application version. It's injected at build time via ldflags:
+- Development builds: "dev"
+- Release builds: semver from git tag (e.g., "1.0.0")
+
+To set version when building:
+```bash
+make build  # Uses git tag or "dev"
+make build VERSION=1.0.0  # Override version
 ```

@@ -1,4 +1,4 @@
-//go:generate templ generate
+//go:generate templ generate -path ../server/views
 package main
 
 import (

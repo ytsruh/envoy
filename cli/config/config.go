@@ -14,8 +14,9 @@ const (
 )
 
 var (
-	homeDir        string
-	configFilePath string
+	homeDir          string
+	configFilePath   string
+	DefaultServerURL = "https://envoy.webiliti.com" // Production server URL
 )
 
 func init() {
@@ -109,17 +110,15 @@ func GetServerURL() (string, error) {
 		return "", err
 	}
 
-	if cfg.ServerURL == "" {
-		cfg.ServerURL = os.Getenv("ENVOY_SERVER_URL")
-		if cfg.ServerURL == "" {
-			cfg.ServerURL = "http://localhost:8080"
-		}
-		if err := Save(cfg); err != nil {
-			return "", err
-		}
+	if cfg.ServerURL != "" {
+		return cfg.ServerURL, nil
 	}
 
-	return cfg.ServerURL, nil
+	if envURL := os.Getenv("ENVOY_SERVER_URL"); envURL != "" {
+		return envURL, nil
+	}
+
+	return DefaultServerURL, nil
 }
 
 func ClearToken() error {

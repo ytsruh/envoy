@@ -1,10 +1,10 @@
 version: "2"
 sql:
   - engine: "sqlite"
-    queries: "pkg/database/queries"
-    schema: "pkg/database/schema.sql"
+    queries: "server/database/queries"
+    schema: "server/database/schema.sql"
     gen:
       go:
         package: "database"
-        out: "pkg/database/generated"
+        out: "server/database/generated"
         emit_interface: true

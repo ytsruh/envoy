@@ -1,21 +1,28 @@
 # Makefile
 
-# Binary name
-BINARY := envoy
+# Binary names
+BINARY := envoy-server
+CLI_BINARY := envoy-cli
 
 # Go tooling
 GORUN	:= go run
 GOTEST := go test
 GOBUILD := go build
 
+# Version
+TAG := $(shell git describe --tags --abbrev=0 --match='v[0-9]*.[0-9]*.[0-9]*' 2>/dev/null || echo "dev")
+VERSION := $(shell echo $(TAG) | sed 's/^v//' || echo "dev")
+LDFLAGS := -ldflags "-X 'ytsruh.com/envoy/shared.Version=$(VERSION)'"
+
 # Directories
 PKGS := ./...
 CMD_DIR := ./cmd
+CLI_DIR := ./cmd
 
 # Air (live reload dev tool). Install: https://github.com/cosmtrek/air
 AIR := air
 
-.PHONY: run dev test test-ci build start help
+.PHONY: run dev test test-ci build start build-cli run-cli help
 
 # Run the program
 run:
@@ -36,12 +43,17 @@ test-ci:
 
 # Build binary
 build:
-	$(GOBUILD) -o $(BINARY) $(CMD_DIR)
+	$(GOBUILD) $(LDFLAGS) -o $(BINARY) $(CMD_DIR)
+	$(GOBUILD) $(LDFLAGS) -tags=cli -o $(CLI_BINARY) $(CMD_DIR)/cli.go
 
 # Start the compiled binary (production)
 start: build
 		@echo "Starting $(BINARY)..."
 		./$(BINARY)
+
+# Run the CLI (development)
+run-cli:
+	$(GORUN) -tags=cli $(CMD_DIR)/cli.go
 
 # Generate SQL Queries
 generate:
@@ -55,4 +67,6 @@ help:
 	@echo "  make test         - run all tests (go test ./...)"
 	@echo "  make test-ci      - run all tests with race detector and coverage"
 	@echo "  make start        - build and run the binary"
+	@echo "  make build        - build the binaries"
+	@echo "  make run-cli      - run the CLI (development)"
 	@echo "  make generate     - generate SQL queries"

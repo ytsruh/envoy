@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"github.com/labstack/echo/v4"
-	views "ytsruh.com/envoy/server/views"
+	"ytsruh.com/envoy/server/views"
 )
 
 func Home(c echo.Context, _ *HandlerContext) error {

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"ytsruh.com/envoy/server/cron"
 	"ytsruh.com/envoy/server/database"
 	queries "ytsruh.com/envoy/server/database/generated"
 	"ytsruh.com/envoy/server/middleware"
@@ -44,12 +43,6 @@ func New(addr string, env *utils.EnvVar) *Server {
 	}
 	// Create an AccessControlService instance
 	accessControl := utils.NewAccessControlService(dbService.GetQueries())
-
-	// Create a CronService instance
-	logger := log.New(log.Writer(), "", log.LstdFlags)
-	cronService := cron.New(dbService.GetDB(), logger)
-	cronService.AddJob("*/30 * * * * *", cron.DatabaseHealthCheck(dbService.GetDB(), logger))
-	cronService.Start()
 
 	// Create a Server instance
 	server := &Server{

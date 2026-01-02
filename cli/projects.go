@@ -6,6 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"ytsruh.com/envoy/cli/controllers"
+	"ytsruh.com/envoy/cli/prompts"
+	"ytsruh.com/envoy/cli/utils"
 	shared "ytsruh.com/envoy/shared"
 )
 
@@ -20,38 +22,38 @@ var createProjectCmd = &cobra.Command{
 	Short: "Create a new project",
 	Long:  "Create a new Envoy project with optional git repository tracking",
 	Run: func(cmd *cobra.Command, args []string) {
-		name, err := PromptString("Project name", true)
+		name, err := prompts.PromptString("Project name", true)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
 		}
 
-		description, err := PromptString("Description (optional)", false)
+		description, err := prompts.PromptString("Description (optional)", false)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
 		}
 
-		gitRepo, err := GetGitRepoString()
+		gitRepo, err := utils.GetGitRepoString()
 		if err != nil {
 			fmt.Printf("Warning: Could not detect git repository: %v\n", err)
 		}
 
 		if gitRepo == "" {
-			gitRepo, err = PromptString("Git repository (owner/repo, optional)", false)
+			gitRepo, err = prompts.PromptString("Git repository (owner/repo, optional)", false)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 		} else {
 			fmt.Printf("Detected git repository: %s\n", gitRepo)
-			useGit, err := Confirm("Use this git repository?")
+			useGit, err := prompts.Confirm("Use this git repository?")
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 			if !useGit {
-				gitRepo, err = PromptString("Git repository (owner/repo, optional)", false)
+				gitRepo, err = prompts.PromptString("Git repository (owner/repo, optional)", false)
 				if err != nil {
 					fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 					os.Exit(1)
@@ -172,7 +174,7 @@ var getProjectCmd = &cobra.Command{
 			fmt.Printf("  Created: %s\n", project.CreatedAt)
 			fmt.Printf("  Updated: %s\n", project.UpdatedAt)
 		} else {
-			projectID, err = promptForProject(client)
+			projectID, err = prompts.PromptForProject(client)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -229,13 +231,13 @@ var updateProjectCmd = &cobra.Command{
 				os.Exit(1)
 			}
 
-			name, err := PromptStringWithDefault("Project name", project.Name)
+			name, err := prompts.PromptStringWithDefault("Project name", project.Name)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			description, err := PromptString("Description (leave empty to keep current)", false)
+			description, err := prompts.PromptString("Description (leave empty to keep current)", false)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -244,7 +246,7 @@ var updateProjectCmd = &cobra.Command{
 				description = *project.Description
 			}
 
-			gitRepo, err := PromptString("Git repository owner/repo (leave empty to keep current)", false)
+			gitRepo, err := prompts.PromptString("Git repository owner/repo (leave empty to keep current)", false)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -271,7 +273,7 @@ var updateProjectCmd = &cobra.Command{
 				fmt.Printf("  Git Repository: %s\n", *updatedProject.GitRepo)
 			}
 		} else {
-			projectID, err = promptForProject(client)
+			projectID, err = prompts.PromptForProject(client)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -286,13 +288,13 @@ var updateProjectCmd = &cobra.Command{
 				os.Exit(1)
 			}
 
-			name, err := PromptStringWithDefault("Project name", project.Name)
+			name, err := prompts.PromptStringWithDefault("Project name", project.Name)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			description, err := PromptString("Description (leave empty to keep current)", false)
+			description, err := prompts.PromptString("Description (leave empty to keep current)", false)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -301,7 +303,7 @@ var updateProjectCmd = &cobra.Command{
 				description = *project.Description
 			}
 
-			gitRepo, err := PromptString("Git repository owner/repo (leave empty to keep current)", false)
+			gitRepo, err := prompts.PromptString("Git repository owner/repo (leave empty to keep current)", false)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -361,7 +363,7 @@ var deleteProjectCmd = &cobra.Command{
 			}
 
 			fmt.Printf("Are you sure you want to delete project '%s' (ID: %s)?\n", project.Name, project.ID)
-			confirmed, err := Confirm("This action cannot be undone")
+			confirmed, err := prompts.Confirm("This action cannot be undone")
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -382,7 +384,7 @@ var deleteProjectCmd = &cobra.Command{
 
 			fmt.Println("Project deleted successfully")
 		} else {
-			projectID, err = promptForProject(client)
+			projectID, err = prompts.PromptForProject(client)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -398,7 +400,7 @@ var deleteProjectCmd = &cobra.Command{
 			}
 
 			fmt.Printf("Are you sure you want to delete project '%s' (ID: %s)?\n", project.Name, project.ID)
-			confirmed, err := Confirm("This action cannot be undone")
+			confirmed, err := prompts.Confirm("This action cannot be undone")
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)

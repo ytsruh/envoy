@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"ytsruh.com/envoy/cli/config"
+	"ytsruh.com/envoy/cli/utils"
 	"ytsruh.com/envoy/shared"
 )
 
@@ -68,7 +68,7 @@ func (b *BaseClient) doRequest(method, path string, body interface{}, authRequir
 			defer resp.Body.Close()
 
 			if resp.StatusCode == http.StatusUnauthorized && errResp.Error == "Token has expired" {
-				if err := config.ClearToken(); err == nil {
+				if err := utils.ClearToken(); err == nil {
 					b.token = ""
 				}
 				return resp, shared.ErrExpiredToken

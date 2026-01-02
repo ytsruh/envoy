@@ -7,6 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"ytsruh.com/envoy/cli/controllers"
+	"ytsruh.com/envoy/cli/prompts"
+	"ytsruh.com/envoy/cli/utils"
 	shared "ytsruh.com/envoy/shared"
 )
 
@@ -48,19 +50,19 @@ var importVariablesCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		projectOptions := make([]SelectOption, len(projects))
+		projectOptions := make([]prompts.SelectOption, len(projects))
 		for i, p := range projects {
 			label := p.Name
 			if p.Description != nil && *p.Description != "" {
 				label += fmt.Sprintf(" - %s", *p.Description)
 			}
-			projectOptions[i] = SelectOption{
+			projectOptions[i] = prompts.SelectOption{
 				Label: label,
 				Value: string(p.ID),
 			}
 		}
 
-		projectID, err := PromptSelect("Select a project", projectOptions, true)
+		projectID, err := prompts.PromptSelect("Select a project", projectOptions, true)
 		if err != nil {
 			fmt.Println("Import cancelled")
 			return
@@ -80,19 +82,19 @@ var importVariablesCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		environmentOptions := make([]SelectOption, len(environments))
+		environmentOptions := make([]prompts.SelectOption, len(environments))
 		for i, e := range environments {
 			label := e.Name
 			if e.Description != nil && *e.Description != "" {
 				label += fmt.Sprintf(" - %s", *e.Description)
 			}
-			environmentOptions[i] = SelectOption{
+			environmentOptions[i] = prompts.SelectOption{
 				Label: label,
 				Value: string(e.ID),
 			}
 		}
 
-		environmentID, err := PromptSelect("Select an environment", environmentOptions, true)
+		environmentID, err := prompts.PromptSelect("Select an environment", environmentOptions, true)
 		if err != nil {
 			fmt.Println("Import cancelled")
 			return
@@ -103,7 +105,7 @@ var importVariablesCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		variables, err := ParseEnvFile(importFile)
+		variables, err := utils.ParseEnvFile(importFile)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to parse file '%s': %v\n", importFile, err)
 			os.Exit(1)
@@ -120,7 +122,7 @@ var importVariablesCmd = &cobra.Command{
 		}
 		fmt.Println()
 
-		confirmed, err := Confirm("Import these variables?")
+		confirmed, err := prompts.Confirm("Import these variables?")
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
@@ -191,19 +193,19 @@ var exportVariablesCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		projectOptions := make([]SelectOption, len(projects))
+		projectOptions := make([]prompts.SelectOption, len(projects))
 		for i, p := range projects {
 			label := p.Name
 			if p.Description != nil && *p.Description != "" {
 				label += fmt.Sprintf(" - %s", *p.Description)
 			}
-			projectOptions[i] = SelectOption{
+			projectOptions[i] = prompts.SelectOption{
 				Label: label,
 				Value: string(p.ID),
 			}
 		}
 
-		projectID, err := PromptSelect("Select a project", projectOptions, true)
+		projectID, err := prompts.PromptSelect("Select a project", projectOptions, true)
 		if err != nil {
 			fmt.Println("Export cancelled")
 			return
@@ -223,19 +225,19 @@ var exportVariablesCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		environmentOptions := make([]SelectOption, len(environments))
+		environmentOptions := make([]prompts.SelectOption, len(environments))
 		for i, e := range environments {
 			label := e.Name
 			if e.Description != nil && *e.Description != "" {
 				label += fmt.Sprintf(" - %s", *e.Description)
 			}
-			environmentOptions[i] = SelectOption{
+			environmentOptions[i] = prompts.SelectOption{
 				Label: label,
 				Value: string(e.ID),
 			}
 		}
 
-		environmentID, err := PromptSelect("Select an environment", environmentOptions, true)
+		environmentID, err := prompts.PromptSelect("Select an environment", environmentOptions, true)
 		if err != nil {
 			fmt.Println("Export cancelled")
 			return
@@ -271,7 +273,7 @@ var exportVariablesCmd = &cobra.Command{
 
 		if _, err := os.Stat(outputFilename); err == nil {
 			fmt.Printf("Warning: File '%s' already exists in current directory\n", outputFilename)
-			confirmed, err := Confirm("Overwrite existing file?")
+			confirmed, err := prompts.Confirm("Overwrite existing file?")
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -287,7 +289,7 @@ var exportVariablesCmd = &cobra.Command{
 			variablesMap[v.Key] = v.Value
 		}
 
-		if err := WriteEnvFile(outputFilename, variablesMap); err != nil {
+		if err := utils.WriteEnvFile(outputFilename, variablesMap); err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Failed to write file '%s': %v\n", outputFilename, err)
 			os.Exit(1)
 		}
@@ -339,13 +341,13 @@ var createVariableCmd = &cobra.Command{
 
 			fmt.Printf("Environment: %s (ID: %s)\n", environment.Name, environment.ID)
 
-			key, err := PromptString("Variable key", true)
+			key, err := prompts.PromptString("Variable key", true)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			value, err := PromptString("Variable value", true)
+			value, err := prompts.PromptString("Variable value", true)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -369,25 +371,25 @@ var createVariableCmd = &cobra.Command{
 			fmt.Fprintln(cmd.OutOrStderr(), "Usage: envoy variables create <project_id> <environment_id>")
 			os.Exit(1)
 		} else {
-			projectID, err = promptForProject(client)
+			projectID, err = prompts.PromptForProject(client)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			environmentID, err = promptForEnvironment(client, projectID)
+			environmentID, err = prompts.PromptForEnvironment(client, projectID)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			key, err := PromptString("Variable key", true)
+			key, err := prompts.PromptString("Variable key", true)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			value, err := PromptString("Variable value", true)
+			value, err := prompts.PromptString("Variable value", true)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -476,13 +478,13 @@ var listVariablesCmd = &cobra.Command{
 			fmt.Fprintln(cmd.OutOrStderr(), "Usage: envoy variables list <project_id> <environment_id>")
 			os.Exit(1)
 		} else {
-			projectID, err = promptForProject(client)
+			projectID, err = prompts.PromptForProject(client)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			environmentID, err = promptForEnvironment(client, projectID)
+			environmentID, err = prompts.PromptForEnvironment(client, projectID)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -575,19 +577,19 @@ var getVariableCmd = &cobra.Command{
 			fmt.Fprintln(cmd.OutOrStderr(), "Usage: envoy variables get <variable_id> <project_id> <environment_id>")
 			os.Exit(1)
 		} else {
-			projectID, err = promptForProject(client)
+			projectID, err = prompts.PromptForProject(client)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			environmentID, err = promptForEnvironment(client, projectID)
+			environmentID, err = prompts.PromptForEnvironment(client, projectID)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			variableID, err = promptForVariable(client, projectID, environmentID)
+			variableID, err = prompts.PromptForVariable(client, projectID, environmentID)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -662,13 +664,13 @@ var updateVariableCmd = &cobra.Command{
 				os.Exit(1)
 			}
 
-			key, err := PromptStringWithDefault("Variable key", variable.Key)
+			key, err := prompts.PromptStringWithDefault("Variable key", variable.Key)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			value, err := PromptString("Variable value", true)
+			value, err := prompts.PromptString("Variable value", true)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -691,19 +693,19 @@ var updateVariableCmd = &cobra.Command{
 			fmt.Fprintln(cmd.OutOrStderr(), "Usage: envoy variables update <variable_id> <project_id> <environment_id>")
 			os.Exit(1)
 		} else {
-			projectID, err = promptForProject(client)
+			projectID, err = prompts.PromptForProject(client)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			environmentID, err = promptForEnvironment(client, projectID)
+			environmentID, err = prompts.PromptForEnvironment(client, projectID)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			variableID, err = promptForVariable(client, projectID, environmentID)
+			variableID, err = prompts.PromptForVariable(client, projectID, environmentID)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -718,13 +720,13 @@ var updateVariableCmd = &cobra.Command{
 				os.Exit(1)
 			}
 
-			key, err := PromptStringWithDefault("Variable key", variable.Key)
+			key, err := prompts.PromptStringWithDefault("Variable key", variable.Key)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			value, err := PromptString("Variable value", true)
+			value, err := prompts.PromptString("Variable value", true)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -796,7 +798,7 @@ var deleteVariableCmd = &cobra.Command{
 			}
 
 			fmt.Printf("Are you sure you want to delete variable '%s' (ID: %s)?\n", variable.Key, variable.ID)
-			confirmed, err := Confirm("This action cannot be undone")
+			confirmed, err := prompts.Confirm("This action cannot be undone")
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -821,19 +823,19 @@ var deleteVariableCmd = &cobra.Command{
 			fmt.Fprintln(cmd.OutOrStderr(), "Usage: envoy variables delete <variable_id> <project_id> <environment_id>")
 			os.Exit(1)
 		} else {
-			projectID, err = promptForProject(client)
+			projectID, err = prompts.PromptForProject(client)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			environmentID, err = promptForEnvironment(client, projectID)
+			environmentID, err = prompts.PromptForEnvironment(client, projectID)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			variableID, err = promptForVariable(client, projectID, environmentID)
+			variableID, err = prompts.PromptForVariable(client, projectID, environmentID)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -849,7 +851,7 @@ var deleteVariableCmd = &cobra.Command{
 			}
 
 			fmt.Printf("Are you sure you want to delete variable '%s' (ID: %s)?\n", variable.Key, variable.ID)
-			confirmed, err := Confirm("This action cannot be undone")
+			confirmed, err := prompts.Confirm("This action cannot be undone")
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)

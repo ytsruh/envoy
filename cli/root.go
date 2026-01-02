@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	shared "ytsruh.com/envoy/shared"
 )
 
 var RootCmd = &cobra.Command{
@@ -22,6 +23,14 @@ func Execute() {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print the version number",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("v%s\n", shared.Version)
+	},
 }
 
 func init() {

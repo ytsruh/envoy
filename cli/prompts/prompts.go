@@ -1,4 +1,4 @@
-package cli
+package prompts
 
 import (
 	"bufio"
@@ -186,7 +186,7 @@ func PromptSelect(prompt string, options []SelectOption, allowCancel bool) (stri
 	}
 }
 
-func promptForProject(client *controllers.Client) (string, error) {
+func PromptForProject(client *controllers.Client) (string, error) {
 	projects, err := client.ListProjects()
 	if err != nil {
 		return "", err
@@ -208,7 +208,7 @@ func promptForProject(client *controllers.Client) (string, error) {
 	return PromptSelect("Select a project", options, true)
 }
 
-func promptForEnvironment(client *controllers.Client, projectID string) (string, error) {
+func PromptForEnvironment(client *controllers.Client, projectID string) (string, error) {
 	environments, err := client.ListEnvironments(projectID)
 	if err != nil {
 		return "", err
@@ -230,7 +230,7 @@ func promptForEnvironment(client *controllers.Client, projectID string) (string,
 	return PromptSelect("Select an environment", options, true)
 }
 
-func promptForVariable(client *controllers.Client, projectID, environmentID string) (string, error) {
+func PromptForVariable(client *controllers.Client, projectID, environmentID string) (string, error) {
 	variables, err := client.ListEnvironmentVariables(projectID, environmentID)
 	if err != nil {
 		return "", err

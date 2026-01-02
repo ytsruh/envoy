@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"ytsruh.com/envoy/cli/controllers"
+	"ytsruh.com/envoy/cli/prompts"
 	shared "ytsruh.com/envoy/shared"
 )
 
@@ -46,20 +47,20 @@ var createEnvironmentCmd = &cobra.Command{
 
 			fmt.Printf("Project: %s (ID: %s)\n", project.Name, project.ID)
 		} else {
-			projectID, err = promptForProject(client)
+			projectID, err = prompts.PromptForProject(client)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 		}
 
-		name, err := PromptString("Environment name", true)
+		name, err := prompts.PromptString("Environment name", true)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
 		}
 
-		description, err := PromptString("Description (optional)", false)
+		description, err := prompts.PromptString("Description (optional)", false)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
@@ -113,7 +114,7 @@ var listEnvironmentsCmd = &cobra.Command{
 				os.Exit(1)
 			}
 		} else {
-			projectID, err = promptForProject(client)
+			projectID, err = prompts.PromptForProject(client)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -200,13 +201,13 @@ var getEnvironmentCmd = &cobra.Command{
 			fmt.Fprintln(cmd.OutOrStderr(), "Usage: envoy environments get <environment_id> <project_id>")
 			os.Exit(1)
 		} else {
-			projectID, err = promptForProject(client)
+			projectID, err = prompts.PromptForProject(client)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			environmentID, err = promptForEnvironment(client, projectID)
+			environmentID, err = prompts.PromptForEnvironment(client, projectID)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -273,13 +274,13 @@ var updateEnvironmentCmd = &cobra.Command{
 				os.Exit(1)
 			}
 
-			name, err := PromptStringWithDefault("Environment name", environment.Name)
+			name, err := prompts.PromptStringWithDefault("Environment name", environment.Name)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			description, err := PromptString("Description (leave empty to keep current)", false)
+			description, err := prompts.PromptString("Description (leave empty to keep current)", false)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -307,13 +308,13 @@ var updateEnvironmentCmd = &cobra.Command{
 			fmt.Fprintln(cmd.OutOrStderr(), "Usage: envoy environments update <environment_id> <project_id>")
 			os.Exit(1)
 		} else {
-			projectID, err = promptForProject(client)
+			projectID, err = prompts.PromptForProject(client)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			environmentID, err = promptForEnvironment(client, projectID)
+			environmentID, err = prompts.PromptForEnvironment(client, projectID)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -328,13 +329,13 @@ var updateEnvironmentCmd = &cobra.Command{
 				os.Exit(1)
 			}
 
-			name, err := PromptStringWithDefault("Environment name", environment.Name)
+			name, err := prompts.PromptStringWithDefault("Environment name", environment.Name)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			description, err := PromptString("Description (leave empty to keep current)", false)
+			description, err := prompts.PromptString("Description (leave empty to keep current)", false)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -401,7 +402,7 @@ var deleteEnvironmentCmd = &cobra.Command{
 			}
 
 			fmt.Printf("Are you sure you want to delete environment '%s' (ID: %s)?\n", environment.Name, environment.ID)
-			confirmed, err := Confirm("This action cannot be undone")
+			confirmed, err := prompts.Confirm("This action cannot be undone")
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -426,13 +427,13 @@ var deleteEnvironmentCmd = &cobra.Command{
 			fmt.Fprintln(cmd.OutOrStderr(), "Usage: envoy environments delete <environment_id> <project_id>")
 			os.Exit(1)
 		} else {
-			projectID, err = promptForProject(client)
+			projectID, err = prompts.PromptForProject(client)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
 			}
 
-			environmentID, err = promptForEnvironment(client, projectID)
+			environmentID, err = prompts.PromptForEnvironment(client, projectID)
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)
@@ -448,7 +449,7 @@ var deleteEnvironmentCmd = &cobra.Command{
 			}
 
 			fmt.Printf("Are you sure you want to delete environment '%s' (ID: %s)?\n", environment.Name, environment.ID)
-			confirmed, err := Confirm("This action cannot be undone")
+			confirmed, err := prompts.Confirm("This action cannot be undone")
 			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 				os.Exit(1)

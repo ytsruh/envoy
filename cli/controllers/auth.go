@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"ytsruh.com/envoy/cli/config"
+	"ytsruh.com/envoy/cli/utils"
 	shared "ytsruh.com/envoy/shared"
 )
 
@@ -42,7 +42,7 @@ func (a *AuthController) Register(name, email, password string) (*AuthResponse, 
 		return nil, err
 	}
 
-	if err := config.SetToken(authResp.Token); err != nil {
+	if err := utils.SetToken(authResp.Token); err != nil {
 		return nil, err
 	}
 
@@ -67,7 +67,7 @@ func (a *AuthController) Login(email, password string) (*AuthResponse, error) {
 		return nil, err
 	}
 
-	if err := config.SetToken(authResp.Token); err != nil {
+	if err := utils.SetToken(authResp.Token); err != nil {
 		return nil, err
 	}
 

@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"ytsruh.com/envoy/cli/config"
+	"ytsruh.com/envoy/cli/utils"
 	shared "ytsruh.com/envoy/shared"
 )
 
@@ -13,12 +13,12 @@ type Client struct {
 }
 
 func NewClient() (*Client, error) {
-	serverURL, err := config.GetServerURL()
+	serverURL, err := utils.GetServerURL()
 	if err != nil {
 		return nil, err
 	}
 
-	token, err := config.GetToken()
+	token, err := utils.GetToken()
 	if err != nil {
 		return nil, err
 	}

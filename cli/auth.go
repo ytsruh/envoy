@@ -5,8 +5,9 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"ytsruh.com/envoy/cli/config"
 	"ytsruh.com/envoy/cli/controllers"
+	"ytsruh.com/envoy/cli/prompts"
+	"ytsruh.com/envoy/cli/utils"
 	shared "ytsruh.com/envoy/shared"
 )
 
@@ -17,19 +18,19 @@ var registerCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Registering new account...")
 
-		name, err := PromptString("Name", true)
+		name, err := prompts.PromptString("Name", true)
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
 		}
 
-		email, err := PromptEmail("Email")
+		email, err := prompts.PromptEmail("Email")
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
 		}
 
-		password, err := PromptPassword("Password (min 8 characters)")
+		password, err := prompts.PromptPassword("Password (min 8 characters)")
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
@@ -64,13 +65,13 @@ var loginCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Logging in...")
 
-		email, err := PromptEmail("Email")
+		email, err := prompts.PromptEmail("Email")
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
 		}
 
-		password, err := PromptPassword("Password")
+		password, err := prompts.PromptPassword("Password")
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
@@ -98,7 +99,7 @@ var logoutCmd = &cobra.Command{
 	Short: "Logout from your account",
 	Long:  "Logout from your Envoy account (clears stored token)",
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := config.ClearToken(); err != nil {
+		if err := utils.ClearToken(); err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			os.Exit(1)
 		}

@@ -130,44 +130,10 @@ var profileCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		projectID, err := config.GetProjectID()
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			os.Exit(1)
-		}
-
-		environmentID, err := config.GetEnvironmentID()
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			os.Exit(1)
-		}
-
 		fmt.Println("Profile Information:")
 		fmt.Printf("  User ID: %s\n", profile.UserID)
 		fmt.Printf("  Email: %s\n", profile.Email)
 		fmt.Printf("  Token issued at: %d\n", profile.Iat)
 		fmt.Printf("  Token expires at: %d\n", profile.Exp)
-
-		if projectID != "" {
-			project, err := client.GetProject(projectID)
-			if err != nil {
-				fmt.Printf("  Current Project: ID: %s (failed to fetch project details)\n", projectID)
-			} else {
-				fmt.Printf("  Current Project: ID: %s, Name: \"%s\"\n", project.ID, project.Name)
-			}
-		} else {
-			fmt.Println("  Current Project: None (use 'envoy projects use <id>' to set)")
-		}
-
-		if environmentID != "" && projectID != "" {
-			environment, err := client.GetEnvironment(projectID, environmentID)
-			if err != nil {
-				fmt.Printf("  Current Environment: ID: %s (failed to fetch environment details)\n", environmentID)
-			} else {
-				fmt.Printf("  Current Environment: ID: %s, Name: \"%s\"\n", environment.ID, environment.Name)
-			}
-		} else {
-			fmt.Println("  Current Environment: None (use 'envoy environments use <id>' to set)")
-		}
 	},
 }

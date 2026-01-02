@@ -18,7 +18,6 @@ func init() {
 	// Register custom validation functions
 	validate.RegisterValidation("project_name", validateName)
 	validate.RegisterValidation("environment_name", validateName)
-	validate.RegisterValidation("env_var_value", validateEnvVarValue)
 }
 
 // Validate validates a struct using the validator package
@@ -49,12 +48,6 @@ func validateName(fl validator.FieldLevel) bool {
 		}
 	}
 	return true
-}
-
-// validateEnvVarValue custom validation for environment variable values
-func validateEnvVarValue(fl validator.FieldLevel) bool {
-	value := fl.Field().String()
-	return len(value) <= 255
 }
 
 // formatValidationError converts validation errors to user-friendly messages

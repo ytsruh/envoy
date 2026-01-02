@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"ytsruh.com/envoy/cli/config"
 	"ytsruh.com/envoy/cli/controllers"
 	shared "ytsruh.com/envoy/shared"
 )
@@ -118,15 +117,9 @@ var listProjectsCmd = &cobra.Command{
 			return
 		}
 
-		currentProjectID, _ := config.GetProjectID()
-
 		fmt.Printf("Found %d project(s):\n\n", len(projects))
 		for _, p := range projects {
-			if string(p.ID) == currentProjectID {
-				fmt.Printf("* ID: %s\n", p.ID)
-			} else {
-				fmt.Printf("  ID: %s\n", p.ID)
-			}
+			fmt.Printf("  ID: %s\n", p.ID)
 			fmt.Printf("  Name: %s\n", p.Name)
 			if p.Description != nil && *p.Description != "" {
 				fmt.Printf("  Description: %s\n", *p.Description)
@@ -295,62 +288,10 @@ var deleteProjectCmd = &cobra.Command{
 	},
 }
 
-var useProjectCmd = &cobra.Command{
-	Use:   "use <id>",
-	Short: "Set as current project",
-	Long:  "Set a project as current project for environment operations",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		projectID := args[0]
-
-		client, err := controllers.RequireToken()
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			if err == shared.ErrNoToken {
-				fmt.Println("Please login first using 'envoy login'")
-			}
-			os.Exit(1)
-		}
-
-		project, err := client.GetProject(projectID)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
-			if err == shared.ErrExpiredToken {
-				fmt.Println("Your session has expired. Please login again using 'envoy login'")
-			}
-			os.Exit(1)
-		}
-
-		if err := config.SetProjectID(projectID); err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to set current project: %v\n", err)
-			os.Exit(1)
-		}
-
-		fmt.Printf("Now using project: %s (ID: %s)\n", project.Name, project.ID)
-	},
-}
-
-var unsetProjectCmd = &cobra.Command{
-	Use:   "unset",
-	Short: "Unset current project",
-	Long:  "Clear the current project selection",
-	Args:  cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		if err := config.ClearProjectID(); err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to clear current project: %v\n", err)
-			os.Exit(1)
-		}
-
-		fmt.Println("Current project cleared")
-	},
-}
-
 func init() {
 	projectsCmd.AddCommand(createProjectCmd)
 	projectsCmd.AddCommand(listProjectsCmd)
 	projectsCmd.AddCommand(getProjectCmd)
 	projectsCmd.AddCommand(updateProjectCmd)
 	projectsCmd.AddCommand(deleteProjectCmd)
-	projectsCmd.AddCommand(useProjectCmd)
-	projectsCmd.AddCommand(unsetProjectCmd)
 }

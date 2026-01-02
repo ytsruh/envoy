@@ -34,10 +34,8 @@ func init() {
 }
 
 type Config struct {
-	ServerURL     string `json:"server_url"`
-	Token         string `json:"token"`
-	ProjectID     string `json:"project_id,omitempty"`
-	EnvironmentID string `json:"environment_id,omitempty"`
+	ServerURL string `json:"server_url"`
+	Token     string `json:"token"`
 }
 
 func GetConfigDir() string {
@@ -127,57 +125,5 @@ func ClearToken() error {
 		return err
 	}
 	cfg.Token = ""
-	return Save(cfg)
-}
-
-func GetProjectID() (string, error) {
-	cfg, err := Load()
-	if err != nil {
-		return "", err
-	}
-	return cfg.ProjectID, nil
-}
-
-func SetProjectID(id string) error {
-	cfg, err := Load()
-	if err != nil {
-		return err
-	}
-	cfg.ProjectID = id
-	return Save(cfg)
-}
-
-func ClearProjectID() error {
-	cfg, err := Load()
-	if err != nil {
-		return err
-	}
-	cfg.ProjectID = ""
-	return Save(cfg)
-}
-
-func GetEnvironmentID() (string, error) {
-	cfg, err := Load()
-	if err != nil {
-		return "", err
-	}
-	return cfg.EnvironmentID, nil
-}
-
-func SetEnvironmentID(id string) error {
-	cfg, err := Load()
-	if err != nil {
-		return err
-	}
-	cfg.EnvironmentID = id
-	return Save(cfg)
-}
-
-func ClearEnvironmentID() error {
-	cfg, err := Load()
-	if err != nil {
-		return err
-	}
-	cfg.EnvironmentID = ""
 	return Save(cfg)
 }

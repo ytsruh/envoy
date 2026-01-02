@@ -14,13 +14,13 @@ import (
 
 type CreateEnvironmentVariableRequest struct {
 	Key         string `json:"key" validate:"required"`
-	Value       string `json:"value" validate:"required,max=255"`
+	Value       string `json:"value" validate:"required"`
 	Description string `json:"description" validate:"max=500"`
 }
 
 type UpdateEnvironmentVariableRequest struct {
 	Key         string `json:"key" validate:"required"`
-	Value       string `json:"value" validate:"required,max=255"`
+	Value       string `json:"value" validate:"required"`
 	Description string `json:"description" validate:"max=500"`
 }
 

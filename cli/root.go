@@ -11,6 +11,10 @@ var RootCmd = &cobra.Command{
 	Use:   "envoy",
 	Short: "Envoy CLI client",
 	Long:  "Envoy CLI client for managing projects and environments",
+	CompletionOptions: cobra.CompletionOptions{
+		//HiddenDefaultCmd:  true, // hides cmd
+		DisableDefaultCmd: true, // removes cmd
+	},
 }
 
 func Execute() {

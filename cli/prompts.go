@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 
+	"ytsruh.com/envoy/cli/controllers"
+
 	"golang.org/x/term"
 )
 
@@ -182,4 +184,69 @@ func PromptSelect(prompt string, options []SelectOption, allowCancel bool) (stri
 
 		return options[selection-1].Value, nil
 	}
+}
+
+func promptForProject(client *controllers.Client) (string, error) {
+	projects, err := client.ListProjects()
+	if err != nil {
+		return "", err
+	}
+
+	if len(projects) == 0 {
+		return "", fmt.Errorf("no projects found. Please create a project first with 'envoy projects create'")
+	}
+
+	options := make([]SelectOption, len(projects))
+	for i, p := range projects {
+		label := p.Name
+		if p.Description != nil && *p.Description != "" {
+			label += fmt.Sprintf(" - %s", *p.Description)
+		}
+		options[i] = SelectOption{Label: label, Value: string(p.ID)}
+	}
+
+	return PromptSelect("Select a project", options, true)
+}
+
+func promptForEnvironment(client *controllers.Client, projectID string) (string, error) {
+	environments, err := client.ListEnvironments(projectID)
+	if err != nil {
+		return "", err
+	}
+
+	if len(environments) == 0 {
+		return "", fmt.Errorf("no environments found. Please create an environment first with 'envoy environments create %s'", projectID)
+	}
+
+	options := make([]SelectOption, len(environments))
+	for i, e := range environments {
+		label := e.Name
+		if e.Description != nil && *e.Description != "" {
+			label += fmt.Sprintf(" - %s", *e.Description)
+		}
+		options[i] = SelectOption{Label: label, Value: string(e.ID)}
+	}
+
+	return PromptSelect("Select an environment", options, true)
+}
+
+func promptForVariable(client *controllers.Client, projectID, environmentID string) (string, error) {
+	variables, err := client.ListEnvironmentVariables(projectID, environmentID)
+	if err != nil {
+		return "", err
+	}
+
+	if len(variables) == 0 {
+		return "", fmt.Errorf("no variables found in this environment")
+	}
+
+	options := make([]SelectOption, len(variables))
+	for i, v := range variables {
+		options[i] = SelectOption{
+			Label: fmt.Sprintf("%s = %s", v.Key, v.Value),
+			Value: string(v.ID),
+		}
+	}
+
+	return PromptSelect("Select a variable", options, true)
 }

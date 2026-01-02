@@ -297,14 +297,11 @@ var exportVariablesCmd = &cobra.Command{
 }
 
 var createVariableCmd = &cobra.Command{
-	Use:   "create <project_id> <environment_id>",
+	Use:   "create [project_id] [environment_id]",
 	Short: "Create a new variable",
 	Long:  "Create a new environment variable",
-	Args:  cobra.ExactArgs(2),
+	Args:  cobra.MaximumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		projectID := args[0]
-		environmentID := args[1]
-
 		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
@@ -314,43 +311,111 @@ var createVariableCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		key, err := PromptString("Variable key", true)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			os.Exit(1)
-		}
+		var projectID, environmentID string
 
-		value, err := PromptString("Variable value", true)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			os.Exit(1)
-		}
+		if len(args) == 2 {
+			projectID = args[0]
+			environmentID = args[1]
 
-		variable, err := client.CreateEnvironmentVariable(projectID, environmentID, key, value)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to create variable: %v\n", err)
-			if err == shared.ErrExpiredToken {
-				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+			project, err := client.GetProject(projectID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
 			}
-			os.Exit(1)
-		}
 
-		fmt.Println("Variable created successfully!")
-		fmt.Printf("  ID: %s\n", variable.ID)
-		fmt.Printf("  Key: %s\n", variable.Key)
-		fmt.Printf("  Value: %s\n", variable.Value)
+			fmt.Printf("Project: %s (ID: %s)\n", project.Name, project.ID)
+
+			environment, err := client.GetEnvironment(projectID, environmentID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get environment: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			fmt.Printf("Environment: %s (ID: %s)\n", environment.Name, environment.ID)
+
+			key, err := PromptString("Variable key", true)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			value, err := PromptString("Variable value", true)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			variable, err := client.CreateEnvironmentVariable(projectID, environmentID, key, value)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to create variable: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			fmt.Println("Variable created successfully!")
+			fmt.Printf("  ID: %s\n", variable.ID)
+			fmt.Printf("  Key: %s\n", variable.Key)
+			fmt.Printf("  Value: %s\n", variable.Value)
+		} else if len(args) == 1 {
+			fmt.Fprintln(cmd.OutOrStderr(), "Error: Both project_id and environment_id are required")
+			fmt.Fprintln(cmd.OutOrStderr(), "Usage: envoy variables create <project_id> <environment_id>")
+			os.Exit(1)
+		} else {
+			projectID, err = promptForProject(client)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			environmentID, err = promptForEnvironment(client, projectID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			key, err := PromptString("Variable key", true)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			value, err := PromptString("Variable value", true)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			variable, err := client.CreateEnvironmentVariable(projectID, environmentID, key, value)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to create variable: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			fmt.Println("Variable created successfully!")
+			fmt.Printf("  ID: %s\n", variable.ID)
+			fmt.Printf("  Key: %s\n", variable.Key)
+			fmt.Printf("  Value: %s\n", variable.Value)
+		}
 	},
 }
 
 var listVariablesCmd = &cobra.Command{
-	Use:   "list <project_id> <environment_id>",
+	Use:   "list [project_id] [environment_id]",
 	Short: "List variables",
 	Long:  "List all variables for an environment",
-	Args:  cobra.ExactArgs(2),
+	Args:  cobra.MaximumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		projectID := args[0]
-		environmentID := args[1]
-
 		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
@@ -360,41 +425,101 @@ var listVariablesCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		variables, err := client.ListEnvironmentVariables(projectID, environmentID)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to list variables: %v\n", err)
-			if err == shared.ErrExpiredToken {
-				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+		var projectID, environmentID string
+
+		if len(args) == 2 {
+			projectID = args[0]
+			environmentID = args[1]
+
+			_, err := client.GetProject(projectID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
 			}
+
+			_, err = client.GetEnvironment(projectID, environmentID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get environment: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			variables, err := client.ListEnvironmentVariables(projectID, environmentID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to list variables: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			if len(variables) == 0 {
+				fmt.Println("No variables found")
+				return
+			}
+
+			fmt.Printf("Found %d variable(s):\n\n", len(variables))
+			for _, v := range variables {
+				fmt.Printf("  ID: %s\n", v.ID)
+				fmt.Printf("  Key: %s\n", v.Key)
+				fmt.Printf("  Value: %s\n", v.Value)
+				fmt.Printf("  Updated: %s\n", v.UpdatedAt)
+				fmt.Println()
+			}
+		} else if len(args) == 1 {
+			fmt.Fprintln(cmd.OutOrStderr(), "Error: Both project_id and environment_id are required")
+			fmt.Fprintln(cmd.OutOrStderr(), "Usage: envoy variables list <project_id> <environment_id>")
 			os.Exit(1)
-		}
+		} else {
+			projectID, err = promptForProject(client)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
 
-		if len(variables) == 0 {
-			fmt.Println("No variables found")
-			return
-		}
+			environmentID, err = promptForEnvironment(client, projectID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
 
-		fmt.Printf("Found %d variable(s):\n\n", len(variables))
-		for _, v := range variables {
-			fmt.Printf("  ID: %s\n", v.ID)
-			fmt.Printf("  Key: %s\n", v.Key)
-			fmt.Printf("  Value: %s\n", v.Value)
-			fmt.Printf("  Updated: %s\n", v.UpdatedAt)
-			fmt.Println()
+			variables, err := client.ListEnvironmentVariables(projectID, environmentID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to list variables: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			if len(variables) == 0 {
+				fmt.Println("No variables found")
+				return
+			}
+
+			fmt.Printf("Found %d variable(s):\n\n", len(variables))
+			for _, v := range variables {
+				fmt.Printf("  ID: %s\n", v.ID)
+				fmt.Printf("  Key: %s\n", v.Key)
+				fmt.Printf("  Value: %s\n", v.Value)
+				fmt.Printf("  Updated: %s\n", v.UpdatedAt)
+				fmt.Println()
+			}
 		}
 	},
 }
 
 var getVariableCmd = &cobra.Command{
-	Use:   "get <variable_id> <project_id> <environment_id>",
+	Use:   "get [variable_id] [project_id] [environment_id]",
 	Short: "Get variable details",
 	Long:  "Get detailed information about a specific variable",
-	Args:  cobra.ExactArgs(3),
+	Args:  cobra.MaximumNArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
-		variableID := args[0]
-		projectID := args[1]
-		environmentID := args[2]
-
 		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
@@ -404,35 +529,96 @@ var getVariableCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		variable, err := client.GetEnvironmentVariable(projectID, environmentID, variableID)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get variable: %v\n", err)
-			if err == shared.ErrExpiredToken {
-				fmt.Println("Your session has expired. Please login again using 'envoy login'")
-			}
-			os.Exit(1)
-		}
+		var variableID, projectID, environmentID string
 
-		fmt.Println("Variable Details:")
-		fmt.Printf("  ID: %s\n", variable.ID)
-		fmt.Printf("  Key: %s\n", variable.Key)
-		fmt.Printf("  Value: %s\n", variable.Value)
-		fmt.Printf("  Environment ID: %s\n", variable.EnvironmentID)
-		fmt.Printf("  Created: %s\n", variable.CreatedAt)
-		fmt.Printf("  Updated: %s\n", variable.UpdatedAt)
+		if len(args) == 3 {
+			variableID = args[0]
+			projectID = args[1]
+			environmentID = args[2]
+
+			_, err := client.GetProject(projectID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			_, err = client.GetEnvironment(projectID, environmentID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get environment: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			variable, err := client.GetEnvironmentVariable(projectID, environmentID, variableID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get variable: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			fmt.Println("Variable Details:")
+			fmt.Printf("  ID: %s\n", variable.ID)
+			fmt.Printf("  Key: %s\n", variable.Key)
+			fmt.Printf("  Value: %s\n", variable.Value)
+			fmt.Printf("  Environment ID: %s\n", variable.EnvironmentID)
+			fmt.Printf("  Created: %s\n", variable.CreatedAt)
+			fmt.Printf("  Updated: %s\n", variable.UpdatedAt)
+		} else if len(args) >= 1 && len(args) < 3 {
+			fmt.Fprintln(cmd.OutOrStderr(), "Error: All three arguments are required: variable_id, project_id, and environment_id")
+			fmt.Fprintln(cmd.OutOrStderr(), "Usage: envoy variables get <variable_id> <project_id> <environment_id>")
+			os.Exit(1)
+		} else {
+			projectID, err = promptForProject(client)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			environmentID, err = promptForEnvironment(client, projectID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			variableID, err = promptForVariable(client, projectID, environmentID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			variable, err := client.GetEnvironmentVariable(projectID, environmentID, variableID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get variable: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			fmt.Println("Variable Details:")
+			fmt.Printf("  ID: %s\n", variable.ID)
+			fmt.Printf("  Key: %s\n", variable.Key)
+			fmt.Printf("  Value: %s\n", variable.Value)
+			fmt.Printf("  Environment ID: %s\n", variable.EnvironmentID)
+			fmt.Printf("  Created: %s\n", variable.CreatedAt)
+			fmt.Printf("  Updated: %s\n", variable.UpdatedAt)
+		}
 	},
 }
 
 var updateVariableCmd = &cobra.Command{
-	Use:   "update <variable_id> <project_id> <environment_id>",
+	Use:   "update [variable_id] [project_id] [environment_id]",
 	Short: "Update a variable",
 	Long:  "Update variable key and value",
-	Args:  cobra.ExactArgs(3),
+	Args:  cobra.MaximumNArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
-		variableID := args[0]
-		projectID := args[1]
-		environmentID := args[2]
-
 		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
@@ -442,52 +628,130 @@ var updateVariableCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		variable, err := client.GetEnvironmentVariable(projectID, environmentID, variableID)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get variable: %v\n", err)
-			if err == shared.ErrExpiredToken {
-				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+		var variableID, projectID, environmentID string
+
+		if len(args) == 3 {
+			variableID = args[0]
+			projectID = args[1]
+			environmentID = args[2]
+
+			_, err := client.GetProject(projectID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
 			}
-			os.Exit(1)
-		}
 
-		key, err := PromptStringWithDefault("Variable key", variable.Key)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			os.Exit(1)
-		}
-
-		value, err := PromptString("Variable value", true)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			os.Exit(1)
-		}
-
-		updatedVariable, err := client.UpdateEnvironmentVariable(projectID, environmentID, variableID, key, value)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to update variable: %v\n", err)
-			if err == shared.ErrExpiredToken {
-				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+			_, err = client.GetEnvironment(projectID, environmentID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get environment: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
 			}
-			os.Exit(1)
-		}
 
-		fmt.Println("Variable updated successfully!")
-		fmt.Printf("  Key: %s\n", updatedVariable.Key)
-		fmt.Printf("  Value: %s\n", updatedVariable.Value)
+			variable, err := client.GetEnvironmentVariable(projectID, environmentID, variableID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get variable: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			key, err := PromptStringWithDefault("Variable key", variable.Key)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			value, err := PromptString("Variable value", true)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			updatedVariable, err := client.UpdateEnvironmentVariable(projectID, environmentID, variableID, key, value)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to update variable: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			fmt.Println("Variable updated successfully!")
+			fmt.Printf("  Key: %s\n", updatedVariable.Key)
+			fmt.Printf("  Value: %s\n", updatedVariable.Value)
+		} else if len(args) >= 1 && len(args) < 3 {
+			fmt.Fprintln(cmd.OutOrStderr(), "Error: All three arguments are required: variable_id, project_id, and environment_id")
+			fmt.Fprintln(cmd.OutOrStderr(), "Usage: envoy variables update <variable_id> <project_id> <environment_id>")
+			os.Exit(1)
+		} else {
+			projectID, err = promptForProject(client)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			environmentID, err = promptForEnvironment(client, projectID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			variableID, err = promptForVariable(client, projectID, environmentID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			variable, err := client.GetEnvironmentVariable(projectID, environmentID, variableID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get variable: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			key, err := PromptStringWithDefault("Variable key", variable.Key)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			value, err := PromptString("Variable value", true)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			updatedVariable, err := client.UpdateEnvironmentVariable(projectID, environmentID, variableID, key, value)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to update variable: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			fmt.Println("Variable updated successfully!")
+			fmt.Printf("  Key: %s\n", updatedVariable.Key)
+			fmt.Printf("  Value: %s\n", updatedVariable.Value)
+		}
 	},
 }
 
 var deleteVariableCmd = &cobra.Command{
-	Use:   "delete <variable_id> <project_id> <environment_id>",
+	Use:   "delete [variable_id] [project_id] [environment_id]",
 	Short: "Delete a variable",
 	Long:  "Delete a variable permanently",
-	Args:  cobra.ExactArgs(3),
+	Args:  cobra.MaximumNArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
-		variableID := args[0]
-		projectID := args[1]
-		environmentID := args[2]
-
 		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
@@ -497,36 +761,115 @@ var deleteVariableCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		variable, err := client.GetEnvironmentVariable(projectID, environmentID, variableID)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get variable: %v\n", err)
-			if err == shared.ErrExpiredToken {
-				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+		var variableID, projectID, environmentID string
+
+		if len(args) == 3 {
+			variableID = args[0]
+			projectID = args[1]
+			environmentID = args[2]
+
+			_, err := client.GetProject(projectID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
 			}
-			os.Exit(1)
-		}
 
-		fmt.Printf("Are you sure you want to delete variable '%s' (ID: %s)?\n", variable.Key, variable.ID)
-		confirmed, err := Confirm("This action cannot be undone")
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			os.Exit(1)
-		}
-
-		if !confirmed {
-			fmt.Println("Operation cancelled")
-			return
-		}
-
-		if err := client.DeleteEnvironmentVariable(projectID, environmentID, variableID); err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to delete variable: %v\n", err)
-			if err == shared.ErrExpiredToken {
-				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+			_, err = client.GetEnvironment(projectID, environmentID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get environment: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
 			}
-			os.Exit(1)
-		}
 
-		fmt.Println("Variable deleted successfully")
+			variable, err := client.GetEnvironmentVariable(projectID, environmentID, variableID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get variable: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			fmt.Printf("Are you sure you want to delete variable '%s' (ID: %s)?\n", variable.Key, variable.ID)
+			confirmed, err := Confirm("This action cannot be undone")
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			if !confirmed {
+				fmt.Println("Operation cancelled")
+				return
+			}
+
+			if err := client.DeleteEnvironmentVariable(projectID, environmentID, variableID); err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to delete variable: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			fmt.Println("Variable deleted successfully")
+		} else if len(args) >= 1 && len(args) < 3 {
+			fmt.Fprintln(cmd.OutOrStderr(), "Error: All three arguments are required: variable_id, project_id, and environment_id")
+			fmt.Fprintln(cmd.OutOrStderr(), "Usage: envoy variables delete <variable_id> <project_id> <environment_id>")
+			os.Exit(1)
+		} else {
+			projectID, err = promptForProject(client)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			environmentID, err = promptForEnvironment(client, projectID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			variableID, err = promptForVariable(client, projectID, environmentID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			variable, err := client.GetEnvironmentVariable(projectID, environmentID, variableID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get variable: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			fmt.Printf("Are you sure you want to delete variable '%s' (ID: %s)?\n", variable.Key, variable.ID)
+			confirmed, err := Confirm("This action cannot be undone")
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			if !confirmed {
+				fmt.Println("Operation cancelled")
+				return
+			}
+
+			if err := client.DeleteEnvironmentVariable(projectID, environmentID, variableID); err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to delete variable: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			fmt.Println("Variable deleted successfully")
+		}
 	},
 }
 

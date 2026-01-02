@@ -134,48 +134,11 @@ var listProjectsCmd = &cobra.Command{
 }
 
 var getProjectCmd = &cobra.Command{
-	Use:   "get <id>",
+	Use:   "get [id]",
 	Short: "Get project details",
 	Long:  "Get detailed information about a specific project",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		projectID := args[0]
-
-		client, err := controllers.NewClient()
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			os.Exit(1)
-		}
-
-		project, err := client.GetProject(projectID)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
-			os.Exit(1)
-		}
-
-		fmt.Println("Project Details:")
-		fmt.Printf("  ID: %s\n", project.ID)
-		fmt.Printf("  Name: %s\n", project.Name)
-		if project.Description != nil && *project.Description != "" {
-			fmt.Printf("  Description: %s\n", *project.Description)
-		}
-		if project.GitRepo != nil && *project.GitRepo != "" {
-			fmt.Printf("  Git Repository: %s\n", *project.GitRepo)
-		}
-		fmt.Printf("  Owner ID: %s\n", project.OwnerID)
-		fmt.Printf("  Created: %s\n", project.CreatedAt)
-		fmt.Printf("  Updated: %s\n", project.UpdatedAt)
-	},
-}
-
-var updateProjectCmd = &cobra.Command{
-	Use:   "update <id>",
-	Short: "Update a project",
-	Long:  "Update project name, description, or git repository",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		projectID := args[0]
-
 		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
@@ -185,67 +148,195 @@ var updateProjectCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		project, err := client.GetProject(projectID)
+		var projectID string
+
+		if len(args) == 1 {
+			projectID = args[0]
+
+			project, err := client.GetProject(projectID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
+				os.Exit(1)
+			}
+
+			fmt.Println("Project Details:")
+			fmt.Printf("  ID: %s\n", project.ID)
+			fmt.Printf("  Name: %s\n", project.Name)
+			if project.Description != nil && *project.Description != "" {
+				fmt.Printf("  Description: %s\n", *project.Description)
+			}
+			if project.GitRepo != nil && *project.GitRepo != "" {
+				fmt.Printf("  Git Repository: %s\n", *project.GitRepo)
+			}
+			fmt.Printf("  Owner ID: %s\n", project.OwnerID)
+			fmt.Printf("  Created: %s\n", project.CreatedAt)
+			fmt.Printf("  Updated: %s\n", project.UpdatedAt)
+		} else {
+			projectID, err = promptForProject(client)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			project, err := client.GetProject(projectID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
+				os.Exit(1)
+			}
+
+			fmt.Println("Project Details:")
+			fmt.Printf("  ID: %s\n", project.ID)
+			fmt.Printf("  Name: %s\n", project.Name)
+			if project.Description != nil && *project.Description != "" {
+				fmt.Printf("  Description: %s\n", *project.Description)
+			}
+			if project.GitRepo != nil && *project.GitRepo != "" {
+				fmt.Printf("  Git Repository: %s\n", *project.GitRepo)
+			}
+			fmt.Printf("  Owner ID: %s\n", project.OwnerID)
+			fmt.Printf("  Created: %s\n", project.CreatedAt)
+			fmt.Printf("  Updated: %s\n", project.UpdatedAt)
+		}
+	},
+}
+
+var updateProjectCmd = &cobra.Command{
+	Use:   "update [id]",
+	Short: "Update a project",
+	Long:  "Update project name, description, or git repository",
+	Args:  cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		client, err := controllers.RequireToken()
 		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
-			if err == shared.ErrExpiredToken {
-				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+			if err == shared.ErrNoToken {
+				fmt.Println("Please login first using 'envoy login'")
 			}
 			os.Exit(1)
 		}
 
-		name, err := PromptStringWithDefault("Project name", project.Name)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			os.Exit(1)
-		}
+		var projectID string
 
-		description, err := PromptString("Description (leave empty to keep current)", false)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			os.Exit(1)
-		}
-		if description == "" && project.Description != nil {
-			description = *project.Description
-		}
+		if len(args) == 1 {
+			projectID = args[0]
 
-		gitRepo, err := PromptString("Git repository owner/repo (leave empty to keep current)", false)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			os.Exit(1)
-		}
-		if gitRepo == "" && project.GitRepo != nil {
-			gitRepo = *project.GitRepo
-		}
-
-		updatedProject, err := client.UpdateProject(projectID, name, description, gitRepo)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to update project: %v\n", err)
-			if err == shared.ErrExpiredToken {
-				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+			project, err := client.GetProject(projectID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
 			}
-			os.Exit(1)
-		}
 
-		fmt.Println("Project updated successfully!")
-		fmt.Printf("  Name: %s\n", updatedProject.Name)
-		if updatedProject.Description != nil && *updatedProject.Description != "" {
-			fmt.Printf("  Description: %s\n", *updatedProject.Description)
-		}
-		if updatedProject.GitRepo != nil && *updatedProject.GitRepo != "" {
-			fmt.Printf("  Git Repository: %s\n", *updatedProject.GitRepo)
+			name, err := PromptStringWithDefault("Project name", project.Name)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			description, err := PromptString("Description (leave empty to keep current)", false)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+			if description == "" && project.Description != nil {
+				description = *project.Description
+			}
+
+			gitRepo, err := PromptString("Git repository owner/repo (leave empty to keep current)", false)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+			if gitRepo == "" && project.GitRepo != nil {
+				gitRepo = *project.GitRepo
+			}
+
+			updatedProject, err := client.UpdateProject(projectID, name, description, gitRepo)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to update project: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			fmt.Println("Project updated successfully!")
+			fmt.Printf("  Name: %s\n", updatedProject.Name)
+			if updatedProject.Description != nil && *updatedProject.Description != "" {
+				fmt.Printf("  Description: %s\n", *updatedProject.Description)
+			}
+			if updatedProject.GitRepo != nil && *updatedProject.GitRepo != "" {
+				fmt.Printf("  Git Repository: %s\n", *updatedProject.GitRepo)
+			}
+		} else {
+			projectID, err = promptForProject(client)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			project, err := client.GetProject(projectID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			name, err := PromptStringWithDefault("Project name", project.Name)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			description, err := PromptString("Description (leave empty to keep current)", false)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+			if description == "" && project.Description != nil {
+				description = *project.Description
+			}
+
+			gitRepo, err := PromptString("Git repository owner/repo (leave empty to keep current)", false)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+			if gitRepo == "" && project.GitRepo != nil {
+				gitRepo = *project.GitRepo
+			}
+
+			updatedProject, err := client.UpdateProject(projectID, name, description, gitRepo)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to update project: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			fmt.Println("Project updated successfully!")
+			fmt.Printf("  Name: %s\n", updatedProject.Name)
+			if updatedProject.Description != nil && *updatedProject.Description != "" {
+				fmt.Printf("  Description: %s\n", *updatedProject.Description)
+			}
+			if updatedProject.GitRepo != nil && *updatedProject.GitRepo != "" {
+				fmt.Printf("  Git Repository: %s\n", *updatedProject.GitRepo)
+			}
 		}
 	},
 }
 
 var deleteProjectCmd = &cobra.Command{
-	Use:   "delete <id>",
+	Use:   "delete [id]",
 	Short: "Delete a project",
 	Long:  "Delete a project permanently",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		projectID := args[0]
-
 		client, err := controllers.RequireToken()
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
@@ -255,36 +346,79 @@ var deleteProjectCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		project, err := client.GetProject(projectID)
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
-			if err == shared.ErrExpiredToken {
-				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+		var projectID string
+
+		if len(args) == 1 {
+			projectID = args[0]
+
+			project, err := client.GetProject(projectID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
 			}
-			os.Exit(1)
-		}
 
-		fmt.Printf("Are you sure you want to delete project '%s' (ID: %s)?\n", project.Name, project.ID)
-		confirmed, err := Confirm("This action cannot be undone")
-		if err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
-			os.Exit(1)
-		}
-
-		if !confirmed {
-			fmt.Println("Operation cancelled")
-			return
-		}
-
-		if err := client.DeleteProject(projectID); err != nil {
-			fmt.Fprintf(cmd.OutOrStderr(), "Failed to delete project: %v\n", err)
-			if err == shared.ErrExpiredToken {
-				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+			fmt.Printf("Are you sure you want to delete project '%s' (ID: %s)?\n", project.Name, project.ID)
+			confirmed, err := Confirm("This action cannot be undone")
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
 			}
-			os.Exit(1)
-		}
 
-		fmt.Println("Project deleted successfully")
+			if !confirmed {
+				fmt.Println("Operation cancelled")
+				return
+			}
+
+			if err := client.DeleteProject(projectID); err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to delete project: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			fmt.Println("Project deleted successfully")
+		} else {
+			projectID, err = promptForProject(client)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			project, err := client.GetProject(projectID)
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to get project: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			fmt.Printf("Are you sure you want to delete project '%s' (ID: %s)?\n", project.Name, project.ID)
+			confirmed, err := Confirm("This action cannot be undone")
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
+				os.Exit(1)
+			}
+
+			if !confirmed {
+				fmt.Println("Operation cancelled")
+				return
+			}
+
+			if err := client.DeleteProject(projectID); err != nil {
+				fmt.Fprintf(cmd.OutOrStderr(), "Failed to delete project: %v\n", err)
+				if err == shared.ErrExpiredToken {
+					fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				}
+				os.Exit(1)
+			}
+
+			fmt.Println("Project deleted successfully")
+		}
 	},
 }
 

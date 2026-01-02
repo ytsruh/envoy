@@ -17,7 +17,7 @@ CLI_DIR := ./cmd
 # Air (live reload dev tool). Install: https://github.com/cosmtrek/air
 AIR := air
 
-.PHONY: dev dev-server dev-cli test test-ci build-dev build generate help
+.PHONY: dev dev-server dev-cli test test-ci build-dev build generate bump-patch bump-minor bump-major help
 
 # Development run with air (live reload). Requires 'air' installed.
 # Sets ENVOY_SERVER_URL to localhost for local development
@@ -57,6 +57,16 @@ build:
 generate:
 	sqlc generate
 
+# Version bumping scripts
+bump-patch:
+	@./version.sh patch
+
+bump-minor:
+	@./version.sh minor
+
+bump-major:
+	@./version.sh major
+
 # Help
 help:
 	@echo "Makefile commands:"
@@ -67,4 +77,6 @@ help:
 	@echo "  make build-dev     - build binaries for development"
 	@echo "  make build         - build binaries for production"
 	@echo "  make generate      - generate SQL queries"
-
+	@echo "  make bump-patch    - bump patch version (v0.0.0 -> v0.0.1)"
+	@echo "  make bump-minor    - bump minor version (v0.0.0 -> v0.1.0)"
+	@echo "  make bump-major    - bump major version (v0.0.0 -> v1.0.0)"

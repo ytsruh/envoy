@@ -28,12 +28,6 @@ The shared package includes:
 
 ## Version
 
-The `Version` variable contains the application version. It's injected at build time via ldflags:
-- Development builds: "dev"
-- Release builds: semver from git tag (e.g., "1.0.0")
-
-To set version when building:
-```bash
-make build  # Uses git tag or "dev"
-make build VERSION=1.0.0  # Override version
-```
+The `Version` variable contains the application version. It's read from Go's build metadata at runtime:
+- Release builds: semver from git tag (e.g., "v1.0.0")
+- Development builds: "(devel)" with helpful installation message

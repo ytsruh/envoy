@@ -9,11 +9,21 @@ A secure environment variable management tool built using Go. Project consists o
 
 ## Installation
 
+Install/Update the latest version:
 ```bash
 go install ytsruh.com/envoy@latest
 ```
 
-Update to the latest version:
+Install a specific version:
 ```bash
-go install ytsruh.com/envoy@latest
+go install ytsruh.com/envoy@v0.0.1
 ```
+
+## Version Management
+
+Check your installed version:
+```bash
+envoy version
+```
+
+Envoy uses semantic versioning with git tags. When you install using `@latest`, Go automatically installs the highest version tag.

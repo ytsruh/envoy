@@ -116,7 +116,7 @@ var profileCmd = &cobra.Command{
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			if err == shared.ErrNoToken {
-				fmt.Println("Please login first using 'envoy login'")
+				fmt.Println("Please login first using 'envoy auth login'")
 			}
 			os.Exit(1)
 		}
@@ -125,7 +125,7 @@ var profileCmd = &cobra.Command{
 		if err != nil {
 			fmt.Fprintf(cmd.OutOrStderr(), "Error: %v\n", err)
 			if err == shared.ErrExpiredToken {
-				fmt.Println("Your session has expired. Please login again using 'envoy login'")
+				fmt.Println("Your session has expired. Please login again using 'envoy auth login'")
 			}
 			os.Exit(1)
 		}
@@ -136,4 +136,17 @@ var profileCmd = &cobra.Command{
 		fmt.Printf("  Token issued at: %d\n", profile.Iat)
 		fmt.Printf("  Token expires at: %d\n", profile.Exp)
 	},
+}
+
+var authCmd = &cobra.Command{
+	Use:   "auth",
+	Short: "Authentication commands",
+	Long:  "Manage your Envoy account authentication",
+}
+
+func init() {
+	authCmd.AddCommand(registerCmd)
+	authCmd.AddCommand(loginCmd)
+	authCmd.AddCommand(logoutCmd)
+	authCmd.AddCommand(profileCmd)
 }

@@ -26,10 +26,7 @@ func Execute() {
 
 func init() {
 	RootCmd.AddCommand(versionCmd)
-	RootCmd.AddCommand(registerCmd)
-	RootCmd.AddCommand(loginCmd)
-	RootCmd.AddCommand(logoutCmd)
-	RootCmd.AddCommand(profileCmd)
+	RootCmd.AddCommand(authCmd)
 	RootCmd.AddCommand(projectsCmd)
 	RootCmd.AddCommand(environmentsCmd)
 	RootCmd.AddCommand(environmentVariablesCmd)

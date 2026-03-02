@@ -51,7 +51,7 @@ jobs:
             -o envoy-server ./cmd/server.go
 
       - name: Install Railway
-        run: npm install -g @railway/railway
+        run: bash <(curl -fsSL cli.new)
 
       - name: Deploy to Railway
         run: railway up --token ${{ secrets.RAILWAY_TOKEN }}

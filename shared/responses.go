@@ -65,6 +65,13 @@ type RegisterResponse struct {
 	CreatedAt Timestamp `json:"created_at"`
 }
 
+// UserSearchResponse represents a user found through search.
+type UserSearchResponse struct {
+	UserID string `json:"user_id"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+}
+
 // ProjectsResponse is a wrapper for a list of projects.
 type ProjectsResponse struct {
 	Projects []ProjectResponse `json:"projects"`

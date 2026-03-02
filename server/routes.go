@@ -63,6 +63,9 @@ func (s *Server) RegisterAuthHandlers() {
 	s.router.GET("/auth/profile", auth(func(c echo.Context) error {
 		return handlers.GetProfile(c, ctx)
 	}))
+	s.router.GET("/users/search", auth(func(c echo.Context) error {
+		return handlers.SearchUsers(c, ctx)
+	}))
 }
 
 func (s *Server) RegisterProjectHandlers() {

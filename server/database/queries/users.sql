@@ -33,3 +33,9 @@ WHERE id = ?;
 -- name: HardDeleteUser :exec
 DELETE FROM users
 WHERE id = ?;
+
+-- name: SearchUsersByEmail :many
+SELECT * FROM users
+WHERE email LIKE ? AND deleted_at IS NULL
+ORDER BY email ASC
+LIMIT 10;

@@ -51,10 +51,27 @@
 						"format": "email",
 						"description": "User's email address"
 					},
-					"created_at": {
+				"created_at": {
+					"type": "string",
+					"format": "date-time",
+					"description": "Timestamp when user was created"
+				}
+			},
+			"UserSearchResponse": {
+				"type": "object",
+				"properties": {
+					"user_id": {
 						"type": "string",
-						"format": "date-time",
-						"description": "Timestamp when user was created"
+						"description": "Unique user identifier"
+					},
+					"name": {
+						"type": "string",
+						"description": "User's full name"
+					},
+					"email": {
+						"type": "string",
+						"format": "email",
+						"description": "User's email address"
 					}
 				}
 			},
@@ -556,6 +573,60 @@
 							"application/json": {
 								"schema": {
 									"$ref": "#/components/schemas/ProfileResponse"
+								}
+							}
+						}
+					},
+					"401": {
+						"description": "Unauthorized",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Error"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/users/search": {
+			"get": {
+				"summary": "Search Users by Email",
+				"description": "Search for users by their email address",
+				"tags": ["Users"],
+				"security": [{ "BearerAuth": [] }],
+				"parameters": [
+					{
+						"name": "email",
+						"in": "query",
+						"required": true,
+						"schema": {
+							"type": "string"
+						},
+						"description": "Email to search for (supports partial matches)"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Users found successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/UserSearchResponse"
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request - email query parameter required",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Error"
 								}
 							}
 						}

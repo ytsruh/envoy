@@ -41,6 +41,7 @@ type Querier interface {
 	ListProjectsByOwner(ctx context.Context, ownerID string) ([]Project, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	RemoveUserFromProject(ctx context.Context, arg RemoveUserFromProjectParams) error
+	SearchUsersByEmail(ctx context.Context, email string) ([]User, error)
 	UpdateEnvironment(ctx context.Context, arg UpdateEnvironmentParams) (Environment, error)
 	UpdateEnvironmentVariable(ctx context.Context, arg UpdateEnvironmentVariableParams) (EnvironmentVariable, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)

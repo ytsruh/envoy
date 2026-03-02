@@ -250,3 +250,10 @@ func PromptForVariable(client *controllers.Client, projectID, environmentID stri
 
 	return PromptSelect("Select a variable", options, true)
 }
+
+func PromptRole(prompt string) (string, error) {
+	return PromptSelect(prompt, []SelectOption{
+		{Label: "Viewer (read-only access)", Value: "viewer"},
+		{Label: "Editor (read and write access)", Value: "editor"},
+	}, false)
+}

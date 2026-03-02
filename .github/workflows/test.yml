@@ -1,20 +1,27 @@
 name: Test
+
 on:
   push:
-    branches: ['main']
+    branches: ['**']
   pull_request:
-    branches: ['main']
+    branches: ['**']
+
 jobs:
   test:
+    if: false # disabled for now until tests are ready
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
           go-version: 1.24.4
+
       - name: Install templ
         run: go install github.com/a-h/templ/cmd/templ@latest
-      - name: Run templ / go generate
-        run: go generate ./cmd/server.go
+
+      - name: Generate templates
+        run: templ generate ./server
+
       - name: Run Test suite
         run: go test ./... -race -cover

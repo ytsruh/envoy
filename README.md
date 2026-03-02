@@ -18,12 +18,3 @@ Install a specific version:
 ```bash
 go install ytsruh.com/envoy@v0.0.1
 ```
-
-## Version Management
-
-Check your installed version:
-```bash
-envoy version
-```
-
-Envoy uses semantic versioning with git tags. When you install using `@latest`, Go automatically installs the highest version tag.

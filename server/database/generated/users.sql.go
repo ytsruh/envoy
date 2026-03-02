@@ -155,6 +155,44 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
+const searchUsersByEmail = `-- name: SearchUsersByEmail :many
+SELECT id, name, email, password, created_at, updated_at, deleted_at FROM users
+WHERE email LIKE ? AND deleted_at IS NULL
+ORDER BY email ASC
+LIMIT 10
+`
+
+func (q *Queries) SearchUsersByEmail(ctx context.Context, email string) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, searchUsersByEmail, email)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Email,
+			&i.Password,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET name = ?, email = ?, password = ?, updated_at = ?

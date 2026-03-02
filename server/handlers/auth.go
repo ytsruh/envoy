@@ -132,3 +132,40 @@ func GetProfile(c echo.Context, ctx *HandlerContext) error {
 
 	return c.JSON(http.StatusOK, profileResp)
 }
+
+type UserSearchResponse struct {
+	UserID string `json:"user_id"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+}
+
+func SearchUsers(c echo.Context, ctx *HandlerContext) error {
+	_, err := GetUserOrUnauthorized(c)
+	if err != nil {
+		return err
+	}
+
+	emailQuery := c.QueryParam("email")
+	if emailQuery == "" {
+		return SendErrorResponse(c, http.StatusBadRequest, fmt.Errorf("email query parameter is required"))
+	}
+
+	dbCtx, cancel := GetDBContext()
+	defer cancel()
+
+	users, err := ctx.Queries.SearchUsersByEmail(dbCtx, "%"+emailQuery+"%")
+	if err != nil {
+		return SendErrorResponse(c, http.StatusInternalServerError, fmt.Errorf("failed to search users"))
+	}
+
+	var resp []UserSearchResponse
+	for _, user := range users {
+		resp = append(resp, UserSearchResponse{
+			UserID: user.ID,
+			Name:   user.Name,
+			Email:  user.Email,
+		})
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}

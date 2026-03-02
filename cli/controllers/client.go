@@ -7,6 +7,7 @@ import (
 
 type Client struct {
 	*AuthController
+	*UsersController
 	*ProjectsController
 	*EnvironmentsController
 	*VariablesController
@@ -27,6 +28,7 @@ func NewClient() (*Client, error) {
 
 	return &Client{
 		AuthController:         NewAuthController(base),
+		UsersController:        NewUsersController(base),
 		ProjectsController:     NewProjectsController(base),
 		EnvironmentsController: NewEnvironmentsController(base),
 		VariablesController:    NewVariablesController(base),

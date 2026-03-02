@@ -129,3 +129,67 @@ func (p *ProjectsController) DeleteProject(projectID string) error {
 
 	return nil
 }
+
+type ProjectMemberResponse struct {
+	UserID string `json:"user_id"`
+	Role   string `json:"role"`
+}
+
+func (p *ProjectsController) ListProjectMembers(projectID string) ([]ProjectMemberResponse, error) {
+	resp, err := p.doRequest("GET", fmt.Sprintf("/projects/%s/members", projectID), nil, true)
+	if err != nil {
+		return nil, err
+	}
+
+	var members []ProjectMemberResponse
+	if err := p.decodeResponse(resp, &members); err != nil {
+		return nil, err
+	}
+
+	return members, nil
+}
+
+func (p *ProjectsController) AddMember(projectID, userID, role string) error {
+	reqBody := map[string]string{
+		"user_id": userID,
+		"role":    role,
+	}
+
+	resp, err := p.doRequest("POST", fmt.Sprintf("/projects/%s/members", projectID), reqBody, true)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		var errResp ErrorResponse
+		json.NewDecoder(resp.Body).Decode(&errResp)
+		if errResp.Error != "" {
+			return fmt.Errorf("server error: %s", errResp.Error)
+		}
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+func (p *ProjectsController) RemoveMember(projectID, userID string) error {
+	resp, err := p.doRequest("DELETE", fmt.Sprintf("/projects/%s/members/%s", projectID, userID), nil, true)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp ErrorResponse
+		json.NewDecoder(resp.Body).Decode(&errResp)
+		if errResp.Error != "" {
+			return fmt.Errorf("server error: %s", errResp.Error)
+		}
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	return nil
+}

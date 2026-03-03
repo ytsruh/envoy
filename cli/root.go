@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	shared "ytsruh.com/envoy/shared"
+	"ytsruh.com/envoy/cli/utils"
 )
 
 var RootCmd = &cobra.Command{
@@ -29,7 +29,7 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version number",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("v%s\n", shared.Version)
+		fmt.Printf("v%s\n", utils.Version)
 	},
 }
 

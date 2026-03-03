@@ -7,7 +7,6 @@ The shared package includes:
 - All API error definitions used throughout the system
 - Request type definitions with validation tags
 - Response type definitions with Timestamp support for JSON serialization
-- Version variable for application versioning (injected at build time)
 
 ## Usage
 ```
@@ -21,13 +20,4 @@ The shared package includes:
 	
 	// Use conversion helpers
 	s := shared.NullStringToStringPtr(ns)
-
-	// Get application version
-	v := shared.Version
 ```
-
-## Version
-
-The `Version` variable contains the application version. It's read from Go's build metadata at runtime:
-- Release builds: semver from git tag (e.g., "v1.0.0")
-- Development builds: "(devel)" with helpful installation message

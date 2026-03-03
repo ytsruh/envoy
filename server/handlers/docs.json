@@ -51,27 +51,10 @@
 						"format": "email",
 						"description": "User's email address"
 					},
-				"created_at": {
-					"type": "string",
-					"format": "date-time",
-					"description": "Timestamp when user was created"
-				}
-			},
-			"UserSearchResponse": {
-				"type": "object",
-				"properties": {
-					"user_id": {
+					"created_at": {
 						"type": "string",
-						"description": "Unique user identifier"
-					},
-					"name": {
-						"type": "string",
-						"description": "User's full name"
-					},
-					"email": {
-						"type": "string",
-						"format": "email",
-						"description": "User's email address"
+						"format": "date-time",
+						"description": "Timestamp when user was created"
 					}
 				}
 			},
@@ -283,163 +266,163 @@
 					}
 				}
 			},
-	"EnvironmentResponse": {
-		"type": "object",
-		"properties": {
-			"id": {
-				"type": "integer",
-				"format": "int64",
-				"description": "Unique environment identifier"
+			"EnvironmentResponse": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "integer",
+						"format": "int64",
+						"description": "Unique environment identifier"
+					},
+					"project_id": {
+						"type": "integer",
+						"format": "int64",
+						"description": "ID of the project this environment belongs to"
+					},
+					"name": {
+						"type": "string",
+						"description": "Environment name"
+					},
+					"description": {
+						"type": "string",
+						"nullable": true,
+						"description": "Environment description (optional)"
+					},
+					"created_at": {
+						"type": "string",
+						"format": "date-time",
+						"description": "Timestamp when environment was created"
+					},
+					"updated_at": {
+						"type": "string",
+						"format": "date-time",
+						"description": "Timestamp when environment was last updated"
+					}
+				}
 			},
-			"project_id": {
-				"type": "integer",
-				"format": "int64",
-				"description": "ID of the project this environment belongs to"
+			"CreateEnvironmentRequest": {
+				"type": "object",
+				"required": ["name"],
+				"properties": {
+					"name": {
+						"type": "string",
+						"description": "Environment name",
+						"minLength": 1,
+						"maxLength": 100
+					},
+					"description": {
+						"type": "string",
+						"maxLength": 500,
+						"description": "Environment description (optional, max 500 characters)"
+					}
+				}
 			},
-			"name": {
-				"type": "string",
-				"description": "Environment name"
+			"UpdateEnvironmentRequest": {
+				"type": "object",
+				"required": ["name"],
+				"properties": {
+					"name": {
+						"type": "string",
+						"description": "Updated environment name",
+						"minLength": 1,
+						"maxLength": 100
+					},
+					"description": {
+						"type": "string",
+						"maxLength": 500,
+						"description": "Updated environment description (optional, max 500 characters)"
+					}
+				}
 			},
-			"description": {
-				"type": "string",
-				"nullable": true,
-				"description": "Environment description (optional)"
+			"EnvironmentVariableResponse": {
+				"type": "object",
+				"properties": {
+					"id": {
+						"type": "integer",
+						"format": "int64",
+						"description": "Unique environment variable identifier"
+					},
+					"environment_id": {
+						"type": "integer",
+						"format": "int64",
+						"description": "ID of the environment this variable belongs to"
+					},
+					"key": {
+						"type": "string",
+						"description": "Variable key (stored in uppercase)"
+					},
+					"value": {
+						"type": "string",
+						"maxLength": 255,
+						"description": "Variable value (max 255 characters)"
+					},
+					"description": {
+						"type": "string",
+						"nullable": true,
+						"description": "Variable description (optional, max 500 characters)"
+					},
+					"created_at": {
+						"type": "string",
+						"format": "date-time",
+						"description": "Timestamp when variable was created"
+					},
+					"updated_at": {
+						"type": "string",
+						"format": "date-time",
+						"description": "Timestamp when variable was last updated"
+					}
+				}
 			},
-			"created_at": {
-				"type": "string",
-				"format": "date-time",
-				"description": "Timestamp when environment was created"
+			"CreateEnvironmentVariableRequest": {
+				"type": "object",
+				"required": ["key", "value"],
+				"properties": {
+					"key": {
+						"type": "string",
+						"description": "Variable key (will be converted to uppercase)"
+					},
+					"value": {
+						"type": "string",
+						"maxLength": 255,
+						"description": "Variable value (max 255 characters)"
+					},
+					"description": {
+						"type": "string",
+						"maxLength": 500,
+						"description": "Variable description (optional, max 500 characters)"
+					}
+				}
 			},
-			"updated_at": {
-				"type": "string",
-				"format": "date-time",
-				"description": "Timestamp when environment was last updated"
-			}
-		}
-	},
-	"CreateEnvironmentRequest": {
-		"type": "object",
-		"required": ["name"],
-		"properties": {
-			"name": {
-				"type": "string",
-				"description": "Environment name",
-				"minLength": 1,
-				"maxLength": 100
+			"UpdateEnvironmentVariableRequest": {
+				"type": "object",
+				"required": ["key", "value"],
+				"properties": {
+					"key": {
+						"type": "string",
+						"description": "Updated variable key (will be converted to uppercase)"
+					},
+					"value": {
+						"type": "string",
+						"maxLength": 255,
+						"description": "Updated variable value (max 255 characters)"
+					},
+					"description": {
+						"type": "string",
+						"maxLength": 500,
+						"description": "Updated variable description (optional, max 500 characters)"
+					}
+				}
 			},
-			"description": {
-				"type": "string",
-				"maxLength": 500,
-				"description": "Environment description (optional, max 500 characters)"
-			}
-		}
-	},
-	"UpdateEnvironmentRequest": {
-		"type": "object",
-		"required": ["name"],
-		"properties": {
-			"name": {
-				"type": "string",
-				"description": "Updated environment name",
-				"minLength": 1,
-				"maxLength": 100
-			},
-			"description": {
-				"type": "string",
-				"maxLength": 500,
-				"description": "Updated environment description (optional, max 500 characters)"
-			}
-		}
-		},
-		"EnvironmentVariableResponse": {
-			"type": "object",
-			"properties": {
-				"id": {
-					"type": "integer",
-					"format": "int64",
-					"description": "Unique environment variable identifier"
-				},
-				"environment_id": {
-					"type": "integer",
-					"format": "int64",
-					"description": "ID of the environment this variable belongs to"
-				},
-				"key": {
-					"type": "string",
-					"description": "Variable key (stored in uppercase)"
-				},
-				"value": {
-					"type": "string",
-					"maxLength": 255,
-					"description": "Variable value (max 255 characters)"
-				},
-				"description": {
-					"type": "string",
-					"nullable": true,
-					"description": "Variable description (optional, max 500 characters)"
-				},
-				"created_at": {
-					"type": "string",
-					"format": "date-time",
-					"description": "Timestamp when variable was created"
-				},
-				"updated_at": {
-					"type": "string",
-					"format": "date-time",
-					"description": "Timestamp when variable was last updated"
+			"HealthResponse": {
+				"type": "object",
+				"properties": {
+					"health": {
+						"type": "string",
+						"enum": ["ok"],
+						"description": "Health status"
+					}
 				}
 			}
-		},
-		"CreateEnvironmentVariableRequest": {
-			"type": "object",
-			"required": ["key", "value"],
-			"properties": {
-				"key": {
-					"type": "string",
-					"description": "Variable key (will be converted to uppercase)"
-				},
-				"value": {
-					"type": "string",
-					"maxLength": 255,
-					"description": "Variable value (max 255 characters)"
-				},
-				"description": {
-					"type": "string",
-					"maxLength": 500,
-					"description": "Variable description (optional, max 500 characters)"
-				}
-			}
-		},
-		"UpdateEnvironmentVariableRequest": {
-			"type": "object",
-			"required": ["key", "value"],
-			"properties": {
-				"key": {
-					"type": "string",
-					"description": "Updated variable key (will be converted to uppercase)"
-				},
-				"value": {
-					"type": "string",
-					"maxLength": 255,
-					"description": "Updated variable value (max 255 characters)"
-				},
-				"description": {
-					"type": "string",
-					"maxLength": 500,
-					"description": "Updated variable description (optional, max 500 characters)"
-				}
-			}
-		},
-		"HealthResponse": {
-		"type": "object",
-		"properties": {
-			"health": {
-				"type": "string",
-				"enum": ["ok"],
-				"description": "Health status"
-			}
-		}
-	}
 		}
 	},
 	"paths": {
@@ -573,60 +556,6 @@
 							"application/json": {
 								"schema": {
 									"$ref": "#/components/schemas/ProfileResponse"
-								}
-							}
-						}
-					},
-					"401": {
-						"description": "Unauthorized",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/Error"
-								}
-							}
-						}
-					}
-				}
-			}
-		},
-		"/users/search": {
-			"get": {
-				"summary": "Search Users by Email",
-				"description": "Search for users by their email address",
-				"tags": ["Users"],
-				"security": [{ "BearerAuth": [] }],
-				"parameters": [
-					{
-						"name": "email",
-						"in": "query",
-						"required": true,
-						"schema": {
-							"type": "string"
-						},
-						"description": "Email to search for (supports partial matches)"
-					}
-				],
-				"responses": {
-					"200": {
-						"description": "Users found successfully",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "array",
-									"items": {
-										"$ref": "#/components/schemas/UserSearchResponse"
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad request - email query parameter required",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/Error"
 								}
 							}
 						}
@@ -2110,4 +2039,4 @@
 			"description": "Environment variable management operations"
 		}
 	]
-  }
+}

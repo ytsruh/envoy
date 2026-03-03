@@ -1,0 +1,31 @@
+project_name: envoy
+
+builds:
+  - id: envoy-cli
+    dir: ./cmd
+    main: ./cli.go
+    tags: cli
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X ytsruh.com/envoy/shared.Version={{ .Version }}
+    binary: envoy-cli
+
+archives:
+  - id: default
+    format: binary
+
+checksum:
+  name_template: 'checksums.txt'
+
+release:
+  github:
+    owner: ytsruh
+    name: envoy
+  draft: false
+  prerelease: false

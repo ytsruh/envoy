@@ -5,3 +5,4 @@
 *_templ.go
 envoy-server
 envoy-cli
+/dist

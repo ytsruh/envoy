@@ -58,9 +58,14 @@ generate:
 	sqlc generate
 
 # Version bumping scripts
-tag:
-	@read -p "Version (e.g. v1.0.0): " TAG; \
-	git tag $$TAG && git push --tags
+bump-patch:
+	@./version.sh patch
+
+bump-minor:
+	@./version.sh minor
+
+bump-major:
+	@./version.sh major
 
 # Help
 help:
@@ -72,4 +77,6 @@ help:
 	@echo "  make build-dev     - build binaries for development"
 	@echo "  make build         - build binaries for production"
 	@echo "  make generate      - generate SQL queries"
-	@echo "  make tag           - create and push a version tag (e.g., v1.0.0)"
+	@echo "  make bump-patch    - bump patch version (v0.0.0 -> v0.0.1)"
+	@echo "  make bump-minor    - bump minor version (v0.0.0 -> v0.1.0)"
+	@echo "  make bump-major    - bump major version (v0.0.0 -> v1.0.0)"

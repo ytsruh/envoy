@@ -3,7 +3,7 @@ A secure environment variable management tool built using Go. Project consists o
 
 ## Core Features:
 
-- Variable Creation: Securely store environment variables using encryption.
+- Variable Creation: Securely store environment variables.
 - Project and Environment Management: Categorize environment variables into projects and environments (e.g., development, staging, production).
 - Secure Sharing: Share environment variables securely with team members through access controls.
 

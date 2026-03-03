@@ -1,43 +1,48 @@
 package cli
 
 import (
+	"context"
+	"flag"
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
+	cli "github.com/pressly/cli"
 	"ytsruh.com/envoy/cli/utils"
 )
 
-var RootCmd = &cobra.Command{
-	Use:   "envoy",
-	Short: "Envoy CLI client",
-	Long:  "Envoy CLI client for managing projects and environments",
-	CompletionOptions: cobra.CompletionOptions{
-		//HiddenDefaultCmd:  true, // hides cmd
-		DisableDefaultCmd: true, // removes cmd
+var Root = &cli.Command{
+	Name:      "envoy",
+	ShortHelp: "Envoy CLI client for managing projects and environments",
+	Usage:     "envoy <command> [flags]",
+	SubCommands: []*cli.Command{
+		versionCmd,
+		authCmd,
+		projectsCmd,
+		environmentsCmd,
+		environmentVariablesCmd,
+		usersCmd,
+	},
+}
+
+var versionCmd = &cli.Command{
+	Name:      "version",
+	ShortHelp: "Print the version number",
+	Exec: func(ctx context.Context, s *cli.State) error {
+		fmt.Fprintf(s.Stdout, "v%s\n", utils.Version)
+		return nil
 	},
 }
 
 func Execute() {
-	if err := RootCmd.Execute(); err != nil {
+	ctx := context.Background()
+	if err := cli.ParseAndRun(ctx, Root, os.Args[1:], nil); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print the version number",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("v%s\n", utils.Version)
-	},
-}
-
 func init() {
-	RootCmd.AddCommand(versionCmd)
-	RootCmd.AddCommand(authCmd)
-	RootCmd.AddCommand(projectsCmd)
-	RootCmd.AddCommand(environmentsCmd)
-	RootCmd.AddCommand(environmentVariablesCmd)
-	RootCmd.AddCommand(usersCmd)
+	Root.Flags = cli.FlagsFunc(func(f *flag.FlagSet) {
+		f.Bool("verbose", false, "enable verbose output")
+	})
 }

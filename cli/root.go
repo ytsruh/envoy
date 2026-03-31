@@ -7,6 +7,7 @@ import (
 	"os"
 
 	cli "github.com/pressly/cli"
+	"ytsruh.com/envoy/cli/tools"
 	"ytsruh.com/envoy/cli/utils"
 )
 
@@ -21,6 +22,7 @@ var Root = &cli.Command{
 		environmentsCmd,
 		environmentVariablesCmd,
 		usersCmd,
+		tools.ToolsCmd,
 	},
 }
 

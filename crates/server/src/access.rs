@@ -12,10 +12,21 @@ async fn count(conn: &Connection, sql: &str, args: Vec<libsql::Value>) -> Result
         .await
         .map_err(|e| ApiError::Internal(e.into()))?
         .ok_or_else(|| ApiError::Internal(anyhow::anyhow!("count query returned no rows")))?;
-    let n: i64 = row
-        .get(0)
-        .map_err(|e| ApiError::Internal(e.into()))?;
+    let n: i64 = row.get(0).map_err(|e| ApiError::Internal(e.into()))?;
     Ok(n)
+}
+
+pub async fn require_admin(conn: &Connection, user_id: &str) -> Result<(), ApiError> {
+    let n = count(
+        conn,
+        "SELECT COUNT(*) FROM users WHERE id = ?1 AND is_admin = 1 AND deleted_at IS NULL",
+        vec![user_id.into()],
+    )
+    .await?;
+    if n == 0 {
+        return Err(ApiError::forbidden("admin access required"));
+    }
+    Ok(())
 }
 
 pub async fn require_owner(

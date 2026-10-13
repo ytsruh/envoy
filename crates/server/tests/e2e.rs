@@ -1,15 +1,17 @@
-//! End-to-end feature parity test against a local libsql DB.
+//! End-to-end API test against a local libsql DB.
+//! Covers the self-hosted model: setup bootstrap, invite-only join,
+//! projects/envs/vars CRUD, and RBAC.
 
 use axum::{
-    body::{Body, to_bytes},
+    body::{to_bytes, Body},
     http::{Request, StatusCode},
 };
 use envoy_server::{db::Db, routes, state::AppState};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 async fn test_app() -> axum::Router {
     let path = std::env::temp_dir().join(format!(
-        "envoy-parity-{}-{}.db",
+        "envoy-e2e-{}-{}.db",
         std::process::id(),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -20,7 +22,7 @@ async fn test_app() -> axum::Router {
     db.migrate().await.unwrap();
     let state = AppState {
         db,
-        jwt_secret: "test-secret-for-parity".to_string(),
+        jwt_secret: "test-secret-for-e2e".to_string(),
     };
     routes::router().with_state(state)
 }
@@ -55,7 +57,7 @@ async fn call(
 }
 
 #[tokio::test]
-async fn full_parity_flow() {
+async fn full_e2e_flow() {
     let mut app = test_app().await;
 
     // health + home + docs (no auth)
@@ -63,11 +65,11 @@ async fn full_parity_flow() {
     assert_eq!(s, StatusCode::OK, "{v}");
     assert_eq!(v["health"], "ok");
 
-    // register user A
+    // bootstrap: first user becomes admin
     let (s, v) = call(
         &mut app,
         "POST",
-        "/auth/register",
+        "/auth/setup",
         None,
         Some(json!({"name": "Alice", "email": "alice@example.com", "password": "password123"})),
     )
@@ -76,16 +78,16 @@ async fn full_parity_flow() {
     let token_a = v["token"].as_str().unwrap().to_string();
     assert!(!token_a.is_empty());
 
-    // duplicate register -> 409
+    // second setup -> 403 (already set up)
     let (s, _) = call(
         &mut app,
         "POST",
-        "/auth/register",
+        "/auth/setup",
         None,
-        Some(json!({"name": "Alice", "email": "alice@example.com", "password": "password123"})),
+        Some(json!({"name": "Eve", "email": "eve@example.com", "password": "password123"})),
     )
     .await;
-    assert_eq!(s, StatusCode::CONFLICT);
+    assert_eq!(s, StatusCode::FORBIDDEN);
 
     // login
     let (s, v) = call(
@@ -145,7 +147,14 @@ async fn full_parity_flow() {
     let (s, v) = call(&mut app, "GET", "/projects", Some(&token_a), None).await;
     assert_eq!(s, StatusCode::OK);
     assert_eq!(v.as_array().unwrap().len(), 1);
-    let (s, _) = call(&mut app, "GET", &format!("/projects/{pid}"), Some(&token_a), None).await;
+    let (s, _) = call(
+        &mut app,
+        "GET",
+        &format!("/projects/{pid}"),
+        Some(&token_a),
+        None,
+    )
+    .await;
     assert_eq!(s, StatusCode::OK);
     let (s, v) = call(
         &mut app,
@@ -158,17 +167,68 @@ async fn full_parity_flow() {
     assert_eq!(s, StatusCode::OK, "{v}");
     assert_eq!(v["name"], "demo-renamed");
 
-    // register user B + search
+    // admin creates invite for Bob (non-admin cannot)
+    let (s, _) = call(
+        &mut app,
+        "POST",
+        "/users/invites",
+        None,
+        Some(json!({"email": "bob@example.com", "name": "Bob"})),
+    )
+    .await;
+    assert_eq!(s, StatusCode::UNAUTHORIZED);
     let (s, v) = call(
         &mut app,
         "POST",
-        "/auth/register",
-        None,
-        Some(json!({"name": "Bob", "email": "bob@example.com", "password": "password123"})),
+        "/users/invites",
+        Some(&token_a),
+        Some(json!({"email": "bob@example.com", "name": "Bob"})),
     )
     .await;
-    assert_eq!(s, StatusCode::CREATED);
+    assert_eq!(s, StatusCode::CREATED, "{v}");
+    let invite_token = v["token"].as_str().unwrap().to_string();
+    assert!(!invite_token.is_empty());
+
+    // pending invites list (admin)
+    let (s, v) = call(&mut app, "GET", "/users/invites", Some(&token_a), None).await;
+    assert_eq!(s, StatusCode::OK, "{v}");
+    assert_eq!(v.as_array().unwrap().len(), 1);
+
+    // Bob accepts invite with his own password
+    let (s, v) = call(
+        &mut app,
+        "POST",
+        "/auth/accept-invite",
+        None,
+        Some(json!({"token": invite_token, "name": "Bob", "password": "password123"})),
+    )
+    .await;
+    assert_eq!(s, StatusCode::CREATED, "{v}");
     let user_b = v["user"]["user_id"].as_str().unwrap().to_string();
+
+    // reused invite -> 401
+    let (s, _) = call(
+        &mut app,
+        "POST",
+        "/auth/accept-invite",
+        None,
+        Some(json!({"token": invite_token, "name": "Bob", "password": "password123"})),
+    )
+    .await;
+    assert_eq!(s, StatusCode::UNAUTHORIZED);
+
+    // bad invite token -> 401
+    let (s, _) = call(
+        &mut app,
+        "POST",
+        "/auth/accept-invite",
+        None,
+        Some(json!({"token": "bogus", "name": "X", "password": "password123"})),
+    )
+    .await;
+    assert_eq!(s, StatusCode::UNAUTHORIZED);
+
+    // search finds Bob
     let (s, v) = call(
         &mut app,
         "GET",
@@ -179,6 +239,61 @@ async fn full_parity_flow() {
     .await;
     assert_eq!(s, StatusCode::OK);
     assert_eq!(v.as_array().unwrap().len(), 1);
+
+    // invite for existing email -> 409
+    let (s, _) = call(
+        &mut app,
+        "POST",
+        "/users/invites",
+        Some(&token_a),
+        Some(json!({"email": "bob@example.com", "name": "Bob"})),
+    )
+    .await;
+    assert_eq!(s, StatusCode::CONFLICT);
+
+    // Bob (non-admin) cannot create invites -> 403
+    let token_b = {
+        let (s, v) = call(
+            &mut app,
+            "POST",
+            "/auth/login",
+            None,
+            Some(json!({"email": "bob@example.com", "password": "password123"})),
+        )
+        .await;
+        assert_eq!(s, StatusCode::OK);
+        v["token"].as_str().unwrap().to_string()
+    };
+    let (s, _) = call(
+        &mut app,
+        "POST",
+        "/users/invites",
+        Some(&token_b),
+        Some(json!({"email": "carol@example.com", "name": "Carol"})),
+    )
+    .await;
+    assert_eq!(s, StatusCode::FORBIDDEN);
+
+    // invite + revoke flow for Carol
+    let (s, v) = call(
+        &mut app,
+        "POST",
+        "/users/invites",
+        Some(&token_a),
+        Some(json!({"email": "carol@example.com", "name": ""})),
+    )
+    .await;
+    assert_eq!(s, StatusCode::CREATED, "{v}");
+    let carol_id = v["invite_id"].as_str().unwrap().to_string();
+    let (s, _) = call(
+        &mut app,
+        "DELETE",
+        &format!("/users/invites/{carol_id}"),
+        Some(&token_a),
+        None,
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK);
 
     // sharing: add/list/update/remove member
     let (s, _) = call(
@@ -282,20 +397,7 @@ async fn full_parity_flow() {
     assert_eq!(s, StatusCode::OK, "{v}");
     assert_eq!(v["value"], "rotated");
 
-    // RBAC: viewer Bob cannot write (add Bob as viewer first via re-add)
-    let token_b = {
-        let (s, v) = call(
-            &mut app,
-            "POST",
-            "/auth/login",
-            None,
-            Some(json!({"email": "bob@example.com", "password": "password123"})),
-        )
-        .await;
-        assert_eq!(s, StatusCode::OK);
-        v["token"].as_str().unwrap().to_string()
-    };
-    // Bob is currently editor; downgrade to viewer then check write denied
+    // RBAC: downgrade Bob to viewer, check write denied
     let (s, _) = call(
         &mut app,
         "PUT",

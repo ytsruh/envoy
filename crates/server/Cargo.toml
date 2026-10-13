@@ -26,6 +26,7 @@ tower = { version = "0.5", features = ["timeout", "limit", "util"] }
 libsql = { version = "0.9", features = ["remote"] }
 bcrypt = "0.17"
 jsonwebtoken = "9"
+sha2 = "0.10"
 dotenvy = "0.15"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

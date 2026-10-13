@@ -43,6 +43,23 @@ pub struct UserSearchResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct InviteResponse {
+    pub invite_id: String,
+    pub email: String,
+    pub token: String,
+    pub expires_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct InviteListItem {
+    pub invite_id: String,
+    pub email: String,
+    pub name: Option<String>,
+    pub expires_at: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ProjectResponse {
     pub id: String,
     pub name: String,

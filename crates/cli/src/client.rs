@@ -5,9 +5,9 @@ use crate::config;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ClientError {
-    #[error("no token - please login first using 'envoy auth login'")]
+    #[error("no token - please login first using 'envoy setup login'")]
     NoToken,
-    #[error("session expired - please login again using 'envoy auth login'")]
+    #[error("session expired - please login again using 'envoy setup login'")]
     Expired,
     #[error("server error: {0}")]
     Server(String),
@@ -49,8 +49,7 @@ impl Client {
         path: &str,
         body: Option<Value>,
         auth: bool,
-    ) -> Result<T, ClientError>
-    {
+    ) -> Result<T, ClientError> {
         let resp = self.raw(method, path, body, auth).await?;
         let status = resp.status();
         if !status.is_success() {
@@ -58,7 +57,11 @@ impl Client {
                 .json::<serde_json::Value>()
                 .await
                 .ok()
-                .and_then(|v| v.get("error").and_then(|e| e.as_str()).map(|s| s.to_string()))
+                .and_then(|v| {
+                    v.get("error")
+                        .and_then(|e| e.as_str())
+                        .map(|s| s.to_string())
+                })
                 .unwrap_or_else(|| format!("HTTP {status}"));
             if status == reqwest::StatusCode::UNAUTHORIZED && err_msg == "Token has expired" {
                 let _ = config::clear_token();
@@ -104,8 +107,8 @@ impl Client {
         self.request(reqwest::Method::GET, path, None, auth).await
     }
 
-    // --- auth ---
-    pub async fn register(
+    // --- setup / session ---
+    pub async fn setup_init(
         &self,
         name: &str,
         email: &str,
@@ -113,7 +116,26 @@ impl Client {
     ) -> Result<envoy_shared::responses::AuthResponse, ClientError> {
         let body = serde_json::json!({"name": name, "email": email, "password": password});
         let resp: envoy_shared::responses::AuthResponse = self
-            .request(reqwest::Method::POST, "/auth/register", Some(body), false)
+            .request(reqwest::Method::POST, "/auth/setup", Some(body), false)
+            .await?;
+        let _ = config::set_token(&resp.token);
+        Ok(resp)
+    }
+
+    pub async fn accept_invite(
+        &self,
+        token: &str,
+        name: &str,
+        password: &str,
+    ) -> Result<envoy_shared::responses::AuthResponse, ClientError> {
+        let body = serde_json::json!({"token": token, "name": name, "password": password});
+        let resp: envoy_shared::responses::AuthResponse = self
+            .request(
+                reqwest::Method::POST,
+                "/auth/accept-invite",
+                Some(body),
+                false,
+            )
             .await?;
         let _ = config::set_token(&resp.token);
         Ok(resp)
@@ -134,6 +156,11 @@ impl Client {
 
     pub async fn profile(&self) -> Result<envoy_shared::responses::ProfileResponse, ClientError> {
         self.get("/auth/profile", true).await
+    }
+
+    pub async fn health(&self) -> Result<serde_json::Value, ClientError> {
+        self.request(reqwest::Method::GET, "/health", None, false)
+            .await
     }
 
     // --- projects ---
@@ -173,13 +200,23 @@ impl Client {
     ) -> Result<envoy_shared::responses::ProjectResponse, ClientError> {
         let body =
             serde_json::json!({"name": name, "description": description, "git_repo": git_repo});
-        self.request(reqwest::Method::PUT, &format!("/projects/{id}"), Some(body), true)
-            .await
+        self.request(
+            reqwest::Method::PUT,
+            &format!("/projects/{id}"),
+            Some(body),
+            true,
+        )
+        .await
     }
 
     pub async fn delete_project(&self, id: &str) -> Result<(), ClientError> {
         let _: serde_json::Value = self
-            .request(reqwest::Method::DELETE, &format!("/projects/{id}"), None, true)
+            .request(
+                reqwest::Method::DELETE,
+                &format!("/projects/{id}"),
+                None,
+                true,
+            )
             .await?;
         Ok(())
     }
@@ -338,6 +375,37 @@ impl Client {
         Ok(())
     }
 
+    // --- admin / invites ---
+    pub async fn create_invite(
+        &self,
+        email: &str,
+        name: &str,
+    ) -> Result<envoy_shared::responses::InviteResponse, ClientError> {
+        let body = serde_json::json!({"email": email, "name": name});
+        self.request(reqwest::Method::POST, "/users/invites", Some(body), true)
+            .await
+    }
+
+    pub async fn list_invites(
+        &self,
+    ) -> Result<Vec<envoy_shared::responses::InviteListItem>, ClientError> {
+        let v: Vec<envoy_shared::responses::InviteListItem> =
+            self.get("/users/invites", true).await.unwrap_or_default();
+        Ok(v)
+    }
+
+    pub async fn revoke_invite(&self, invite_id: &str) -> Result<(), ClientError> {
+        let _: serde_json::Value = self
+            .request(
+                reqwest::Method::DELETE,
+                &format!("/users/invites/{invite_id}"),
+                None,
+                true,
+            )
+            .await?;
+        Ok(())
+    }
+
     // --- users/sharing ---
     pub async fn search_users(
         &self,
@@ -379,11 +447,7 @@ impl Client {
         Ok(())
     }
 
-    pub async fn remove_member(
-        &self,
-        project_id: &str,
-        user_id: &str,
-    ) -> Result<(), ClientError> {
+    pub async fn remove_member(&self, project_id: &str, user_id: &str) -> Result<(), ClientError> {
         let _: serde_json::Value = self
             .request(
                 reqwest::Method::DELETE,

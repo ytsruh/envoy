@@ -6,9 +6,20 @@ CREATE TABLE IF NOT EXISTS users (
   name TEXT NOT NULL,
   email TEXT NOT NULL,
   password TEXT NOT NULL,
+  is_admin INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   deleted_at TIMESTAMP DEFAULT NULL
+);
+CREATE TABLE IF NOT EXISTS invites (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  name TEXT,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMP NOT NULL,
+  accepted_at TIMESTAMP DEFAULT NULL,
+  invited_by TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY,
@@ -66,16 +77,21 @@ impl Db {
         let db = Builder::new_remote(url.to_string(), token.to_string())
             .build()
             .await?;
-        Ok(Self { db: std::sync::Arc::new(db) })
+        Ok(Self {
+            db: std::sync::Arc::new(db),
+        })
     }
 
     pub async fn connect_local(path: &str) -> anyhow::Result<Self> {
         let db = Builder::new_local(path).build().await?;
-        Ok(Self { db: std::sync::Arc::new(db) })
+        Ok(Self {
+            db: std::sync::Arc::new(db),
+        })
     }
 
     pub async fn connect_auto(url: &str, token: &str) -> anyhow::Result<Self> {
-        if url.starts_with("http://") || url.starts_with("https://") || url.starts_with("libsql://") {
+        if url.starts_with("http://") || url.starts_with("https://") || url.starts_with("libsql://")
+        {
             Self::connect_remote(url, token).await
         } else {
             let path = url.strip_prefix("file:").unwrap_or(url);
@@ -90,6 +106,20 @@ impl Db {
     pub async fn migrate(&self) -> anyhow::Result<()> {
         let conn = self.conn().await?;
         conn.execute_batch(SCHEMA).await?;
+        // Backfill for databases created before is_admin / invites existed.
+        // Ignore "duplicate column" when the column is already present.
+        if let Err(e) = conn
+            .execute(
+                "ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0",
+                libsql::params![],
+            )
+            .await
+        {
+            let msg = e.to_string();
+            if !msg.contains("duplicate column") && !msg.contains("already exists") {
+                return Err(e.into());
+            }
+        }
         Ok(())
     }
 }

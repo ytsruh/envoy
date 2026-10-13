@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use axum::Router;
 use envoy_server::{config, db, routes, state};
-use tower_http::{cors::CorsLayer, limit::RequestBodyLimitLayer, timeout::TimeoutLayer, trace::TraceLayer};
+use tower_http::{limit::RequestBodyLimitLayer, timeout::TimeoutLayer, trace::TraceLayer};
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -20,7 +20,6 @@ async fn main() -> anyhow::Result<()> {
     let app: Router = routes::router()
         .with_state(state)
         .layer(TraceLayer::new_for_http())
-        .layer(CorsLayer::permissive())
         .layer(RequestBodyLimitLayer::new(2 * 1024 * 1024))
         .layer(TimeoutLayer::with_status_code(
             axum::http::StatusCode::REQUEST_TIMEOUT,

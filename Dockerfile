@@ -18,5 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 
 COPY --from=builder /app/target/release/envoy-server .
 
+VOLUME /data
+
 EXPOSE 8080
 ENTRYPOINT ["./envoy-server"]

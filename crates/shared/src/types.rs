@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use utoipa::ToSchema;
 
-/// RFC3339 timestamp that serializes zero as null (matches Go Timestamp).
+/// RFC3339 timestamp that serializes absence as null.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ToSchema)]
 pub struct Timestamp(pub Option<DateTime<Utc>>);
 

@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-const DEFAULT_SERVER_URL: &str = "https://envoy.webiliti.com";
+const DEFAULT_SERVER_URL: &str = "http://localhost:8080";
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
@@ -58,6 +58,19 @@ pub fn set_token(token: &str) -> anyhow::Result<()> {
 
 pub fn clear_token() -> anyhow::Result<()> {
     set_token("")
+}
+
+/// Point the CLI at a (self-hosted) server. Clears any stale token since
+/// tokens are instance-scoped and must not leak across servers.
+pub fn connect(server_url: &str) -> anyhow::Result<()> {
+    let url = server_url.trim().trim_end_matches('/').to_string();
+    if url.is_empty() {
+        anyhow::bail!("server URL is required");
+    }
+    let mut cfg = load();
+    cfg.server_url = url;
+    cfg.token = String::new();
+    save(&cfg)
 }
 
 pub fn server_url() -> String {

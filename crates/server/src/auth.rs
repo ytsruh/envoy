@@ -1,5 +1,5 @@
 use chrono::Utc;
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -10,7 +10,7 @@ pub struct Claims {
     pub iat: i64,
 }
 
-const EXPIRY_SECS: i64 = 7 * 24 * 3600;
+const EXPIRY_SECS: i64 = 30 * 24 * 3600;
 
 pub fn generate_jwt(user_id: &str, email: &str, secret: &str) -> anyhow::Result<String> {
     let now = Utc::now().timestamp();

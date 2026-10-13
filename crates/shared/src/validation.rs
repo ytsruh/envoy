@@ -1,5 +1,5 @@
-/// Mirrors Go validator.go: project/environment names 1-100 chars,
-/// charset [a-zA-Z0-9 \-_], descriptions max 500.
+/// Project/environment names are 1-100 chars, charset [a-zA-Z0-9 \-_];
+/// descriptions max 500 chars.
 pub fn validate_name(value: &str) -> Result<(), String> {
     if value.is_empty() || value.len() > 100 {
         return Err("name must be between 1 and 100 characters".to_string());

@@ -69,10 +69,7 @@ pub async fn select_project(client: &Client) -> anyhow::Result<String> {
     Ok(ans[start..end].to_string())
 }
 
-pub async fn select_environment(
-    client: &Client,
-    project_id: &str,
-) -> anyhow::Result<String> {
+pub async fn select_environment(client: &Client, project_id: &str) -> anyhow::Result<String> {
     let envs = client.list_environments(project_id).await?;
     if envs.is_empty() {
         anyhow::bail!("No environments found. Create one first.");
@@ -96,7 +93,10 @@ pub async fn select_variable(
     if vars.is_empty() {
         anyhow::bail!("No variables found.");
     }
-    let options: Vec<String> = vars.iter().map(|v| format!("{} = {} ({})", v.key, v.value, v.id)).collect();
+    let options: Vec<String> = vars
+        .iter()
+        .map(|v| format!("{} = {} ({})", v.key, v.value, v.id))
+        .collect();
     let ans = inquire::Select::new("Select a variable", options).prompt()?;
     let start = ans.rfind('(').map(|i| i + 1).unwrap_or(0);
     let end = ans.rfind(')').unwrap_or(ans.len());
@@ -116,11 +116,11 @@ pub fn print_client_error(e: ClientError) {
     match e {
         ClientError::NoToken => {
             eprintln!("Error: no token");
-            println!("Please login first using 'envoy auth login'");
+            println!("Please login first using 'envoy setup login'");
         }
         ClientError::Expired => {
             eprintln!("Error: expired token");
-            println!("Your session has expired. Please login again using 'envoy auth login'");
+            println!("Your session has expired. Please login again using 'envoy setup login'");
         }
         ClientError::Server(msg) => eprintln!("Error: {msg}"),
         ClientError::Transport(err) => eprintln!("Error: {err}"),

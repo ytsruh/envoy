@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-/// Matches Go handler-local structs (handlers define their own shapes;
-/// shared/requests.go in Go is dead code for projects/envs/vars).
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CreateProjectRequest {
     #[serde(default)]
@@ -38,7 +36,7 @@ pub struct CreateVariableRequest {
 pub type UpdateVariableRequest = CreateVariableRequest;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct RegisterRequest {
+pub struct SetupRequest {
     pub name: String,
     pub email: String,
     pub password: String,
@@ -48,6 +46,20 @@ pub struct RegisterRequest {
 pub struct LoginRequest {
     pub email: String,
     pub password: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct AcceptInviteRequest {
+    pub token: String,
+    pub name: String,
+    pub password: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct CreateInviteRequest {
+    pub email: String,
+    #[serde(default)]
+    pub name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

@@ -2,13 +2,14 @@ pub mod auth;
 pub mod docs;
 pub mod environments;
 pub mod health;
+pub mod invites;
 pub mod projects;
 pub mod sharing;
 pub mod variables;
 
 use axum::{
-    Router,
     routing::{delete, get, post, put},
+    Router,
 };
 
 use crate::state::AppState;
@@ -20,11 +21,20 @@ pub fn router() -> Router<AppState> {
         .route("/favicon.ico", get(health::favicon))
         .route("/openapi.json", get(docs::openapi))
         .route("/docs", get(docs::docs))
-        .route("/auth/register", post(auth::register))
+        .route("/auth/setup", post(auth::setup))
+        .route("/auth/accept-invite", post(auth::accept_invite))
         .route("/auth/login", post(auth::login))
         .route("/auth/profile", get(auth::profile))
         .route("/users/search", get(auth::search_users))
-        .route("/projects", post(projects::create_project).get(projects::list_projects))
+        .route(
+            "/users/invites",
+            post(invites::create_invite).get(invites::list_invites),
+        )
+        .route("/users/invites/{id}", delete(invites::revoke_invite))
+        .route(
+            "/projects",
+            post(projects::create_project).get(projects::list_projects),
+        )
         .route(
             "/projects/{id}",
             get(projects::get_project)
@@ -59,10 +69,5 @@ pub fn router() -> Router<AppState> {
             get(variables::get_variable)
                 .put(variables::update_variable)
                 .delete(variables::delete_variable),
-        )
-        // Back-compat alias for Go CLI bug (DELETE /api/projects/:id)
-        .route(
-            "/api/projects/{id}",
-            delete(projects::delete_project),
         )
 }

@@ -9,10 +9,13 @@ A secure environment variable management tool built using Rust. Self-host the se
 
 ## Installation
 
-Build from source (binaries in `target/release/`):
+Build from source:
 ```bash
-cargo build --release
+make build         # debug binaries in `target/debug/`: `envoy`, `envoy-server`
+make build-release # optimised binaries in `target/release/`: `envoy`, `envoy-server`
 ```
+
+The examples below assume a release build — substitute `target/debug/` if you ran `make build`.
 
 Run the server (self-hosted — defaults to `./data/envoy.db`, JWT secret auto-generated and persisted to `./data/.jwt_secret`):
 ```bash

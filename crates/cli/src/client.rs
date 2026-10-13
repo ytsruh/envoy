@@ -74,17 +74,6 @@ impl Client {
         Ok(parsed)
     }
 
-    async fn request_unit(
-        &self,
-        method: reqwest::Method,
-        path: &str,
-        body: Option<Value>,
-        auth: bool,
-    ) -> Result<serde_json::Value, ClientError> {
-        self.request::<serde_json::Value>(method, path, body, auth)
-            .await
-    }
-
     async fn raw(
         &self,
         method: reqwest::Method,
@@ -457,15 +446,5 @@ impl Client {
             )
             .await?;
         Ok(())
-    }
-
-    pub async fn _raw(
-        &self,
-        method: reqwest::Method,
-        path: &str,
-        body: Option<Value>,
-        auth: bool,
-    ) -> Result<serde_json::Value, ClientError> {
-        self.request_unit(method, path, body, auth).await
     }
 }

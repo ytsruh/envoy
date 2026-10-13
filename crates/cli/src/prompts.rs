@@ -40,10 +40,10 @@ pub fn email(prompt: &str) -> anyhow::Result<String> {
 }
 
 pub fn confirm(prompt: &str) -> anyhow::Result<bool> {
-    Ok(inquire::Confirm::new(prompt)
+    inquire::Confirm::new(prompt)
         .with_default(false)
         .prompt()
-        .context("prompt cancelled")?)
+        .context("prompt cancelled")
 }
 
 pub async fn select_project(client: &Client) -> anyhow::Result<String> {

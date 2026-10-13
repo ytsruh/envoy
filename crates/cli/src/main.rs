@@ -200,7 +200,7 @@ fn git_repo_detect() -> String {
         .rev()
         .collect::<Vec<_>>();
     if trimmed.len() == 2 {
-        let owner = trimmed[0].split(':').last().unwrap_or(trimmed[0]);
+        let owner = trimmed[0].split(':').next_back().unwrap_or(trimmed[0]);
         return format!("{owner}/{}", trimmed[1]);
     }
     String::new()
@@ -326,7 +326,7 @@ async fn main() {
                 let description = prompts::text("Description (optional)", false)
                     .unwrap_or_else(|e| fail(&e.to_string()));
                 let detected = git_repo_detect();
-                let mut git_repo = String::new();
+                let git_repo: String;
                 if detected.is_empty() {
                     git_repo = prompts::text("Git repository (owner/repo, optional)", false)
                         .unwrap_or_else(|e| fail(&e.to_string()));

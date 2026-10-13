@@ -5,15 +5,11 @@ CLI_BIN := envoy
 
 CARGO := cargo
 
-.PHONY: dev dev-server dev-cli test test-ci build build-release lint fmt clean help
+.PHONY: server test test-ci build build-release lint fmt clean help
 
 # Run the server (expects JWT_SECRET + TURSO_DATABASE_URL in env/.env)
-dev-server dev:
+server:
 	$(CARGO) run -p envoy-server
-
-# Run the CLI (expects ENVOY_SERVER_URL for local dev)
-dev-cli:
-	ENVOY_SERVER_URL=http://localhost:8080 $(CARGO) run -p envoy-cli -- $(ARGS)
 
 # Run the full test suite
 test:
@@ -43,12 +39,11 @@ clean:
 
 help:
 	@echo "Makefile commands:"
-	@echo "  make dev/dev-server - run the API server"
-	@echo "  make dev-cli        - run the CLI (pass ARGS=\"... =\")"
+	@echo "  make server         - run the API server (cargo run -p envoy-server)"
 	@echo "  make test           - run all tests (cargo test)"
 	@echo "  make test-ci        - tests + clippy with warnings denied"
-	@echo "  make build          - debug build all crates"
-	@echo "  make build-release  - release build all crates"
+	@echo "  make build          - debug build (binaries in target/debug/: envoy, envoy-server)"
+	@echo "  make build-release  - release build (binaries in target/release/: envoy, envoy-server)"
 	@echo "  make lint           - clippy"
 	@echo "  make fmt            - rustfmt"
 	@echo "  make clean          - cargo clean"

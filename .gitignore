@@ -6,3 +6,4 @@ envoy-server
 envoy
 /dist
 /target
+/data

@@ -1,5 +1,5 @@
 # Envoy
-A secure environment variable management tool built using Go. Project consists of a REST API and a CLI.
+A secure environment variable management tool built using Rust. Project consists of a REST API and a CLI.
 
 ## Core Features:
 
@@ -9,12 +9,17 @@ A secure environment variable management tool built using Go. Project consists o
 
 ## Installation
 
-Install/Update the latest version:
+Build from source (binaries in `target/release/`):
 ```bash
-go install ytsruh.com/envoy@latest
+cargo build --release
 ```
 
-Install a specific version:
+Run the server:
 ```bash
-go install ytsruh.com/envoy@v0.0.1
+JWT_SECRET=... TURSO_DATABASE_URL=... TURSO_AUTH_TOKEN=... ./target/release/envoy-server
+```
+
+Run the CLI:
+```bash
+./target/release/envoy --help
 ```

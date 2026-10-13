@@ -2,7 +2,7 @@
 .DS_Store
 *.db
 /tmp
-*_templ.go
 envoy-server
-envoy-cli
+envoy
 /dist
+/target

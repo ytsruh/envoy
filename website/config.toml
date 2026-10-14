@@ -1,0 +1,9 @@
+base_url = "https://example.com"
+title = "Envoy"
+description = "A self-hosted CLI tool for managing environment variables across projects and teams."
+compile_sass = false
+generate_feeds = false
+generate_sitemap = true
+
+[extra]
+github_url = "https://github.com/ytsruh/envoy"

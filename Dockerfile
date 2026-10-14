@@ -1,24 +1,32 @@
-FROM golang:1.24.4-alpine AS builder
+FROM rust:1.97-slim AS builder
 
 WORKDIR /app
 
-RUN apk add --no-cache git
+RUN apt-get update && apt-get install -y --no-install-recommends pkg-config libssl-dev ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY go.mod go.sum ./
-RUN go mod download
+COPY Cargo.toml Cargo.lock ./
+COPY crates ./crates
+RUN cargo build --release -p envoy-server
 
-COPY . .
-
-RUN go install github.com/a-h/templ/cmd/templ@latest
-RUN templ generate ./server
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o envoy-server ./cmd/server.go
-
-FROM scratch
+FROM debian:bookworm-slim
 
 WORKDIR /app
 
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /app/envoy-server .
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/target/release/envoy-server .
+
+# Single source of truth for persisted state (SQLite + auto-generated
+# .jwt_secret). Mount a volume here or both are lost on redeploy.
+ENV TURSO_DATABASE_URL=/data/envoy.db
+ENV ENVOY_STATE_DIR=/data
+ENV ADDR=0.0.0.0:8080
+
+VOLUME /data
 
 EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD sh -c 'curl -f http://localhost:${PORT:-8080}/health || exit 1'
 ENTRYPOINT ["./envoy-server"]

@@ -1,0 +1,26 @@
+<!-- Hero Section -->
+<div class="relative pt-32 pb-20 sm:pt-40 sm:pb-24 overflow-hidden">
+  <!-- Background effects -->
+  <div class="absolute top-0 left-1/2 w-full -translate-x-1/2 h-full z-0 pointer-events-none">
+    <div class="absolute top-20 left-1/4 w-72 h-72 bg-brand-500/20 rounded-full blur-[100px] animate-pulse-slow"></div>
+    <div class="absolute bottom-20 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-[100px] animate-pulse-slow" style="animation-delay: 1s;"></div>
+  </div>
+  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 animate-slide-up">
+      <span class="header-text text-gradient">Environment Variables</span>
+      <span class="block text-white">Managed Right</span>
+    </h1>
+    <p class="mt-4 max-w-2xl mx-auto text-xl text-slate-400 animate-slide-up" style="animation-delay: 0.1s;">
+      A self-hosted CLI tool for managing environment variables across projects and teams. Organize with projects and environments, sync with your team, and stop passing .env files over chat.
+    </p>
+    <div class="mt-10 flex justify-center gap-4 animate-slide-up" style="animation-delay: 0.2s;">
+      <a href="#install" class="bg-white text-dark-900 hover:bg-slate-100 px-8 py-3 rounded-full font-bold text-lg transition-all transform hover:scale-105 shadow-xl">
+        Get Started
+      </a>
+      <a href="{{ config.extra.github_url }}" class="glass-panel text-white hover:bg-white/10 px-8 py-3 rounded-full font-semibold text-lg transition-all border border-white/20">
+        View on GitHub
+      </a>
+    </div>
+    {% include "partials/terminal.html" %}
+  </div>
+</div>

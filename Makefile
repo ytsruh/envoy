@@ -5,7 +5,7 @@ CLI_BIN := envoy
 
 CARGO := cargo
 
-.PHONY: server test test-ci build build-release lint fmt clean help
+.PHONY: server test test-ci build build-release lint fmt clean help website-serve website-build
 
 # Run the server (expects JWT_SECRET + TURSO_DATABASE_URL in env/.env)
 server:
@@ -36,6 +36,13 @@ fmt:
 
 clean:
 	$(CARGO) clean
+	rm -rf website/public
+
+website-serve:
+	zola --root website serve
+
+website-build:
+	zola --root website build
 
 help:
 	@echo "Makefile commands:"
@@ -47,3 +54,5 @@ help:
 	@echo "  make lint           - clippy"
 	@echo "  make fmt            - rustfmt"
 	@echo "  make clean          - cargo clean"
+	@echo "  make website-serve  - run Zola dev server for website/"
+	@echo "  make website-build  - build static site to website/public/"

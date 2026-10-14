@@ -7,7 +7,7 @@ CARGO := cargo
 
 .PHONY: server test test-ci build build-release lint fmt clean help website-serve website-build
 
-# Run the server (expects JWT_SECRET + TURSO_DATABASE_URL in env/.env)
+# Run the server (zero-config locally: SQLite at ./data/envoy.db, JWT secret auto-generated)
 server:
 	$(CARGO) run -p envoy-server
 

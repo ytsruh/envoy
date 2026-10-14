@@ -67,7 +67,15 @@ impl Config {
         let database_url = env::var("TURSO_DATABASE_URL")
             .unwrap_or_else(|_| "./data/envoy.db".to_string());
         let auth_token = env::var("TURSO_AUTH_TOKEN").unwrap_or_default();
-        let addr = env::var("ADDR").unwrap_or_else(|_| "0.0.0.0:8080".to_string());
+        // ADDR wins when set. Otherwise honour $PORT when the host injects
+        // it, falling back to 0.0.0.0:8080.
+        let addr = env::var("ADDR").ok().filter(|s| !s.is_empty()).unwrap_or_else(|| {
+            let port = env::var("PORT")
+                .ok()
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| "8080".to_string());
+            format!("0.0.0.0:{port}")
+        });
         let is_remote = database_url.starts_with("http://")
             || database_url.starts_with("https://")
             || database_url.starts_with("libsql://");

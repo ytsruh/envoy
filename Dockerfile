@@ -13,12 +13,20 @@ FROM debian:bookworm-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/target/release/envoy-server .
 
+# Single source of truth for persisted state (SQLite + auto-generated
+# .jwt_secret). Mount a volume here or both are lost on redeploy.
+ENV TURSO_DATABASE_URL=/data/envoy.db
+ENV ENVOY_STATE_DIR=/data
+ENV ADDR=0.0.0.0:8080
+
 VOLUME /data
 
 EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD sh -c 'curl -f http://localhost:${PORT:-8080}/health || exit 1'
 ENTRYPOINT ["./envoy-server"]

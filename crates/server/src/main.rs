@@ -7,8 +7,16 @@ use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let log_level = std::env::var("ENVOY_LOG_LEVEL")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "warn".to_string());
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
+        .with_env_filter(
+            log_level
+                .parse::<EnvFilter>()
+                .unwrap_or_else(|_| EnvFilter::new("warn")),
+        )
         .init();
     let cfg = config::Config::load()?;
     let db = db::Db::connect_auto(&cfg.database_url, &cfg.auth_token).await?;

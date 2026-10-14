@@ -63,6 +63,28 @@ envoy vars list [--env dev]           # KEY=VALUE lines
 Mutating commands print the resolved `project/env` target
 (e.g. `Pushed to 'demo/dev'`).
 
+### `.env` file format
+
+Both `push` and `pull` follow standard dotenv rules (same as docker
+compose / python-dotenv / node dotenv): quotes, backslash escapes, the
+`export` prefix, inline ` #` comments, BOM, and multiline double-quoted
+values are all honoured. Malformed lines fail loudly naming the file and
+line instead of uploading junk, and empty values are rejected (the server
+requires non-empty values).
+
+One rule deserves emphasis: unquoted and double-quoted `$VAR`/`${VAR}`
+are expanded against your **local** environment at upload time. To store
+a literal dollar sign, single-quote the value:
+
+```bash
+PASSWORD='s3cr$et'   # stored literally as s3cr$et
+PASSWORD=s3cr$et     # $et is expanded (usually to empty) — not what you want
+```
+
+Duplicate keys resolve last-wins with a warning naming the key. Files
+written by `pull` quote values as needed (spaces, `#`, `$`, quotes,
+newlines), so a pulled file pushes back byte-identical.
+
 ## Management (`envoy manage ...`)
 
 ```bash

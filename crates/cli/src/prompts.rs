@@ -54,11 +54,27 @@ pub async fn select_project(client: &Client) -> anyhow::Result<String> {
             format!("{} ({})", p.name, p.id)
         })
         .collect();
-    let ans = inquire::Select::new("Select a project", options).prompt()?;
-    // Extract id between last parens
-    let start = ans.rfind('(').map(|i| i + 1).unwrap_or(0);
-    let end = ans.rfind(')').unwrap_or(ans.len());
-    Ok(ans[start..end].to_string())
+    let ans = inquire::Select::new("Select a project", options)
+        .prompt()
+        .context("prompt cancelled")?;
+    // Options embed the unique id, so match the full display string instead of
+    // parsing parens (project names may themselves contain parens).
+    let idx = projects
+        .iter()
+        .position(|p| {
+            let display = if let Some(d) = &p.description {
+                if !d.is_empty() {
+                    format!("{} - {d} ({})", p.name, p.id)
+                } else {
+                    format!("{} ({})", p.name, p.id)
+                }
+            } else {
+                format!("{} ({})", p.name, p.id)
+            };
+            display == ans
+        })
+        .context("selected project not found")?;
+    Ok(projects[idx].id.clone())
 }
 
 pub async fn select_environment(client: &Client, project_id: &str) -> anyhow::Result<String> {
@@ -72,10 +88,14 @@ pub async fn select_environment(client: &Client, project_id: &str) -> anyhow::Re
         .iter()
         .map(|e| format!("{} ({})", e.name, e.id))
         .collect();
-    let ans = inquire::Select::new("Select an environment", options).prompt()?;
-    let start = ans.rfind('(').map(|i| i + 1).unwrap_or(0);
-    let end = ans.rfind(')').unwrap_or(ans.len());
-    Ok(ans[start..end].to_string())
+    let ans = inquire::Select::new("Select an environment", options)
+        .prompt()
+        .context("prompt cancelled")?;
+    let idx = envs
+        .iter()
+        .position(|e| format!("{} ({})", e.name, e.id) == ans)
+        .context("selected environment not found")?;
+    Ok(envs[idx].id.clone())
 }
 
 pub fn select_role() -> anyhow::Result<String> {

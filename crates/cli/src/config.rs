@@ -31,13 +31,26 @@ fn config_path() -> anyhow::Result<PathBuf> {
     Ok(home.join(".envoy").join("config.json"))
 }
 
-pub fn load() -> Config {
-    let path = match config_path() {
-        Ok(p) => p,
-        Err(_) => return Config::default(),
+/// Load config, distinguishing "no config yet" (Ok(default)) from
+/// "config exists but is unreadable/corrupt" (Err with path + cause).
+pub fn load() -> anyhow::Result<Config> {
+    let path = config_path()?;
+    let data = match fs::read_to_string(&path) {
+        Ok(d) => d,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Config::default()),
+        Err(e) => {
+            anyhow::bail!("cannot read config file {}: {e}", path.display());
+        }
     };
-    let data = fs::read_to_string(path).unwrap_or_default();
-    serde_json::from_str(&data).unwrap_or_default()
+    if data.trim().is_empty() {
+        return Ok(Config::default());
+    }
+    serde_json::from_str(&data).map_err(|e| {
+        anyhow::anyhow!(
+            "corrupt config file {}: {e}. Fix it or remove it to start fresh",
+            path.display()
+        )
+    })
 }
 
 pub fn save(cfg: &Config) -> anyhow::Result<()> {
@@ -60,12 +73,12 @@ pub fn save(cfg: &Config) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn get_token() -> String {
-    load().token
+pub fn get_token() -> anyhow::Result<String> {
+    Ok(load()?.token)
 }
 
 pub fn set_token(token: &str) -> anyhow::Result<()> {
-    let mut cfg = load();
+    let mut cfg = load()?;
     cfg.token = token.to_string();
     save(&cfg)
 }
@@ -81,23 +94,23 @@ pub fn connect(server_url: &str) -> anyhow::Result<()> {
     if url.is_empty() {
         anyhow::bail!("server URL is required");
     }
-    let mut cfg = load();
+    let mut cfg = load()?;
     cfg.server_url = url;
     cfg.token = String::new();
     save(&cfg)
 }
 
-pub fn server_url() -> String {
-    let cfg = load();
+pub fn server_url() -> anyhow::Result<String> {
+    let cfg = load()?;
     if !cfg.server_url.is_empty() {
-        return cfg.server_url;
+        return Ok(cfg.server_url);
     }
     if let Ok(url) = std::env::var("ENVOY_SERVER_URL") {
         if !url.is_empty() {
-            return url;
+            return Ok(url);
         }
     }
-    DEFAULT_SERVER_URL.to_string()
+    Ok(DEFAULT_SERVER_URL.to_string())
 }
 
 fn cwd_key() -> String {
@@ -107,25 +120,25 @@ fn cwd_key() -> String {
 }
 
 /// Find the link for cwd, walking up parents so subdirs inherit.
-pub fn link_for_cwd() -> Option<LinkEntry> {
-    let cfg = load();
+pub fn link_for_cwd() -> anyhow::Result<Option<LinkEntry>> {
+    let cfg = load()?;
     if cfg.links.is_empty() {
-        return None;
+        return Ok(None);
     }
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     let canon = std::fs::canonicalize(&cwd).unwrap_or(cwd);
     let mut cur: Option<&std::path::Path> = Some(&canon);
     while let Some(p) = cur {
         if let Some(e) = cfg.links.get(&p.to_string_lossy().to_string()) {
-            return Some(e.clone());
+            return Ok(Some(e.clone()));
         }
         cur = p.parent();
     }
-    None
+    Ok(None)
 }
 
 pub fn set_link(entry: &LinkEntry) -> anyhow::Result<String> {
-    let mut cfg = load();
+    let mut cfg = load()?;
     let key = cwd_key();
     cfg.links.insert(key.clone(), entry.clone());
     save(&cfg)?;
@@ -133,7 +146,7 @@ pub fn set_link(entry: &LinkEntry) -> anyhow::Result<String> {
 }
 
 pub fn remove_link() -> anyhow::Result<bool> {
-    let mut cfg = load();
+    let mut cfg = load()?;
     let key = cwd_key();
     let removed = cfg.links.remove(&key).is_some();
     if removed {
@@ -142,8 +155,8 @@ pub fn remove_link() -> anyhow::Result<bool> {
     Ok(removed)
 }
 
-pub fn list_links() -> Vec<(String, LinkEntry)> {
-    let mut v: Vec<(String, LinkEntry)> = load().links.into_iter().collect();
+pub fn list_links() -> anyhow::Result<Vec<(String, LinkEntry)>> {
+    let mut v: Vec<(String, LinkEntry)> = load()?.links.into_iter().collect();
     v.sort_by(|a, b| a.0.cmp(&b.0));
-    v
+    Ok(v)
 }

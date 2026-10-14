@@ -30,7 +30,7 @@ fn edit_distance(a: &str, b: &str) -> usize {
     for (i, ca) in a.iter().enumerate() {
         let mut cur = vec![i + 1];
         for (j, cb) in b.iter().enumerate() {
-            let cost = if ca.to_ascii_lowercase() == cb.to_ascii_lowercase() {
+            let cost = if ca.eq_ignore_ascii_case(cb) {
                 0
             } else {
                 1
@@ -46,7 +46,7 @@ fn closest_name(input: &str, names: &[String]) -> Option<String> {
     let mut best: Option<(usize, &String)> = None;
     for n in names {
         let d = edit_distance(input, n);
-        if d <= 2 && best.map_or(true, |(bd, _)| d < bd) {
+        if d <= 2 && best.is_none_or(|(bd, _)| d < bd) {
             best = Some((d, n));
         }
     }
@@ -55,10 +55,15 @@ fn closest_name(input: &str, names: &[String]) -> Option<String> {
 
 impl Client {
     pub fn new() -> anyhow::Result<Self> {
-        let _ = dotenvy::dotenv();
+        // Missing .env is normal; only warn when one exists but fails to parse.
+        if std::path::Path::new(".env").exists() {
+            if let Err(e) = dotenvy::dotenv() {
+                eprintln!("Warning: failed to parse .env: {e}");
+            }
+        }
         Ok(Self {
-            base: config::server_url(),
-            token: config::get_token(),
+            base: config::server_url()?,
+            token: config::get_token()?,
             http: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(30))
                 .build()?,
@@ -93,9 +98,19 @@ impl Client {
                         .map(|s| s.to_string())
                 })
                 .unwrap_or_else(|| format!("HTTP {status}"));
-            if status == reqwest::StatusCode::UNAUTHORIZED && err_msg == "Token has expired" {
-                let _ = config::clear_token();
-                return Err(ClientError::Expired);
+            if status == reqwest::StatusCode::UNAUTHORIZED {
+                // Token is unusable (expired, invalid, revoked, or server rotated
+                // its secret). Clear it so the next run reports NoToken instead of
+                // retrying a dead credential, then tell the user to log in again.
+                if let Err(e) = config::clear_token() {
+                    eprintln!("Warning: failed to clear expired token: {e:?}");
+                }
+                if err_msg.to_ascii_lowercase().contains("expir") {
+                    return Err(ClientError::Expired);
+                }
+                return Err(ClientError::Server(format!(
+                    "{err_msg} - please login again using 'envoy manage login'"
+                )));
             }
             return Err(ClientError::Server(err_msg));
         }
@@ -137,7 +152,7 @@ impl Client {
         let resp: envoy_shared::responses::AuthResponse = self
             .request(reqwest::Method::POST, "/auth/setup", Some(body), false)
             .await?;
-        let _ = config::set_token(&resp.token);
+        config::set_token(&resp.token).map_err(ClientError::Other)?;
         Ok(resp)
     }
 
@@ -156,7 +171,7 @@ impl Client {
                 false,
             )
             .await?;
-        let _ = config::set_token(&resp.token);
+        config::set_token(&resp.token).map_err(ClientError::Other)?;
         Ok(resp)
     }
 
@@ -169,7 +184,7 @@ impl Client {
         let resp: envoy_shared::responses::AuthResponse = self
             .request(reqwest::Method::POST, "/auth/login", Some(body), false)
             .await?;
-        let _ = config::set_token(&resp.token);
+        config::set_token(&resp.token).map_err(ClientError::Other)?;
         Ok(resp)
     }
 
@@ -198,9 +213,7 @@ impl Client {
     pub async fn list_projects(
         &self,
     ) -> Result<Vec<envoy_shared::responses::ProjectResponse>, ClientError> {
-        let v: Vec<envoy_shared::responses::ProjectResponse> =
-            self.get("/projects", true).await.unwrap_or_default();
-        Ok(v)
+        self.get("/projects", true).await
     }
 
     pub async fn get_project(
@@ -263,11 +276,8 @@ impl Client {
         &self,
         project_id: &str,
     ) -> Result<Vec<envoy_shared::responses::EnvironmentResponse>, ClientError> {
-        let v: Vec<envoy_shared::responses::EnvironmentResponse> = self
-            .get(&format!("/projects/{project_id}/environments"), true)
+        self.get(&format!("/projects/{project_id}/environments"), true)
             .await
-            .unwrap_or_default();
-        Ok(v)
     }
 
     pub async fn get_environment(
@@ -328,11 +338,8 @@ impl Client {
         &self,
         env_id: &str,
     ) -> Result<Vec<envoy_shared::responses::VariableResponse>, ClientError> {
-        let v: Vec<envoy_shared::responses::VariableResponse> = self
-            .get(&format!("/environments/{env_id}/variables"), true)
+        self.get(&format!("/environments/{env_id}/variables"), true)
             .await
-            .unwrap_or_default();
-        Ok(v)
     }
 
     #[allow(dead_code)]
@@ -435,9 +442,7 @@ impl Client {
     pub async fn list_invites(
         &self,
     ) -> Result<Vec<envoy_shared::responses::InviteListItem>, ClientError> {
-        let v: Vec<envoy_shared::responses::InviteListItem> =
-            self.get("/users/invites", true).await.unwrap_or_default();
-        Ok(v)
+        self.get("/users/invites", true).await
     }
 
     pub async fn revoke_invite(&self, invite_id: &str) -> Result<(), ClientError> {
@@ -457,22 +462,16 @@ impl Client {
         &self,
         email: &str,
     ) -> Result<Vec<envoy_shared::responses::UserSearchResponse>, ClientError> {
-        let v: Vec<envoy_shared::responses::UserSearchResponse> = self
-            .get(&format!("/users/search?email={email}"), true)
+        self.get(&format!("/users/search?email={email}"), true)
             .await
-            .unwrap_or_default();
-        Ok(v)
     }
 
     pub async fn list_members(
         &self,
         project_id: &str,
     ) -> Result<Vec<envoy_shared::responses::ProjectMemberResponse>, ClientError> {
-        let v: Vec<envoy_shared::responses::ProjectMemberResponse> = self
-            .get(&format!("/projects/{project_id}/members"), true)
+        self.get(&format!("/projects/{project_id}/members"), true)
             .await
-            .unwrap_or_default();
-        Ok(v)
     }
 
     pub async fn add_member(

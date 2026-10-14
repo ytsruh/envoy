@@ -316,15 +316,45 @@ async fn resolve_project_ctx(
     if let Some(input) = env_override("ENVOY_PROJECT") {
         return client.resolve_project(&input).await.unwrap_or_else(err);
     }
-    if let Some(link) = config::link_for_cwd() {
+    if let Some(link) = config::link_for_cwd().unwrap_or_else(|e| fail(&e.to_string())) {
         if !link.project_id.is_empty() {
-            if let Ok(p) = client.get_project(&link.project_id).await {
-                return p;
+            match client.get_project(&link.project_id).await {
+                Ok(p) => return p,
+                Err(e) => {
+                    // Infrastructure failures (network, auth) are the real cause —
+                    // report them, don't mask as a selection problem.
+                    match &e {
+                        ClientError::Server(msg)
+                            if msg.contains("not found")
+                                || msg.contains("access denied") =>
+                        {
+                            // Fall through to name resolution / stale-link error below.
+                            if link.project_name.is_empty() {
+                                fail(&format!(
+                                    "linked project '{}' is no longer accessible: {e}. Run 'envoy unlink' then 'envoy link'",
+                                    link.project_id
+                                ));
+                            }
+                        }
+                        _ => err(e),
+                    }
+                }
             }
         }
         if !link.project_name.is_empty() {
-            if let Ok(p) = client.resolve_project(&link.project_name).await {
-                return p;
+            match client.resolve_project(&link.project_name).await {
+                Ok(p) => return p,
+                Err(e) => {
+                    match &e {
+                        ClientError::Server(msg) if msg.contains("not found") => {
+                            fail(&format!(
+                                "linked project '{}' is no longer accessible: {e}. Run 'envoy unlink' then 'envoy link'",
+                                link.project_name
+                            ));
+                        }
+                        _ => err(e),
+                    }
+                }
             }
         }
     }
@@ -361,7 +391,7 @@ async fn resolve_env_ctx(
             .await
             .unwrap_or_else(err);
     }
-    let link = config::link_for_cwd();
+    let link = config::link_for_cwd().unwrap_or_else(|e| fail(&e.to_string()));
     if let Some(l) = link {
         if l.project_id == project.id && !l.env_name.is_empty() {
             if let Ok(e) = client.resolve_environment(&project.id, &l.env_name).await {
@@ -412,8 +442,11 @@ async fn resolve_ctx(
 }
 
 async fn print_status(client: &Client) {
-    println!("Server: {}", config::server_url());
-    match config::link_for_cwd() {
+    match config::server_url() {
+        Ok(url) => println!("Server: {url}"),
+        Err(e) => fail(&e.to_string()),
+    }
+    match config::link_for_cwd().unwrap_or_else(|e| fail(&e.to_string())) {
         None => println!("Link: not linked here (run 'envoy link')"),
         Some(l) => {
             let env = if l.env_name.is_empty() {
@@ -426,7 +459,10 @@ async fn print_status(client: &Client) {
     }
     match client.profile().await {
         Ok(p) => println!("Logged in as: {}", p.email),
-        Err(_) => println!("Not logged in. Use 'envoy manage login'."),
+        Err(ClientError::NoToken | ClientError::Expired) => {
+            println!("Not logged in. Use 'envoy manage login'.")
+        }
+        Err(e) => print_client_error(e),
     }
 }
 
@@ -437,7 +473,7 @@ async fn main() {
         Commands::Link { project } => {
             let client = Client::require_token().unwrap_or_else(err);
             let proj = resolve_project_ctx(&client, project).await;
-            let prev = config::link_for_cwd();
+            let prev = config::link_for_cwd().unwrap_or_else(|e| fail(&e.to_string()));
             let env_name = match prev {
                 Some(l) if l.project_id == proj.id && !l.env_name.is_empty() => l.env_name,
                 _ => "dev".to_string(),
@@ -523,18 +559,31 @@ async fn main() {
                 let existing = client.list_variables(&env_res.id).await.unwrap_or_else(err);
                 let mut created = 0;
                 let mut updated = 0;
+                let mut failed = 0;
                 for (k, v) in &vars {
                     match existing.iter().find(|e| e.key == *k) {
                         Some(cur) if cur.value == *v => {}
                         Some(cur) => match client.update_variable(&cur.id, k, v).await {
                             Ok(_) => updated += 1,
-                            Err(e) => eprintln!("Failed to update {k}: {e}"),
+                            Err(e) => {
+                                failed += 1;
+                                eprintln!("Failed to update {k}: {e}");
+                            }
                         },
                         None => match client.create_variable(&env_res.id, k, v).await {
                             Ok(_) => created += 1,
-                            Err(e) => eprintln!("Failed to create {k}: {e}"),
+                            Err(e) => {
+                                failed += 1;
+                                eprintln!("Failed to create {k}: {e}");
+                            }
                         },
                     }
+                }
+                if failed > 0 {
+                    fail(&format!(
+                        "Pushed to '{}/{}': {created} created, {updated} updated, {failed} failed",
+                        proj.name, env_res.name
+                    ));
                 }
                 println!(
                     "Pushed to '{}/{}': {created} created, {updated} updated",
@@ -715,7 +764,7 @@ async fn main() {
                 print_status(&client).await;
             }
             ManageCmd::Links => {
-                let links = config::list_links();
+                let links = config::list_links().unwrap_or_else(|e| fail(&e.to_string()));
                 if links.is_empty() {
                     println!("No links yet. Run 'envoy link' in a project directory.");
                 } else {

@@ -72,6 +72,15 @@ pub async fn create_project(
     )
     .await
     .map_err(|e| ApiError::Internal(e.into()))?;
+    // Every project starts with a `dev` environment so daily commands work immediately.
+    // Explicit `envs create` remains the only way to add more (no implicit creation on typo).
+    let dev_id = Uuid::new_v4().to_string();
+    conn.execute(
+        "INSERT INTO environments (id, project_id, name, description, created_at, updated_at) VALUES (?1, ?2, 'dev', NULL, ?3, ?3)",
+        libsql::params![dev_id, id.clone(), now.clone()],
+    )
+    .await
+    .map_err(|e| ApiError::Internal(e.into()))?;
     let ts = envoy_shared::types::parse_sqlite_time(&now).into();
     Ok((
         StatusCode::CREATED,

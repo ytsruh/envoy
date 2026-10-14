@@ -23,6 +23,36 @@ pub struct Client {
     http: reqwest::Client,
 }
 
+fn edit_distance(a: &str, b: &str) -> usize {
+    let a: Vec<char> = a.chars().collect();
+    let b: Vec<char> = b.chars().collect();
+    let mut prev: Vec<usize> = (0..=b.len()).collect();
+    for (i, ca) in a.iter().enumerate() {
+        let mut cur = vec![i + 1];
+        for (j, cb) in b.iter().enumerate() {
+            let cost = if ca.to_ascii_lowercase() == cb.to_ascii_lowercase() {
+                0
+            } else {
+                1
+            };
+            cur.push((prev[j] + cost).min(cur[j] + 1).min(prev[j + 1] + 1));
+        }
+        prev = cur;
+    }
+    prev[b.len()]
+}
+
+fn closest_name(input: &str, names: &[String]) -> Option<String> {
+    let mut best: Option<(usize, &String)> = None;
+    for n in names {
+        let d = edit_distance(input, n);
+        if d <= 2 && best.map_or(true, |(bd, _)| d < bd) {
+            best = Some((d, n));
+        }
+    }
+    best.map(|(_, n)| n.clone())
+}
+
 impl Client {
     pub fn new() -> anyhow::Result<Self> {
         let _ = dotenvy::dotenv();
@@ -180,6 +210,7 @@ impl Client {
         self.get(&format!("/projects/{id}"), true).await
     }
 
+    #[allow(dead_code)]
     pub async fn update_project(
         &self,
         id: &str,
@@ -198,6 +229,7 @@ impl Client {
         .await
     }
 
+    #[allow(dead_code)]
     pub async fn delete_project(&self, id: &str) -> Result<(), ClientError> {
         let _: serde_json::Value = self
             .request(
@@ -210,7 +242,7 @@ impl Client {
         Ok(())
     }
 
-    // --- environments ---
+    // --- environments (flat: only create/list are project-scoped) ---
     pub async fn create_environment(
         &self,
         project_id: &str,
@@ -240,19 +272,14 @@ impl Client {
 
     pub async fn get_environment(
         &self,
-        project_id: &str,
         env_id: &str,
     ) -> Result<envoy_shared::responses::EnvironmentResponse, ClientError> {
-        self.get(
-            &format!("/projects/{project_id}/environments/{env_id}"),
-            true,
-        )
-        .await
+        self.get(&format!("/environments/{env_id}"), true).await
     }
 
+    #[allow(dead_code)]
     pub async fn update_environment(
         &self,
-        project_id: &str,
         env_id: &str,
         name: &str,
         description: &str,
@@ -260,22 +287,19 @@ impl Client {
         let body = serde_json::json!({"name": name, "description": description});
         self.request(
             reqwest::Method::PUT,
-            &format!("/projects/{project_id}/environments/{env_id}"),
+            &format!("/environments/{env_id}"),
             Some(body),
             true,
         )
         .await
     }
 
-    pub async fn delete_environment(
-        &self,
-        project_id: &str,
-        env_id: &str,
-    ) -> Result<(), ClientError> {
+    #[allow(dead_code)]
+    pub async fn delete_environment(&self, env_id: &str) -> Result<(), ClientError> {
         let _: serde_json::Value = self
             .request(
                 reqwest::Method::DELETE,
-                &format!("/projects/{project_id}/environments/{env_id}"),
+                &format!("/environments/{env_id}"),
                 None,
                 true,
             )
@@ -283,10 +307,9 @@ impl Client {
         Ok(())
     }
 
-    // --- variables ---
+    // --- variables (flat: only create/list are env-scoped) ---
     pub async fn create_variable(
         &self,
-        project_id: &str,
         env_id: &str,
         key: &str,
         value: &str,
@@ -294,7 +317,7 @@ impl Client {
         let body = serde_json::json!({"key": key, "value": value, "description": ""});
         self.request(
             reqwest::Method::POST,
-            &format!("/projects/{project_id}/environments/{env_id}/variables"),
+            &format!("/environments/{env_id}/variables"),
             Some(body),
             true,
         )
@@ -303,36 +326,25 @@ impl Client {
 
     pub async fn list_variables(
         &self,
-        project_id: &str,
         env_id: &str,
     ) -> Result<Vec<envoy_shared::responses::VariableResponse>, ClientError> {
         let v: Vec<envoy_shared::responses::VariableResponse> = self
-            .get(
-                &format!("/projects/{project_id}/environments/{env_id}/variables"),
-                true,
-            )
+            .get(&format!("/environments/{env_id}/variables"), true)
             .await
             .unwrap_or_default();
         Ok(v)
     }
 
+    #[allow(dead_code)]
     pub async fn get_variable(
         &self,
-        project_id: &str,
-        env_id: &str,
         var_id: &str,
     ) -> Result<envoy_shared::responses::VariableResponse, ClientError> {
-        self.get(
-            &format!("/projects/{project_id}/environments/{env_id}/variables/{var_id}"),
-            true,
-        )
-        .await
+        self.get(&format!("/variables/{var_id}"), true).await
     }
 
     pub async fn update_variable(
         &self,
-        project_id: &str,
-        env_id: &str,
         var_id: &str,
         key: &str,
         value: &str,
@@ -340,28 +352,73 @@ impl Client {
         let body = serde_json::json!({"key": key, "value": value, "description": ""});
         self.request(
             reqwest::Method::PUT,
-            &format!("/projects/{project_id}/environments/{env_id}/variables/{var_id}"),
+            &format!("/variables/{var_id}"),
             Some(body),
             true,
         )
         .await
     }
 
-    pub async fn delete_variable(
-        &self,
-        project_id: &str,
-        env_id: &str,
-        var_id: &str,
-    ) -> Result<(), ClientError> {
+    pub async fn delete_variable(&self, var_id: &str) -> Result<(), ClientError> {
         let _: serde_json::Value = self
             .request(
                 reqwest::Method::DELETE,
-                &format!("/projects/{project_id}/environments/{env_id}/variables/{var_id}"),
+                &format!("/variables/{var_id}"),
                 None,
                 true,
             )
             .await?;
         Ok(())
+    }
+
+    // --- name-or-id resolution (client-side, via list + match) ---
+    pub async fn resolve_project(
+        &self,
+        input: &str,
+    ) -> Result<envoy_shared::responses::ProjectResponse, ClientError> {
+        let projects = self.list_projects().await?;
+        projects
+            .into_iter()
+            .find(|p| p.id == input || p.name == input || p.name.eq_ignore_ascii_case(input))
+            .ok_or_else(|| ClientError::Server(format!("project '{input}' not found")))
+    }
+
+    pub async fn resolve_environment(
+        &self,
+        project_id: &str,
+        input: &str,
+    ) -> Result<envoy_shared::responses::EnvironmentResponse, ClientError> {
+        let envs = self.list_environments(project_id).await?;
+        if let Some(e) = envs.iter().find(|e| {
+            e.id == input || e.name == input || e.name.eq_ignore_ascii_case(input)
+        }) {
+            return Ok(e.clone());
+        }
+        // Strict: never create on typo. Suggest closest name instead.
+        let available: Vec<String> = envs.iter().map(|e| e.name.clone()).collect();
+        let suggestion = closest_name(input, &available);
+        let mut msg = format!("environment '{input}' not found");
+        if let Some(s) = suggestion {
+            msg.push_str(&format!(". Did you mean '{s}'?"));
+        }
+        if available.is_empty() {
+            msg.push_str(". No environments exist yet — run 'envoy envs create'");
+        } else {
+            msg.push_str(" — run 'envoy envs list' to see available environments");
+        }
+        Err(ClientError::Server(msg))
+    }
+
+    pub async fn resolve_variable(
+        &self,
+        env_id: &str,
+        key_or_id: &str,
+    ) -> Result<envoy_shared::responses::VariableResponse, ClientError> {
+        let vars = self.list_variables(env_id).await?;
+        vars
+            .into_iter()
+            .find(|v| v.id == key_or_id || v.key == key_or_id)
+            .ok_or_else(|| ClientError::Server(format!("variable '{key_or_id}' not found")))
     }
 
     // --- admin / invites ---

@@ -16,14 +16,6 @@ pub fn text(prompt: &str, required: bool) -> anyhow::Result<String> {
     }
 }
 
-pub fn text_default(prompt: &str, default: &str) -> anyhow::Result<String> {
-    let ans = inquire::Text::new(prompt)
-        .with_default(default)
-        .prompt()
-        .context("prompt cancelled")?;
-    Ok(ans.trim().to_string())
-}
-
 pub fn password(prompt: &str) -> anyhow::Result<String> {
     Ok(rpassword::prompt_password(format!("{prompt}: "))?)
 }
@@ -72,32 +64,13 @@ pub async fn select_project(client: &Client) -> anyhow::Result<String> {
 pub async fn select_environment(client: &Client, project_id: &str) -> anyhow::Result<String> {
     let envs = client.list_environments(project_id).await?;
     if envs.is_empty() {
-        anyhow::bail!("No environments found. Create one first.");
+        anyhow::bail!("No environments found in this project. Create one with 'envoy envs create'");
     }
     let options: Vec<String> = envs
         .iter()
         .map(|e| format!("{} ({})", e.name, e.id))
         .collect();
     let ans = inquire::Select::new("Select an environment", options).prompt()?;
-    let start = ans.rfind('(').map(|i| i + 1).unwrap_or(0);
-    let end = ans.rfind(')').unwrap_or(ans.len());
-    Ok(ans[start..end].to_string())
-}
-
-pub async fn select_variable(
-    client: &Client,
-    project_id: &str,
-    env_id: &str,
-) -> anyhow::Result<String> {
-    let vars = client.list_variables(project_id, env_id).await?;
-    if vars.is_empty() {
-        anyhow::bail!("No variables found.");
-    }
-    let options: Vec<String> = vars
-        .iter()
-        .map(|v| format!("{} = {} ({})", v.key, v.value, v.id))
-        .collect();
-    let ans = inquire::Select::new("Select a variable", options).prompt()?;
     let start = ans.rfind('(').map(|i| i + 1).unwrap_or(0);
     let end = ans.rfind(')').unwrap_or(ans.len());
     Ok(ans[start..end].to_string())

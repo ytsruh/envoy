@@ -31,10 +31,55 @@ fn row_to_var(row: &libsql::Row) -> anyhow::Result<VariableResponse> {
 
 const SELECT: &str = "SELECT id, environment_id, key, value, description, created_at, updated_at FROM environment_variables";
 
+async fn project_id_for_env(conn: &libsql::Connection, env_id: &str) -> Result<String, ApiError> {
+    let mut rows = conn
+        .query(
+            "SELECT project_id FROM environments WHERE id = ?1 AND deleted_at IS NULL",
+            libsql::params![env_id.to_string()],
+        )
+        .await
+        .map_err(|e| ApiError::Internal(e.into()))?;
+    let row = rows
+        .next()
+        .await
+        .map_err(|e| ApiError::Internal(e.into()))?
+        .ok_or_else(|| ApiError::not_found("environment not found or access denied"))?;
+    row.get::<String>(0).map_err(|e| ApiError::Internal(e.into()))
+}
+
+async fn fetch_var_with_project(
+    conn: &libsql::Connection,
+    var_id: &str,
+) -> Result<(VariableResponse, String), ApiError> {
+    let mut rows = conn
+        .query(
+            "SELECT ev.id, ev.environment_id, ev.key, ev.value, ev.description, ev.created_at, ev.updated_at, e.project_id FROM environment_variables ev JOIN environments e ON e.id = ev.environment_id WHERE ev.id = ?1 AND e.deleted_at IS NULL",
+            libsql::params![var_id.to_string()],
+        )
+        .await
+        .map_err(|e| ApiError::Internal(e.into()))?;
+    let row = rows
+        .next()
+        .await
+        .map_err(|e| ApiError::Internal(e.into()))?
+        .ok_or_else(|| ApiError::not_found("environment variable not found or access denied"))?;
+    let project_id: String = row.get(7).map_err(|e| ApiError::Internal(e.into()))?;
+    let var = VariableResponse {
+        id: get_string(&row, 0).map_err(|e| ApiError::Internal(e.into()))?,
+        environment_id: get_string(&row, 1).map_err(|e| ApiError::Internal(e.into()))?,
+        key: get_string(&row, 2).map_err(|e| ApiError::Internal(e.into()))?,
+        value: get_string(&row, 3).map_err(|e| ApiError::Internal(e.into()))?,
+        description: get_opt_string(&row, 4).map_err(|e| ApiError::Internal(e.into()))?,
+        created_at: ts_from_row_string(row.get(5).map_err(|e| ApiError::Internal(e.into()))?),
+        updated_at: ts_from_row_string(row.get(6).map_err(|e| ApiError::Internal(e.into()))?),
+    };
+    Ok((var, project_id))
+}
+
 pub async fn create_variable(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
-    Path((project_id, env_id)): Path<(String, String)>,
+    Path(env_id): Path<String>,
     Json(req): Json<CreateVariableRequest>,
 ) -> Result<(StatusCode, Json<VariableResponse>), ApiError> {
     if req.key.is_empty() {
@@ -45,6 +90,7 @@ pub async fn create_variable(
     }
     validation::validate_description(&req.description).map_err(ApiError::bad)?;
     let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let project_id = project_id_for_env(&conn, &env_id).await?;
     crate::access::require_editor(&conn, &project_id, &user.user_id).await?;
     let id = Uuid::new_v4().to_string();
     let now = envoy_shared::types::sqlite_now();
@@ -77,9 +123,10 @@ pub async fn create_variable(
 pub async fn list_variables(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
-    Path((project_id, env_id)): Path<(String, String)>,
+    Path(env_id): Path<String>,
 ) -> Result<Json<Vec<VariableResponse>>, ApiError> {
     let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let project_id = project_id_for_env(&conn, &env_id).await?;
     crate::access::require_viewer(&conn, &project_id, &user.user_id).await?;
     let mut rows = conn
         .query(
@@ -97,29 +144,19 @@ pub async fn list_variables(
 
 pub async fn get_variable(
     State(state): State<AppState>,
-    _user: AuthUser,
-    Path((_, _, var_id)): Path<(String, String, String)>,
+    AuthUser(user): AuthUser,
+    Path(var_id): Path<String>,
 ) -> Result<Json<VariableResponse>, ApiError> {
     let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
-    let mut rows = conn
-        .query(
-            &format!("{SELECT} WHERE id = ?1"),
-            libsql::params![var_id.clone()],
-        )
-        .await
-        .map_err(|e| ApiError::Internal(e.into()))?;
-    let row = rows
-        .next()
-        .await
-        .map_err(|e| ApiError::Internal(e.into()))?
-        .ok_or_else(|| ApiError::not_found("environment variable not found or access denied"))?;
-    Ok(Json(row_to_var(&row).map_err(|e| ApiError::Internal(e.into()))?))
+    let (var, project_id) = fetch_var_with_project(&conn, &var_id).await?;
+    crate::access::require_viewer(&conn, &project_id, &user.user_id).await?;
+    Ok(Json(var))
 }
 
 pub async fn update_variable(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
-    Path((project_id, env_id, var_id)): Path<(String, String, String)>,
+    Path(var_id): Path<String>,
     Json(req): Json<UpdateVariableRequest>,
 ) -> Result<Json<VariableResponse>, ApiError> {
     if req.key.is_empty() {
@@ -130,6 +167,7 @@ pub async fn update_variable(
     }
     validation::validate_description(&req.description).map_err(ApiError::bad)?;
     let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let (existing, project_id) = fetch_var_with_project(&conn, &var_id).await?;
     crate::access::require_editor(&conn, &project_id, &user.user_id).await?;
     let desc: Option<String> = if req.description.is_empty() {
         None
@@ -140,22 +178,24 @@ pub async fn update_variable(
     let n = conn
         .execute(
             "UPDATE environment_variables SET key = ?1, value = ?2, description = ?3, updated_at = ?4 WHERE id = ?5 AND environment_id = ?6",
-            libsql::params![req.key.clone(), req.value.clone(), desc.clone(), now.clone(), var_id.clone(), env_id.clone()],
+            libsql::params![req.key.clone(), req.value.clone(), desc.clone(), now.clone(), var_id.clone(), existing.environment_id.clone()],
         )
         .await
         .map_err(|e| ApiError::Internal(e.into()))?;
     if n == 0 {
         return Err(ApiError::not_found("environment variable not found or access denied"));
     }
-    get_variable(State(state), AuthUser(user), Path((project_id, env_id, var_id))).await
+    let (updated, _) = fetch_var_with_project(&conn, &var_id).await?;
+    Ok(Json(updated))
 }
 
 pub async fn delete_variable(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
-    Path((project_id, _env_id, var_id)): Path<(String, String, String)>,
+    Path(var_id): Path<String>,
 ) -> Result<Json<envoy_shared::responses::MessageBody>, ApiError> {
     let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let (_, project_id) = fetch_var_with_project(&conn, &var_id).await?;
     crate::access::require_editor(&conn, &project_id, &user.user_id).await?;
     conn.execute(
         "DELETE FROM environment_variables WHERE id = ?1",

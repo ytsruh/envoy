@@ -5,11 +5,25 @@ use serde::{Deserialize, Serialize};
 const DEFAULT_SERVER_URL: &str = "http://localhost:8080";
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct LinkEntry {
+    #[serde(default)]
+    pub project_id: String,
+    #[serde(default)]
+    pub project_name: String,
+    #[serde(default)]
+    pub env_name: String,
+    #[serde(default)]
+    pub git_repo: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
     #[serde(default)]
     pub server_url: String,
     #[serde(default)]
     pub token: String,
+    #[serde(default)]
+    pub links: std::collections::HashMap<String, LinkEntry>,
 }
 
 fn config_path() -> anyhow::Result<PathBuf> {
@@ -84,4 +98,52 @@ pub fn server_url() -> String {
         }
     }
     DEFAULT_SERVER_URL.to_string()
+}
+
+fn cwd_key() -> String {
+    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let canon = std::fs::canonicalize(&cwd).unwrap_or(cwd);
+    canon.to_string_lossy().to_string()
+}
+
+/// Find the link for cwd, walking up parents so subdirs inherit.
+pub fn link_for_cwd() -> Option<LinkEntry> {
+    let cfg = load();
+    if cfg.links.is_empty() {
+        return None;
+    }
+    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let canon = std::fs::canonicalize(&cwd).unwrap_or(cwd);
+    let mut cur: Option<&std::path::Path> = Some(&canon);
+    while let Some(p) = cur {
+        if let Some(e) = cfg.links.get(&p.to_string_lossy().to_string()) {
+            return Some(e.clone());
+        }
+        cur = p.parent();
+    }
+    None
+}
+
+pub fn set_link(entry: &LinkEntry) -> anyhow::Result<String> {
+    let mut cfg = load();
+    let key = cwd_key();
+    cfg.links.insert(key.clone(), entry.clone());
+    save(&cfg)?;
+    Ok(key)
+}
+
+pub fn remove_link() -> anyhow::Result<bool> {
+    let mut cfg = load();
+    let key = cwd_key();
+    let removed = cfg.links.remove(&key).is_some();
+    if removed {
+        save(&cfg)?;
+    }
+    Ok(removed)
+}
+
+pub fn list_links() -> Vec<(String, LinkEntry)> {
+    let mut v: Vec<(String, LinkEntry)> = load().links.into_iter().collect();
+    v.sort_by(|a, b| a.0.cmp(&b.0));
+    v
 }

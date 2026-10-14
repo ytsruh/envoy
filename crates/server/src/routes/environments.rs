@@ -124,23 +124,26 @@ async fn fetch_env(
 
 pub async fn get_environment(
     State(state): State<AppState>,
-    _user: AuthUser,
-    Path((_project_id, env_id)): Path<(String, String)>,
+    AuthUser(user): AuthUser,
+    Path(env_id): Path<String>,
 ) -> Result<Json<EnvironmentResponse>, ApiError> {
     let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
-    Ok(Json(fetch_env(&conn, &env_id).await?))
+    let env = fetch_env(&conn, &env_id).await?;
+    crate::access::require_viewer(&conn, &env.project_id, &user.user_id).await?;
+    Ok(Json(env))
 }
 
 pub async fn update_environment(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
-    Path((project_id, env_id)): Path<(String, String)>,
+    Path(env_id): Path<String>,
     Json(req): Json<UpdateEnvironmentRequest>,
 ) -> Result<Json<EnvironmentResponse>, ApiError> {
     validation::validate_name(&req.name).map_err(ApiError::bad)?;
     validation::validate_description(&req.description).map_err(ApiError::bad)?;
     let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
-    crate::access::require_editor(&conn, &project_id, &user.user_id).await?;
+    let existing = fetch_env(&conn, &env_id).await?;
+    crate::access::require_editor(&conn, &existing.project_id, &user.user_id).await?;
     let desc: Option<String> = if req.description.is_empty() {
         None
     } else {
@@ -149,11 +152,18 @@ pub async fn update_environment(
     let now = envoy_shared::types::sqlite_now();
     let n = conn
         .execute(
-            "UPDATE environments SET name = ?1, description = ?2, updated_at = ?3 WHERE id = ?4 AND project_id = ?5 AND deleted_at IS NULL",
-            libsql::params![req.name.clone(), desc.clone(), now.clone(), env_id.clone(), project_id.clone()],
+            "UPDATE environments SET name = ?1, description = ?2, updated_at = ?3 WHERE id = ?4 AND deleted_at IS NULL",
+            libsql::params![req.name.clone(), desc.clone(), now.clone(), env_id.clone()],
         )
         .await
-        .map_err(|e| ApiError::Internal(e.into()))?;
+        .map_err(|e| {
+            let msg = e.to_string();
+            if msg.contains("UNIQUE") {
+                ApiError::conflict("an environment with this name already exists")
+            } else {
+                ApiError::Internal(e.into())
+            }
+        })?;
     if n == 0 {
         return Err(ApiError::not_found("environment not found or access denied"));
     }
@@ -163,13 +173,14 @@ pub async fn update_environment(
 pub async fn delete_environment(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
-    Path((project_id, env_id)): Path<(String, String)>,
+    Path(env_id): Path<String>,
 ) -> Result<Json<envoy_shared::responses::MessageBody>, ApiError> {
     let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
-    crate::access::require_editor(&conn, &project_id, &user.user_id).await?;
+    let existing = fetch_env(&conn, &env_id).await?;
+    crate::access::require_editor(&conn, &existing.project_id, &user.user_id).await?;
     conn.execute(
-        "UPDATE environments SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?1 AND project_id = ?2",
-        libsql::params![env_id.clone(), project_id.clone()],
+        "UPDATE environments SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?1",
+        libsql::params![env_id.clone()],
     )
     .await
     .map_err(|e| ApiError::Internal(e.into()))?;

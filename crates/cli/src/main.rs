@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 #[command(
     name = "envoy",
     version,
-    about = "Envoy CLI - manage projects and environments"
+    about = "Envoy CLI - secure environment variables"
 )]
 struct Cli {
     #[arg(long, global = true, default_value_t = false)]
@@ -23,26 +23,126 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Print the CLI version.
     Version,
+    /// First-time setup: connect to a server, bootstrap admin, login/logout.
     Setup {
         #[command(subcommand)]
         cmd: SetupCmd,
     },
+    /// Instance administration: invites, user search, project members.
     Admin {
         #[command(subcommand)]
         cmd: AdminCmd,
     },
+    /// Project management: create and list projects (rarely needed daily).
     Projects {
         #[command(subcommand)]
         cmd: ProjectCmd,
     },
-    Environments {
+    /// Environment management: create and list environments (daily work uses `vars` instead).
+    Envs {
         #[command(subcommand)]
-        cmd: EnvCmd,
+        cmd: EnvsCmd,
     },
-    Variables {
+    /// Daily variables: pull, push, set, get, unset and list (uses linked project/env).
+    Vars {
         #[command(subcommand)]
-        cmd: VarCmd,
+        cmd: VarsCmd,
+    },
+    /// Link this directory to a project (stored globally in ~/.envoy/config.json, defaults env to `dev`).
+    Link {
+        /// Project name or ID (defaults to git remote match or prompt).
+        #[arg(long, short = 'p')]
+        project: Option<String>,
+    },
+    /// Set the default environment for this directory (switch-only; fresh links already use `dev`).
+    Use {
+        /// Environment name or ID.
+        env: Option<String>,
+        #[arg(long, short = 'p')]
+        project: Option<String>,
+    },
+    /// List all directory links stored in the global config.
+    Links,
+    /// Remove the link for the current directory.
+    Unlink,
+    /// Show server URL, link for this directory, and login status.
+    Status,
+}
+
+#[derive(Subcommand)]
+enum VarsCmd {
+    /// Download variables to a .env file (defaults to `.env.<env>`).
+    Pull {
+        /// Environment name or ID (defaults to linked env, then `dev`).
+        #[arg(long, short = 'e')]
+        env: Option<String>,
+        /// Project name or ID (defaults to linked project).
+        #[arg(long, short = 'p')]
+        project: Option<String>,
+        /// Output file (defaults to `.env.<env>`).
+        #[arg(short, long)]
+        file: Option<String>,
+    },
+    /// Upload a .env file, creating or overwriting matching keys (never creates environments).
+    Push {
+        /// Environment name or ID (defaults to linked env, then `dev`).
+        #[arg(long, short = 'e')]
+        env: Option<String>,
+        /// Project name or ID (defaults to linked project).
+        #[arg(long, short = 'p')]
+        project: Option<String>,
+        /// Input file to upload.
+        #[arg(short, long, default_value = ".env")]
+        file: String,
+    },
+    /// Create or update a single variable by key (upsert).
+    Set {
+        /// Variable key (e.g. API_KEY).
+        key: String,
+        /// Variable value.
+        value: String,
+        /// Environment name or ID (defaults to linked env, then `dev`).
+        #[arg(long, short = 'e')]
+        env: Option<String>,
+        /// Project name or ID (defaults to linked project).
+        #[arg(long, short = 'p')]
+        project: Option<String>,
+    },
+    /// Print a single variable value (script-friendly, value only).
+    Get {
+        /// Variable key (e.g. API_KEY).
+        key: String,
+        /// Environment name or ID (defaults to linked env, then `dev`).
+        #[arg(long, short = 'e')]
+        env: Option<String>,
+        /// Project name or ID (defaults to linked project).
+        #[arg(long, short = 'p')]
+        project: Option<String>,
+    },
+    /// Delete a variable by key (asks to confirm unless `--yes`).
+    Unset {
+        /// Variable key (e.g. API_KEY).
+        key: String,
+        /// Environment name or ID (defaults to linked env, then `dev`).
+        #[arg(long, short = 'e')]
+        env: Option<String>,
+        /// Project name or ID (defaults to linked project).
+        #[arg(long, short = 'p')]
+        project: Option<String>,
+        /// Skip the confirmation prompt.
+        #[arg(long)]
+        yes: bool,
+    },
+    /// List variables as KEY=VALUE lines (safe to pipe to files).
+    List {
+        /// Environment name or ID (defaults to linked env, then `dev`).
+        #[arg(long, short = 'e')]
+        env: Option<String>,
+        /// Project name or ID (defaults to linked project).
+        #[arg(long, short = 'p')]
+        project: Option<String>,
     },
 }
 
@@ -58,7 +158,9 @@ enum SetupCmd {
     Accept {
         token: Option<String>,
     },
+    /// Log in with email and password (stores token globally).
     Login,
+    /// Log out (clears the stored token).
     Logout,
     /// Show the currently logged-in user.
     Whoami,
@@ -70,17 +172,22 @@ enum SetupCmd {
 enum AdminCmd {
     /// Create a single-use invite (prints a token to share).
     Invite {
+        /// Invitee email address.
         email: Option<String>,
     },
     /// List pending invites.
     Invites,
     /// Revoke a pending invite.
     Revoke {
+        /// Invite ID to revoke.
         invite_id: Option<String>,
     },
+    /// Search users by email (for adding project members).
     Search {
+        /// Email to search for.
         email: Option<String>,
     },
+    /// Manage project members (list, add, remove).
     Members {
         #[command(subcommand)]
         cmd: MemberCmd,
@@ -89,81 +196,47 @@ enum AdminCmd {
 
 #[derive(Subcommand)]
 enum ProjectCmd {
+    /// Create a new project (auto-creates a `dev` environment).
     Create,
+    /// List projects you have access to.
     List,
-    Get { id: Option<String> },
-    Update { id: Option<String> },
-    Delete { id: Option<String> },
 }
 
 #[derive(Subcommand)]
-enum EnvCmd {
+enum EnvsCmd {
+    /// Create a new environment in a project (the ONLY way to add environments).
     Create {
-        project_id: Option<String>,
+        /// Project name or ID (defaults to linked project).
+        #[arg(long, short = 'p')]
+        project: Option<String>,
     },
+    /// List environments in a project.
     List {
-        project_id: Option<String>,
-    },
-    Get {
-        project_id: Option<String>,
-        environment_id: Option<String>,
-    },
-    Update {
-        project_id: Option<String>,
-        environment_id: Option<String>,
-    },
-    Delete {
-        project_id: Option<String>,
-        environment_id: Option<String>,
-    },
-}
-
-#[derive(Subcommand)]
-enum VarCmd {
-    Import {
-        #[arg(short, long, default_value = ".env")]
-        file: String,
-    },
-    Export {
-        #[arg(short, long)]
-        file: Option<String>,
-    },
-    Create {
-        project_id: Option<String>,
-        environment_id: Option<String>,
-    },
-    List {
-        project_id: Option<String>,
-        environment_id: Option<String>,
-    },
-    Get {
-        variable_id: Option<String>,
-        project_id: Option<String>,
-        environment_id: Option<String>,
-    },
-    Update {
-        variable_id: Option<String>,
-        project_id: Option<String>,
-        environment_id: Option<String>,
-    },
-    Delete {
-        variable_id: Option<String>,
-        project_id: Option<String>,
-        environment_id: Option<String>,
+        /// Project name or ID (defaults to linked project).
+        #[arg(long, short = 'p')]
+        project: Option<String>,
     },
 }
 
 #[derive(Subcommand)]
 enum MemberCmd {
+    /// List members of a project.
     List {
+        /// Project name.
         project_name: Option<String>,
     },
+    /// Add a user to a project as viewer or editor (prompts for role).
     Add {
+        /// Project name.
         project_name: Option<String>,
+        /// User email.
         email: Option<String>,
     },
+    /// Remove a user from a project.
     Remove {
+        /// Project name.
         project_name: Option<String>,
+        /// User email.
         email: Option<String>,
     },
 }
@@ -206,11 +279,355 @@ fn git_repo_detect() -> String {
     String::new()
 }
 
+fn env_override(key: &str) -> Option<String> {
+    std::env::var(key)
+        .ok()
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())
+}
+
+async fn resolve_project_ctx(
+    client: &Client,
+    flag: Option<String>,
+) -> envoy_shared::responses::ProjectResponse {
+    if let Some(input) = flag.filter(|v| !v.trim().is_empty()) {
+        return client.resolve_project(&input).await.unwrap_or_else(err);
+    }
+    if let Some(input) = env_override("ENVOY_PROJECT") {
+        return client.resolve_project(&input).await.unwrap_or_else(err);
+    }
+    if let Some(link) = config::link_for_cwd() {
+        if !link.project_id.is_empty() {
+            if let Ok(p) = client.get_project(&link.project_id).await {
+                return p;
+            }
+        }
+        if !link.project_name.is_empty() {
+            if let Ok(p) = client.resolve_project(&link.project_name).await {
+                return p;
+            }
+        }
+    }
+    let detected = git_repo_detect();
+    if !detected.is_empty() {
+        let projects = client.list_projects().await.unwrap_or_else(err);
+        if let Some(p) = projects
+            .iter()
+            .find(|p| p.git_repo.as_deref() == Some(detected.as_str()))
+        {
+            return p.clone();
+        }
+    }
+    let id = prompts::select_project(client)
+        .await
+        .unwrap_or_else(|e| fail(&e.to_string()));
+    client.get_project(&id).await.unwrap_or_else(err)
+}
+
+async fn resolve_env_ctx(
+    client: &Client,
+    project: &envoy_shared::responses::ProjectResponse,
+    flag: Option<String>,
+) -> envoy_shared::responses::EnvironmentResponse {
+    if let Some(input) = flag.filter(|v| !v.trim().is_empty()) {
+        return client
+            .resolve_environment(&project.id, &input)
+            .await
+            .unwrap_or_else(err);
+    }
+    if let Some(input) = env_override("ENVOY_ENV") {
+        return client
+            .resolve_environment(&project.id, &input)
+            .await
+            .unwrap_or_else(err);
+    }
+    let link = config::link_for_cwd();
+    if let Some(l) = link {
+        if l.project_id == project.id && !l.env_name.is_empty() {
+            if let Ok(e) = client
+                .resolve_environment(&project.id, &l.env_name)
+                .await
+            {
+                return e;
+            }
+        }
+    }
+    // Default: linked-but-no-env (or stale link env) resolves to `dev` when it
+    // exists, so `link` is immediately usable without a mandatory `use`.
+    if let Ok(e) = client.resolve_environment(&project.id, "dev").await {
+        return e;
+    }
+    // No explicit env: single-env projects resolve without prompting.
+    // Empty projects fail with a pointer to creation (never auto-create on typo).
+    let envs = client
+        .list_environments(&project.id)
+        .await
+        .unwrap_or_else(err);
+    if envs.is_empty() {
+        fail(&format!(
+            "No environments in project '{}'. Run 'envoy envs create --project {}'",
+            project.name, project.name
+        ));
+    }
+    if envs.len() == 1 {
+        return envs.into_iter().next().unwrap_or_else(|| fail("No environments found"));
+    }
+    let eid = prompts::select_environment(client, &project.id)
+        .await
+        .unwrap_or_else(|e| fail(&e.to_string()));
+    client.get_environment(&eid).await.unwrap_or_else(err)
+}
+
+async fn resolve_ctx(
+    client: &Client,
+    project_flag: Option<String>,
+    env_flag: Option<String>,
+) -> (
+    envoy_shared::responses::ProjectResponse,
+    envoy_shared::responses::EnvironmentResponse,
+) {
+    let proj = resolve_project_ctx(client, project_flag).await;
+    let env = resolve_env_ctx(client, &proj, env_flag).await;
+    (proj, env)
+}
+
+async fn print_status(client: &Client) {
+    println!("Server: {}", config::server_url());
+    match config::link_for_cwd() {
+        None => println!("Link: not linked here (run 'envoy link')"),
+        Some(l) => {
+            let env = if l.env_name.is_empty() {
+                "(no default env, run 'envoy use <env>')".to_string()
+            } else {
+                l.env_name.clone()
+            };
+            println!("Link: {} ({}) env: {}", l.project_name, l.project_id, env);
+        }
+    }
+    match client.profile().await {
+        Ok(p) => println!("Logged in as: {}", p.email),
+        Err(_) => println!("Not logged in. Use 'envoy setup login'."),
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
     match cli.command {
         Commands::Version => println!("v{}", env!("CARGO_PKG_VERSION")),
+        Commands::Status => {
+            let client = Client::new().unwrap_or_else(|e| fail(&e.to_string()));
+            // Best-effort: profile may fail when logged out; print_status handles it.
+            print_status(&client).await;
+        }
+        Commands::Link { project } => {
+            let client = Client::require_token().unwrap_or_else(err);
+            let proj = resolve_project_ctx(&client, project).await;
+            let prev = config::link_for_cwd();
+            let env_name = match prev {
+                Some(l) if l.project_id == proj.id && !l.env_name.is_empty() => l.env_name,
+                _ => "dev".to_string(),
+            };
+            let entry = config::LinkEntry {
+                project_id: proj.id.clone(),
+                project_name: proj.name.clone(),
+                env_name,
+                git_repo: proj.git_repo.clone().unwrap_or_default(),
+            };
+            match config::set_link(&entry) {
+                Ok(key) => {
+                    println!("Linked {} to project '{}' ({}) env: dev", key, proj.name, proj.id);
+                    println!("Default environment is 'dev'. Switch with 'envoy use <env>'");
+                }
+                Err(e) => fail(&e.to_string()),
+            }
+        }
+        Commands::Use { env, project } => {
+            let client = Client::require_token().unwrap_or_else(err);
+            let proj = resolve_project_ctx(&client, project).await;
+            let selected = match env {
+                Some(e) if !e.trim().is_empty() => client
+                    .resolve_environment(&proj.id, &e)
+                    .await
+                    .unwrap_or_else(err),
+                _ => resolve_env_ctx(&client, &proj, None).await,
+            };
+            let ctx = config::LinkEntry {
+                project_id: proj.id.clone(),
+                project_name: proj.name.clone(),
+                env_name: selected.name.clone(),
+                git_repo: proj.git_repo.clone().unwrap_or_default(),
+            };
+            if let Err(e) = config::set_link(&ctx) {
+                fail(&e.to_string());
+            }
+            println!(
+                "Default env for '{}' is now '{}'",
+                proj.name, selected.name
+            );
+        }
+        Commands::Vars { cmd } => match cmd {
+            VarsCmd::Pull { env, project, file } => {
+            let client = Client::require_token().unwrap_or_else(err);
+            let (_proj, env_res) = resolve_ctx(&client, project, env).await;
+            let out = file.unwrap_or_else(|| {
+                format!(".env.{}", envfile::sanitize_filename(&env_res.name))
+            });
+            let vars = client
+                .list_variables(&env_res.id)
+                .await
+                .unwrap_or_else(err);
+            if vars.is_empty() {
+                println!("No variables to export");
+                return;
+            }
+            if std::path::Path::new(&out).exists() {
+                eprintln!("Warning: File '{out}' already exists in current directory");
+                let ok = prompts::confirm("Overwrite existing file?")
+                    .unwrap_or_else(|e| fail(&e.to_string()));
+                if !ok {
+                    println!("Export cancelled");
+                    return;
+                }
+            }
+            let map: BTreeMap<String, String> =
+                vars.into_iter().map(|v| (v.key, v.value)).collect();
+            let n = map.len();
+            if let Err(e) = envfile::write_env_file(&out, &map) {
+                fail(&format!("Failed to write file '{out}': {e}"));
+            }
+            println!("Pulled {n} variable(s) to {out}");
+        }
+            VarsCmd::Push { env, project, file } => {
+            let client = Client::require_token().unwrap_or_else(err);
+            let (proj, env_res) = resolve_ctx(&client, project, env).await;
+            if std::path::Path::new(&file).metadata().is_err() {
+                fail(&format!("File '{file}' not found"));
+            }
+            let vars = envfile::parse_env_file(&file).unwrap_or_else(|e| fail(&e.to_string()));
+            if vars.is_empty() {
+                println!("No variables found in {file}");
+                return;
+            }
+            let existing = client
+                .list_variables(&env_res.id)
+                .await
+                .unwrap_or_else(err);
+            let mut created = 0;
+            let mut updated = 0;
+            for (k, v) in &vars {
+                match existing.iter().find(|e| e.key == *k) {
+                    Some(cur) if cur.value == *v => {}
+                    Some(cur) => {
+                        match client.update_variable(&cur.id, k, v).await {
+                            Ok(_) => updated += 1,
+                            Err(e) => eprintln!("Failed to update {k}: {e}"),
+                        }
+                    }
+                    None => match client.create_variable(&env_res.id, k, v).await {
+                        Ok(_) => created += 1,
+                        Err(e) => eprintln!("Failed to create {k}: {e}"),
+                    },
+                }
+            }
+            println!("Pushed to '{}/{}': {created} created, {updated} updated", proj.name, env_res.name);
+        }
+            VarsCmd::Set {
+            key,
+            value,
+            env,
+            project,
+        } => {
+            let client = Client::require_token().unwrap_or_else(err);
+            let (_proj, env_res) = resolve_ctx(&client, project, env).await;
+            if key.trim().is_empty() || value.is_empty() {
+                fail("key and value are required");
+            }
+            let existing = client
+                .list_variables(&env_res.id)
+                .await
+                .unwrap_or_else(err);
+            match existing.iter().find(|v| v.key == key) {
+                Some(cur) => match client.update_variable(&cur.id, &key, &value).await {
+                    Ok(v) => println!("Updated {}={} in '{}'", v.key, v.value, env_res.name),
+                    Err(e) => err(e),
+                },
+                None => match client.create_variable(&env_res.id, &key, &value).await {
+                    Ok(v) => println!("Set {}={} in '{}'", v.key, v.value, env_res.name),
+                    Err(e) => err(e),
+                },
+            }
+        }
+            VarsCmd::Get { key, env, project } => {
+            let client = Client::require_token().unwrap_or_else(err);
+            let (_proj, env_res) = resolve_ctx(&client, project, env).await;
+            match client
+                .resolve_variable(&env_res.id, &key)
+                .await
+            {
+                Ok(v) => println!("{}", v.value),
+                Err(e) => err(e),
+            }
+        }
+            VarsCmd::Unset {
+            key,
+            env,
+            project,
+            yes,
+        } => {
+            let client = Client::require_token().unwrap_or_else(err);
+            let (_proj, env_res) = resolve_ctx(&client, project, env).await;
+            let cur = client
+                .resolve_variable(&env_res.id, &key)
+                .await
+                .unwrap_or_else(err);
+            if !yes {
+                println!("Delete '{key}' from '{}'?", env_res.name);
+                let ok = prompts::confirm("This action cannot be undone")
+                    .unwrap_or_else(|e| fail(&e.to_string()));
+                if !ok {
+                    println!("Operation cancelled");
+                    return;
+                }
+            }
+            match client.delete_variable(&cur.id).await {
+                Ok(()) => println!("Deleted '{key}'"),
+                Err(e) => err(e),
+            }
+        }
+            VarsCmd::List { env, project } => {
+                let client = Client::require_token().unwrap_or_else(err);
+                let (_proj, env_res) = resolve_ctx(&client, project, env).await;
+                match client.list_variables(&env_res.id).await {
+                    Ok(list) => {
+                        if list.is_empty() {
+                            println!("No variables found");
+                        } else {
+                            for v in list {
+                                println!("{}={}", v.key, v.value);
+                            }
+                        }
+                    }
+                    Err(e) => err(e),
+                }
+            }
+        }
+        Commands::Links => {
+            let links = config::list_links();
+            if links.is_empty() {
+                println!("No links yet. Run 'envoy link' in a project directory.");
+            } else {
+                for (dir, l) in links {
+                    let env = if l.env_name.is_empty() { "-" } else { &l.env_name };
+                    println!("{dir} -> {} ({}) env: {env}", l.project_name, l.project_id);
+                }
+            }
+        }
+        Commands::Unlink => match config::remove_link() {
+            Ok(true) => println!("Unlinked current directory"),
+            Ok(false) => println!("Not linked here"),
+            Err(e) => fail(&e.to_string()),
+        },
         Commands::Setup { cmd } => match cmd {
             SetupCmd::Connect { url } => {
                 let url = match url {
@@ -302,20 +719,8 @@ async fn main() {
                 }
             }
             SetupCmd::Status => {
-                println!("Server: {}", config::server_url());
-                let client = match Client::require_token() {
-                    Ok(c) => c,
-                    Err(_) => {
-                        println!("Not logged in. Use 'envoy setup login'.");
-                        return;
-                    }
-                };
-                match client.profile().await {
-                    Ok(p) => {
-                        println!("Logged in as: {}", p.email);
-                    }
-                    Err(e) => err(e),
-                }
+                let client = Client::new().unwrap_or_else(|e| fail(&e.to_string()));
+                print_status(&client).await;
             }
         },
         Commands::Projects { cmd } => match cmd {
@@ -346,6 +751,7 @@ async fn main() {
                         println!("Project created successfully!");
                         println!("  ID: {}", p.id);
                         println!("  Name: {}", p.name);
+                        println!("  Default environment 'dev' created. Add more with 'envoy envs create --project {}'", p.name);
                     }
                     Err(e) => err(e),
                 }
@@ -366,7 +772,6 @@ async fn main() {
                                         println!("  Description: {d}");
                                     }
                                 }
-                                println!("  Created: {}", p.created_at_string());
                                 println!();
                             }
                         }
@@ -374,90 +779,39 @@ async fn main() {
                     Err(e) => err(e),
                 }
             }
-            ProjectCmd::Get { id } => {
+        },
+        Commands::Envs { cmd } => match cmd {
+            EnvsCmd::Create { project } => {
                 let client = Client::require_token().unwrap_or_else(err);
-                let pid = match id {
-                    Some(v) => v,
-                    None => prompts::select_project(&client)
-                        .await
-                        .unwrap_or_else(|e| fail(&e.to_string())),
-                };
-                match client.get_project(&pid).await {
-                    Ok(p) => {
-                        println!("Project Details:");
-                        println!("  ID: {}", p.id);
-                        println!("  Name: {}", p.name);
-                        println!("  Owner ID: {}", p.owner_id);
+                let proj = resolve_project_ctx(&client, project).await;
+                let name =
+                    prompts::text("Environment name", true).unwrap_or_else(|e| fail(&e.to_string()));
+                match client.create_environment(&proj.id, &name, "").await {
+                    Ok(e) => {
+                        println!("Environment '{}' created in '{}'!", e.name, proj.name);
+                        println!("  ID: {}", e.id);
                     }
                     Err(e) => err(e),
                 }
             }
-            ProjectCmd::Update { id } => {
+            EnvsCmd::List { project } => {
                 let client = Client::require_token().unwrap_or_else(err);
-                let pid = match id {
-                    Some(v) => v,
-                    None => prompts::select_project(&client)
-                        .await
-                        .unwrap_or_else(|e| fail(&e.to_string())),
-                };
-                let cur = client.get_project(&pid).await.unwrap_or_else(err);
-                let name = prompts::text_default("Project name", &cur.name)
-                    .unwrap_or_else(|e| fail(&e.to_string()));
-                let description = prompts::text("Description (leave empty to keep current)", false)
-                    .unwrap_or_else(|e| fail(&e.to_string()));
-                let description = if description.is_empty() {
-                    cur.description.clone().unwrap_or_default()
-                } else {
-                    description
-                };
-                let git_repo = prompts::text(
-                    "Git repository owner/repo (leave empty to keep current)",
-                    false,
-                )
-                .unwrap_or_else(|e| fail(&e.to_string()));
-                let git_repo = if git_repo.is_empty() {
-                    cur.git_repo.clone().unwrap_or_default()
-                } else {
-                    git_repo
-                };
-                match client
-                    .update_project(&pid, &name, &description, &git_repo)
-                    .await
-                {
-                    Ok(p) => {
-                        println!("Project updated successfully!");
-                        println!("  Name: {}", p.name);
+                let proj = resolve_project_ctx(&client, project).await;
+                match client.list_environments(&proj.id).await {
+                    Ok(list) => {
+                        if list.is_empty() {
+                            println!("No environments found");
+                        } else {
+                            println!("Environments in '{}':\n", proj.name);
+                            for e in list {
+                                println!("  {} ({})", e.name, e.id);
+                            }
+                        }
                     }
-                    Err(e) => err(e),
-                }
-            }
-            ProjectCmd::Delete { id } => {
-                let client = Client::require_token().unwrap_or_else(err);
-                let pid = match id {
-                    Some(v) => v,
-                    None => prompts::select_project(&client)
-                        .await
-                        .unwrap_or_else(|e| fail(&e.to_string())),
-                };
-                let cur = client.get_project(&pid).await.unwrap_or_else(err);
-                println!(
-                    "Are you sure you want to delete project '{}' (ID: {})?",
-                    cur.name, cur.id
-                );
-                let ok = prompts::confirm("This action cannot be undone")
-                    .unwrap_or_else(|e| fail(&e.to_string()));
-                if !ok {
-                    println!("Operation cancelled");
-                    return;
-                }
-                match client.delete_project(&pid).await {
-                    Ok(()) => println!("Project deleted successfully"),
                     Err(e) => err(e),
                 }
             }
         },
-        Commands::Environments { cmd } => handle_env(cmd).await,
-        Commands::Variables { cmd } => handle_vars(cmd).await,
         Commands::Admin { cmd } => match cmd {
             AdminCmd::Invite { email } => {
                 let email = match email {
@@ -538,11 +892,7 @@ async fn main() {
                 MemberCmd::List { project_name } => {
                     let name = project_name.unwrap_or_else(|| fail("project-name is required"));
                     let client = Client::require_token().unwrap_or_else(err);
-                    let projects = client.list_projects().await.unwrap_or_else(err);
-                    let proj = projects
-                        .into_iter()
-                        .find(|p| p.name == name)
-                        .unwrap_or_else(|| fail(&format!("project '{name}' not found")));
+                    let proj = client.resolve_project(&name).await.unwrap_or_else(err);
                     match client.list_members(&proj.id).await {
                         Ok(members) => {
                             if members.is_empty() {
@@ -567,11 +917,7 @@ async fn main() {
                     let email =
                         email.unwrap_or_else(|| fail("project-name and email are required"));
                     let client = Client::require_token().unwrap_or_else(err);
-                    let projects = client.list_projects().await.unwrap_or_else(err);
-                    let proj = projects
-                        .into_iter()
-                        .find(|p| p.name == name)
-                        .unwrap_or_else(|| fail(&format!("project '{name}' not found")));
+                    let proj = client.resolve_project(&name).await.unwrap_or_else(err);
                     let users = client.search_users(&email).await.unwrap_or_else(err);
                     if users.is_empty() {
                         fail(&format!("no user found with email '{email}'"));
@@ -597,11 +943,7 @@ async fn main() {
                     let email =
                         email.unwrap_or_else(|| fail("project-name and email are required"));
                     let client = Client::require_token().unwrap_or_else(err);
-                    let projects = client.list_projects().await.unwrap_or_else(err);
-                    let proj = projects
-                        .into_iter()
-                        .find(|p| p.name == name)
-                        .unwrap_or_else(|| fail(&format!("project '{name}' not found")));
+                    let proj = client.resolve_project(&name).await.unwrap_or_else(err);
                     let users = client.search_users(&email).await.unwrap_or_else(err);
                     if users.is_empty() {
                         fail(&format!("no user found with email '{email}'"));
@@ -619,371 +961,5 @@ async fn main() {
                 }
             },
         },
-    }
-}
-
-trait CreatedAtString {
-    fn created_at_string(&self) -> String;
-}
-
-impl CreatedAtString for envoy_shared::responses::ProjectResponse {
-    fn created_at_string(&self) -> String {
-        self.created_at
-            .0
-            .map(|d| d.to_rfc3339())
-            .unwrap_or_default()
-    }
-}
-
-async fn resolve_project_env(
-    client: &Client,
-    project_id: Option<String>,
-    environment_id: Option<String>,
-) -> (String, String) {
-    let pid = match project_id {
-        Some(v) => v,
-        None => prompts::select_project(client)
-            .await
-            .unwrap_or_else(|e| fail(&e.to_string())),
-    };
-    let eid = match environment_id {
-        Some(v) => v,
-        None => prompts::select_environment(client, &pid)
-            .await
-            .unwrap_or_else(|e| fail(&e.to_string())),
-    };
-    (pid, eid)
-}
-
-async fn handle_env(cmd: EnvCmd) {
-    let client = Client::require_token().unwrap_or_else(err);
-    match cmd {
-        EnvCmd::Create { project_id } => {
-            let pid = match project_id {
-                Some(v) => v,
-                None => prompts::select_project(&client)
-                    .await
-                    .unwrap_or_else(|e| fail(&e.to_string())),
-            };
-            let name =
-                prompts::text("Environment name", true).unwrap_or_else(|e| fail(&e.to_string()));
-            let description = prompts::text("Description (optional)", false)
-                .unwrap_or_else(|e| fail(&e.to_string()));
-            match client.create_environment(&pid, &name, &description).await {
-                Ok(e) => {
-                    println!("Environment created successfully!");
-                    println!("  ID: {}", e.id);
-                    println!("  Name: {}", e.name);
-                }
-                Err(e) => err(e),
-            }
-        }
-        EnvCmd::List { project_id } => {
-            let pid = match project_id {
-                Some(v) => v,
-                None => prompts::select_project(&client)
-                    .await
-                    .unwrap_or_else(|e| fail(&e.to_string())),
-            };
-            match client.list_environments(&pid).await {
-                Ok(list) => {
-                    if list.is_empty() {
-                        println!("No environments found");
-                    } else {
-                        println!("Found {} environment(s):\n", list.len());
-                        for e in list {
-                            println!("  ID: {}", e.id);
-                            println!("  Name: {}", e.name);
-                            println!();
-                        }
-                    }
-                }
-                Err(e) => err(e),
-            }
-        }
-        EnvCmd::Get {
-            project_id,
-            environment_id,
-        } => {
-            if project_id.is_some() ^ environment_id.is_some() {
-                fail("Both project_id and environment_id are required\nUsage: envoy environments get <project_id> <environment_id>");
-            }
-            let (pid, eid) = resolve_project_env(&client, project_id, environment_id).await;
-            match client.get_environment(&pid, &eid).await {
-                Ok(e) => {
-                    println!("Environment Details:");
-                    println!("  ID: {}", e.id);
-                    println!("  Name: {}", e.name);
-                    println!("  Project ID: {}", e.project_id);
-                }
-                Err(e) => err(e),
-            }
-        }
-        EnvCmd::Update {
-            project_id,
-            environment_id,
-        } => {
-            if project_id.is_some() ^ environment_id.is_some() {
-                fail("Both project_id and environment_id are required");
-            }
-            let (pid, eid) = resolve_project_env(&client, project_id, environment_id).await;
-            let cur = client.get_environment(&pid, &eid).await.unwrap_or_else(err);
-            let name = prompts::text_default("Environment name", &cur.name)
-                .unwrap_or_else(|e| fail(&e.to_string()));
-            let description = prompts::text("Description (leave empty to keep current)", false)
-                .unwrap_or_else(|e| fail(&e.to_string()));
-            let description = if description.is_empty() {
-                cur.description.unwrap_or_default()
-            } else {
-                description
-            };
-            match client
-                .update_environment(&pid, &eid, &name, &description)
-                .await
-            {
-                Ok(e) => {
-                    println!("Environment updated successfully!");
-                    println!("  Name: {}", e.name);
-                }
-                Err(e) => err(e),
-            }
-        }
-        EnvCmd::Delete {
-            project_id,
-            environment_id,
-        } => {
-            if project_id.is_some() ^ environment_id.is_some() {
-                fail("Both project_id and environment_id are required");
-            }
-            let (pid, eid) = resolve_project_env(&client, project_id, environment_id).await;
-            let cur = client.get_environment(&pid, &eid).await.unwrap_or_else(err);
-            println!(
-                "Are you sure you want to delete environment '{}' (ID: {})?",
-                cur.name, cur.id
-            );
-            let ok = prompts::confirm("This action cannot be undone")
-                .unwrap_or_else(|e| fail(&e.to_string()));
-            if !ok {
-                println!("Operation cancelled");
-                return;
-            }
-            match client.delete_environment(&pid, &eid).await {
-                Ok(()) => println!("Environment deleted successfully"),
-                Err(e) => err(e),
-            }
-        }
-    }
-}
-
-async fn resolve_var(
-    client: &Client,
-    vid: Option<String>,
-    pid: Option<String>,
-    eid: Option<String>,
-) -> (String, String, String) {
-    let provided = vid.is_some() as u8 + pid.is_some() as u8 + eid.is_some() as u8;
-    if provided == 1 || provided == 2 {
-        fail("All three arguments are required: variable_id, project_id, and environment_id\nUsage: envoy variables get <variable_id> <project_id> <environment_id>");
-    }
-    if provided == 3 {
-        return (vid.unwrap(), pid.unwrap(), eid.unwrap());
-    }
-    let pid = prompts::select_project(client)
-        .await
-        .unwrap_or_else(|e| fail(&e.to_string()));
-    let eid = prompts::select_environment(client, &pid)
-        .await
-        .unwrap_or_else(|e| fail(&e.to_string()));
-    let vid = prompts::select_variable(client, &pid, &eid)
-        .await
-        .unwrap_or_else(|e| fail(&e.to_string()));
-    (vid, pid, eid)
-}
-
-async fn handle_vars(cmd: VarCmd) {
-    let client = Client::require_token().unwrap_or_else(err);
-    match cmd {
-        VarCmd::Import { file } => {
-            let pid = prompts::select_project(&client)
-                .await
-                .unwrap_or_else(|e| fail(&e.to_string()));
-            let eid = prompts::select_environment(&client, &pid)
-                .await
-                .unwrap_or_else(|e| fail(&e.to_string()));
-            if std::path::Path::new(&file).metadata().is_err() {
-                fail(&format!("File '{file}' not found"));
-            }
-            let vars = envfile::parse_env_file(&file).unwrap_or_else(|e| fail(&e.to_string()));
-            if vars.is_empty() {
-                println!("No variables found in {file}");
-                return;
-            }
-            println!("Found {} variable(s) in {file}:\n", vars.len());
-            for (k, v) in &vars {
-                println!("  {k}={v}");
-            }
-            println!();
-            let ok = prompts::confirm("Import these variables?")
-                .unwrap_or_else(|e| fail(&e.to_string()));
-            if !ok {
-                println!("Import cancelled");
-                return;
-            }
-            let mut created = 0;
-            for (k, v) in &vars {
-                match client.create_variable(&pid, &eid, k, v).await {
-                    Ok(_) => created += 1,
-                    Err(e) => eprintln!("Failed to import variable {k}: {e}"),
-                }
-            }
-            println!("Successfully imported {created} variable(s)");
-        }
-        VarCmd::Export { file } => {
-            let pid = prompts::select_project(&client)
-                .await
-                .unwrap_or_else(|e| fail(&e.to_string()));
-            let eid = prompts::select_environment(&client, &pid)
-                .await
-                .unwrap_or_else(|e| fail(&e.to_string()));
-            let out = match file {
-                Some(f) => f,
-                None => {
-                    let env = client.get_environment(&pid, &eid).await.unwrap_or_else(err);
-                    format!(".env.{}", envfile::sanitize_filename(&env.name))
-                }
-            };
-            let vars = client.list_variables(&pid, &eid).await.unwrap_or_else(err);
-            if vars.is_empty() {
-                println!("No variables to export");
-                return;
-            }
-            if std::path::Path::new(&out).exists() {
-                eprintln!("Warning: File '{out}' already exists in current directory");
-                let ok = prompts::confirm("Overwrite existing file?")
-                    .unwrap_or_else(|e| fail(&e.to_string()));
-                if !ok {
-                    println!("Export cancelled");
-                    return;
-                }
-            }
-            let map: BTreeMap<String, String> =
-                vars.into_iter().map(|v| (v.key, v.value)).collect();
-            if let Err(e) = envfile::write_env_file(&out, &map) {
-                fail(&format!("Failed to write file '{out}': {e}"));
-            }
-            println!("Exported {} variable(s) to {out}", map.len());
-        }
-        VarCmd::Create {
-            project_id,
-            environment_id,
-        } => {
-            if project_id.is_some() ^ environment_id.is_some() {
-                fail("Both project_id and environment_id are required\nUsage: envoy variables create <project_id> <environment_id>");
-            }
-            let (pid, eid) = resolve_project_env(&client, project_id, environment_id).await;
-            let key = prompts::text("Variable key", true).unwrap_or_else(|e| fail(&e.to_string()));
-            let value =
-                prompts::text("Variable value", true).unwrap_or_else(|e| fail(&e.to_string()));
-            match client.create_variable(&pid, &eid, &key, &value).await {
-                Ok(v) => {
-                    println!("Variable created successfully!");
-                    println!("  ID: {}", v.id);
-                    println!("  Key: {}", v.key);
-                }
-                Err(e) => err(e),
-            }
-        }
-        VarCmd::List {
-            project_id,
-            environment_id,
-        } => {
-            if project_id.is_some() ^ environment_id.is_some() {
-                fail("Both project_id and environment_id are required");
-            }
-            let (pid, eid) = resolve_project_env(&client, project_id, environment_id).await;
-            match client.list_variables(&pid, &eid).await {
-                Ok(list) => {
-                    if list.is_empty() {
-                        println!("No variables found");
-                    } else {
-                        println!("Found {} variable(s):\n", list.len());
-                        for v in list {
-                            println!("  ID: {}", v.id);
-                            println!("  Key: {}", v.key);
-                            println!("  Value: {}", v.value);
-                            println!();
-                        }
-                    }
-                }
-                Err(e) => err(e),
-            }
-        }
-        VarCmd::Get {
-            variable_id,
-            project_id,
-            environment_id,
-        } => {
-            let (vid, pid, eid) =
-                resolve_var(&client, variable_id, project_id, environment_id).await;
-            match client.get_variable(&pid, &eid, &vid).await {
-                Ok(v) => {
-                    println!("Variable Details:");
-                    println!("  ID: {}", v.id);
-                    println!("  Key: {}", v.key);
-                    println!("  Value: {}", v.value);
-                }
-                Err(e) => err(e),
-            }
-        }
-        VarCmd::Update {
-            variable_id,
-            project_id,
-            environment_id,
-        } => {
-            let (vid, pid, eid) =
-                resolve_var(&client, variable_id, project_id, environment_id).await;
-            let cur = client
-                .get_variable(&pid, &eid, &vid)
-                .await
-                .unwrap_or_else(err);
-            let key = prompts::text_default("Variable key", &cur.key)
-                .unwrap_or_else(|e| fail(&e.to_string()));
-            let value =
-                prompts::text("Variable value", true).unwrap_or_else(|e| fail(&e.to_string()));
-            match client.update_variable(&pid, &eid, &vid, &key, &value).await {
-                Ok(v) => {
-                    println!("Variable updated successfully!");
-                    println!("  Key: {}", v.key);
-                    println!("  Value: {}", v.value);
-                }
-                Err(e) => err(e),
-            }
-        }
-        VarCmd::Delete {
-            variable_id,
-            project_id,
-            environment_id,
-        } => {
-            let (vid, pid, eid) =
-                resolve_var(&client, variable_id, project_id, environment_id).await;
-            let cur = client
-                .get_variable(&pid, &eid, &vid)
-                .await
-                .unwrap_or_else(err);
-            println!(
-                "Are you sure you want to delete variable '{}' (ID: {})?",
-                cur.key, cur.id
-            );
-            let ok = prompts::confirm("This action cannot be undone")
-                .unwrap_or_else(|e| fail(&e.to_string()));
-            if !ok {
-                println!("Operation cancelled");
-                return;
-            }
-            match client.delete_variable(&pid, &eid, &vid).await {
-                Ok(()) => println!("Variable deleted successfully"),
-                Err(e) => err(e),
-            }
-        }
     }
 }

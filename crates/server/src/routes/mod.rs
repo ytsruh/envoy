@@ -55,17 +55,17 @@ pub fn router() -> Router<AppState> {
             post(environments::create_environment).get(environments::list_environments),
         )
         .route(
-            "/projects/{project_id}/environments/{id}",
+            "/environments/{id}",
             get(environments::get_environment)
                 .put(environments::update_environment)
                 .delete(environments::delete_environment),
         )
         .route(
-            "/projects/{project_id}/environments/{environment_id}/variables",
+            "/environments/{environment_id}/variables",
             post(variables::create_variable).get(variables::list_variables),
         )
         .route(
-            "/projects/{project_id}/environments/{environment_id}/variables/{id}",
+            "/variables/{id}",
             get(variables::get_variable)
                 .put(variables::update_variable)
                 .delete(variables::delete_variable),

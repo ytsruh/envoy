@@ -325,13 +325,34 @@ async fn full_e2e_flow() {
     .await;
     assert_eq!(s, StatusCode::OK);
 
-    // environments CRUD
+    // environments: project auto-creates `dev`; duplicate `dev` conflicts
     let (s, v) = call(
+        &mut app,
+        "GET",
+        &format!("/projects/{pid}/environments"),
+        Some(&token_a),
+        None,
+    )
+    .await;
+    assert_eq!(s, StatusCode::OK);
+    assert_eq!(v.as_array().unwrap().len(), 1);
+    assert_eq!(v[0]["name"], "dev");
+    let (s, _) = call(
         &mut app,
         "POST",
         &format!("/projects/{pid}/environments"),
         Some(&token_a),
         Some(json!({"name": "dev", "description": ""})),
+    )
+    .await;
+    assert_eq!(s, StatusCode::CONFLICT);
+    // CRUD on an additional env
+    let (s, v) = call(
+        &mut app,
+        "POST",
+        &format!("/projects/{pid}/environments"),
+        Some(&token_a),
+        Some(json!({"name": "prod", "description": ""})),
     )
     .await;
     assert_eq!(s, StatusCode::CREATED, "{v}");
@@ -345,11 +366,11 @@ async fn full_e2e_flow() {
     )
     .await;
     assert_eq!(s, StatusCode::OK);
-    assert_eq!(v.as_array().unwrap().len(), 1);
+    assert_eq!(v.as_array().unwrap().len(), 2);
     let (s, _) = call(
         &mut app,
         "GET",
-        &format!("/projects/{pid}/environments/{eid}"),
+        &format!("/environments/{eid}"),
         Some(&token_a),
         None,
     )
@@ -360,7 +381,7 @@ async fn full_e2e_flow() {
     let (s, v) = call(
         &mut app,
         "POST",
-        &format!("/projects/{pid}/environments/{eid}/variables"),
+        &format!("/environments/{eid}/variables"),
         Some(&token_a),
         Some(json!({"key": "API_KEY", "value": "secret", "description": ""})),
     )
@@ -370,7 +391,7 @@ async fn full_e2e_flow() {
     let (s, v) = call(
         &mut app,
         "GET",
-        &format!("/projects/{pid}/environments/{eid}/variables"),
+        &format!("/environments/{eid}/variables"),
         Some(&token_a),
         None,
     )
@@ -380,7 +401,7 @@ async fn full_e2e_flow() {
     let (s, _) = call(
         &mut app,
         "GET",
-        &format!("/projects/{pid}/environments/{eid}/variables/{vid}"),
+        &format!("/variables/{vid}"),
         Some(&token_a),
         None,
     )
@@ -389,7 +410,7 @@ async fn full_e2e_flow() {
     let (s, v) = call(
         &mut app,
         "PUT",
-        &format!("/projects/{pid}/environments/{eid}/variables/{vid}"),
+        &format!("/variables/{vid}"),
         Some(&token_a),
         Some(json!({"key": "API_KEY", "value": "rotated", "description": ""})),
     )
@@ -440,7 +461,7 @@ async fn full_e2e_flow() {
     let (s, _) = call(
         &mut app,
         "DELETE",
-        &format!("/projects/{pid}/environments/{eid}/variables/{vid}"),
+        &format!("/variables/{vid}"),
         Some(&token_a),
         None,
     )
@@ -449,7 +470,7 @@ async fn full_e2e_flow() {
     let (s, _) = call(
         &mut app,
         "DELETE",
-        &format!("/projects/{pid}/environments/{eid}"),
+        &format!("/environments/{eid}"),
         Some(&token_a),
         None,
     )

@@ -24,8 +24,6 @@ ENV TURSO_DATABASE_URL=/data/envoy.db
 ENV ENVOY_STATE_DIR=/data
 ENV ADDR=0.0.0.0:8080
 
-VOLUME /data
-
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD sh -c 'curl -f http://localhost:${PORT:-8080}/health || exit 1'

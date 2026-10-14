@@ -5,9 +5,9 @@ use crate::config;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ClientError {
-    #[error("no token - please login first using 'envoy setup login'")]
+    #[error("no token - please login first using 'envoy manage login'")]
     NoToken,
-    #[error("session expired - please login again using 'envoy setup login'")]
+    #[error("session expired - please login again using 'envoy manage login'")]
     Expired,
     #[error("server error: {0}")]
     Server(String),
@@ -389,9 +389,10 @@ impl Client {
         input: &str,
     ) -> Result<envoy_shared::responses::EnvironmentResponse, ClientError> {
         let envs = self.list_environments(project_id).await?;
-        if let Some(e) = envs.iter().find(|e| {
-            e.id == input || e.name == input || e.name.eq_ignore_ascii_case(input)
-        }) {
+        if let Some(e) = envs
+            .iter()
+            .find(|e| e.id == input || e.name == input || e.name.eq_ignore_ascii_case(input))
+        {
             return Ok(e.clone());
         }
         // Strict: never create on typo. Suggest closest name instead.
@@ -402,9 +403,9 @@ impl Client {
             msg.push_str(&format!(". Did you mean '{s}'?"));
         }
         if available.is_empty() {
-            msg.push_str(". No environments exist yet — run 'envoy envs create'");
+            msg.push_str(". No environments exist yet — run 'envoy manage envs create'");
         } else {
-            msg.push_str(" — run 'envoy envs list' to see available environments");
+            msg.push_str(" — run 'envoy manage envs list' to see available environments");
         }
         Err(ClientError::Server(msg))
     }
@@ -415,8 +416,7 @@ impl Client {
         key_or_id: &str,
     ) -> Result<envoy_shared::responses::VariableResponse, ClientError> {
         let vars = self.list_variables(env_id).await?;
-        vars
-            .into_iter()
+        vars.into_iter()
             .find(|v| v.id == key_or_id || v.key == key_or_id)
             .ok_or_else(|| ClientError::Server(format!("variable '{key_or_id}' not found")))
     }

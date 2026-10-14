@@ -34,9 +34,9 @@ Run the CLI:
 
 Point the CLI at your server, then set it up:
 ```bash
-envoy setup connect --url http://localhost:8080
-envoy setup init        # first user becomes instance admin (fresh server only)
-envoy setup login
-envoy admin invite someone@example.com   # admin creates a one-time invite
-envoy setup accept --token <token>       # invitee joins with their own password
+envoy manage connect --url http://localhost:8080
+envoy manage init        # first user becomes instance admin (fresh server only)
+envoy manage login
+envoy manage invites create someone@example.com   # admin creates a one-time invite
+envoy manage accept --token <token>       # invitee joins with their own password
 ```

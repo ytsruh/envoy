@@ -41,7 +41,7 @@ pub fn confirm(prompt: &str) -> anyhow::Result<bool> {
 pub async fn select_project(client: &Client) -> anyhow::Result<String> {
     let projects = client.list_projects().await?;
     if projects.is_empty() {
-        anyhow::bail!("No projects found. Create one first with 'envoy projects create'");
+        anyhow::bail!("No projects found. Create one first with 'envoy manage projects create'");
     }
     let options: Vec<String> = projects
         .iter()
@@ -64,7 +64,9 @@ pub async fn select_project(client: &Client) -> anyhow::Result<String> {
 pub async fn select_environment(client: &Client, project_id: &str) -> anyhow::Result<String> {
     let envs = client.list_environments(project_id).await?;
     if envs.is_empty() {
-        anyhow::bail!("No environments found in this project. Create one with 'envoy envs create'");
+        anyhow::bail!(
+            "No environments found in this project. Create one with 'envoy manage envs create'"
+        );
     }
     let options: Vec<String> = envs
         .iter()
@@ -89,11 +91,11 @@ pub fn print_client_error(e: ClientError) {
     match e {
         ClientError::NoToken => {
             eprintln!("Error: no token");
-            println!("Please login first using 'envoy setup login'");
+            println!("Please login first using 'envoy manage login'");
         }
         ClientError::Expired => {
             eprintln!("Error: expired token");
-            println!("Your session has expired. Please login again using 'envoy setup login'");
+            println!("Your session has expired. Please login again using 'envoy manage login'");
         }
         ClientError::Server(msg) => eprintln!("Error: {msg}"),
         ClientError::Transport(err) => eprintln!("Error: {err}"),

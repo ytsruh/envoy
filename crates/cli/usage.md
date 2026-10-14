@@ -1,11 +1,18 @@
 # Envoy CLI Usage Guide
 
-## Overview
+## Command groups (5 top-level)
 
-Daily variables live under `vars`; context and management are separate
-groups, so `envoy --help` reads clean. Everything is stored in one global
-file, `~/.envoy/config.json` (`server_url`, `token`, plus a `links` map).
-Nothing is written into your project directories.
+```
+envoy manage ...   # server, auth, projects, envs, invites, members, links, status
+envoy vars ...     # daily variables: pull, push, set, get, unset, list
+envoy link         # link this directory (defaults env to `dev`)
+envoy use <env>    # switch default environment (switch-only)
+envoy unlink       # remove link for cwd
+```
+
+Everything is stored in one global file, `~/.envoy/config.json`
+(`server_url`, `token`, plus a `links` map). Nothing is written into your
+project directories.
 
 Each link maps one directory to one project/env:
 
@@ -23,22 +30,21 @@ git-remote auto-match > interactive prompt.
 ## Setup (once)
 
 ```bash
-envoy setup connect --url http://localhost:8080
-envoy setup init        # first user becomes instance admin (fresh server only)
-envoy setup login
-envoy admin invite someone@example.com   # admin creates a one-time invite
-envoy setup accept --token <token>       # invitee joins with their own password
-envoy status            # server + link + login for cwd
+envoy manage connect --url http://localhost:8080
+envoy manage init        # first user becomes instance admin (fresh server only)
+envoy manage login
+envoy manage invites create someone@example.com [--name Someone]   # admin creates a one-time invite
+envoy manage accept --token <token>                # invitee joins with their own password
+envoy manage status
 ```
 
 ## Context (per directory)
 
 ```bash
-# Link this directory (defaults to the `dev` environment, created with every project)
-envoy link [--project demo]
-envoy use prod                     # only to switch away from `dev`
-envoy links                        # list all directory links
-envoy unlink                       # remove link for cwd
+envoy link [--project demo]   # defaults to the `dev` environment (created with every project)
+envoy use prod                # only to switch away from `dev`
+envoy manage links
+envoy unlink
 ```
 
 With a link in place, daily commands just work against `dev` — no `use` needed.
@@ -49,45 +55,44 @@ With a link in place, daily commands just work against `dev` — no `use` needed
 envoy vars push [--env dev] [-f .env]
 envoy vars pull [--env dev]            # -> .env.<env> by default, -f to override
 envoy vars set API_KEY secret [--env dev]
-envoy vars get API_KEY [--env dev]     # prints value only (script-friendly)
+envoy vars get API_KEY [--env dev]    # prints value only (script-friendly)
 envoy vars unset API_KEY [--env dev] [--yes]
-envoy vars list [--env dev]            # KEY=VALUE lines
+envoy vars list [--env dev]           # KEY=VALUE lines
 ```
 
-```bash
-envoy link --project demo
-envoy vars push            # demo/dev from global links map
-envoy vars pull
-envoy vars list
-```
+Mutating commands print the resolved `project/env` target
+(e.g. `Pushed to 'demo/dev'`).
 
-Mutating commands always print the resolved `project/env` target
-(e.g. `Pushed to 'demo/dev'`), so a stale `ENVOY_PROJECT` or wrong directory
-is visible before damage spreads. Each directory resolves independently.
-
-## Rare management
+## Management (`envoy manage ...`)
 
 ```bash
-envoy projects create   # auto-creates a `dev` environment
-envoy projects list
-envoy envs create [--project demo]   # name only; the ONLY way to add envs
-envoy envs list [--project demo]
+envoy manage projects create   # auto-creates a `dev` environment
+envoy manage projects list
+envoy manage envs create [--project demo]   # the ONLY way to add envs
+envoy manage envs list [--project demo]
+envoy manage invites create someone@example.com
+envoy manage invites list
+envoy manage invites revoke <invite-id>
+envoy manage members search <email>
+envoy manage members list <project>
+envoy manage members add <project> <email>       # prompts for role
+envoy manage members remove <project> <email>
 ```
 
 Adding a new environment (explicit, never implicit — a misspelled `--env`
 fails instead of creating a stray env):
 
 ```bash
-envoy envs create --project demo   # prompts for the name, e.g. prod
-envoy use prod                     # switch this directory to it (updates global links map)
-envoy vars push --env prod -f .env # populate it
+envoy manage envs create --project demo   # prompts for the name, e.g. prod
+envoy use prod
+envoy vars push --env prod -f .env
 ```
 
 Misspelled names fail closed with a suggestion:
 
 ```bash
 $ envoy vars list --env prdo
-Error: environment 'prdo' not found. Did you mean 'prod'? — run 'envoy envs list' to see available environments
+Error: environment 'prdo' not found. Did you mean 'prod'? — run 'envoy manage envs list' to see available environments
 ```
 
 The server API is flat:
@@ -106,7 +111,7 @@ list + match.
 
 ## Tips
 
-1. `envoy status` first when something looks wrong (server/link/login for cwd).
+1. `envoy manage status` first when something looks wrong (server/link/login for cwd).
 2. Use `--project/--env` in CI; use `link`/`use` locally.
 3. `get` prints only the value, so `export KEY=$(envoy vars get KEY --env prod)` works.
 4. `list` prints `KEY=VALUE` lines, safe to pipe to files.

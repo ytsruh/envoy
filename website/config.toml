@@ -1,4 +1,4 @@
-base_url = "https://example.com"
+base_url = "https://envoy.webiliti.com"
 title = "Envoy"
 description = "A self-hosted CLI tool for managing environment variables across projects and teams."
 compile_sass = false

@@ -1,9 +1,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use utoipa::ToSchema;
 
 /// RFC3339 timestamp that serializes absence as null.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Timestamp(pub Option<DateTime<Utc>>);
 
 impl Timestamp {
@@ -73,7 +72,7 @@ impl<'de> Deserialize<'de> for Timestamp {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Role {
     Owner,

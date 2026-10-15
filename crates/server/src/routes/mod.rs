@@ -1,5 +1,4 @@
 pub mod auth;
-pub mod docs;
 pub mod environments;
 pub mod health;
 pub mod invites;
@@ -18,9 +17,6 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/health", get(health::health))
         .route("/", get(health::home))
-        .route("/favicon.ico", get(health::favicon))
-        .route("/openapi.json", get(docs::openapi))
-        .route("/docs", get(docs::docs))
         .route("/auth/setup", post(auth::setup))
         .route("/auth/accept-invite", post(auth::accept_invite))
         .route("/auth/login", post(auth::login))

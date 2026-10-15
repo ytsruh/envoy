@@ -1,19 +1,18 @@
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 use crate::types::Timestamp;
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ErrorBody {
     pub error: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageBody {
     pub message: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegisteredUser {
     pub user_id: String,
     pub name: String,
@@ -21,13 +20,13 @@ pub struct RegisteredUser {
     pub created_at: Timestamp,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthResponse {
     pub token: String,
     pub user: RegisteredUser,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProfileResponse {
     pub user_id: String,
     pub email: String,
@@ -35,14 +34,14 @@ pub struct ProfileResponse {
     pub expires_at: i64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserSearchResponse {
     pub user_id: String,
     pub name: String,
     pub email: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InviteResponse {
     pub invite_id: String,
     pub email: String,
@@ -50,7 +49,7 @@ pub struct InviteResponse {
     pub expires_at: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InviteListItem {
     pub invite_id: String,
     pub email: String,
@@ -59,7 +58,7 @@ pub struct InviteListItem {
     pub created_at: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectResponse {
     pub id: String,
     pub name: String,
@@ -70,7 +69,7 @@ pub struct ProjectResponse {
     pub updated_at: Timestamp,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnvironmentResponse {
     pub id: String,
     pub project_id: String,
@@ -80,7 +79,7 @@ pub struct EnvironmentResponse {
     pub updated_at: Timestamp,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VariableResponse {
     pub id: String,
     pub environment_id: String,
@@ -91,14 +90,14 @@ pub struct VariableResponse {
     pub updated_at: Timestamp,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectMemberResponse {
     pub user_id: String,
     pub role: String,
     pub created_at: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthResponse {
     pub health: String,
 }

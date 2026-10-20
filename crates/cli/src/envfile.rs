@@ -106,6 +106,105 @@ pub fn sanitize_filename(name: &str) -> String {
         .collect()
 }
 
+const IGNORED_DIRS: &[&str] = &[
+    ".git",
+    ".jj",
+    ".hg",
+    ".svn",
+    "node_modules",
+    "target",
+    "dist",
+    "build",
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".next",
+    ".turbo",
+    ".parcel-cache",
+];
+
+fn is_env_filename(name: &str) -> bool {
+    if name == ".env" || name.starts_with(".env.") || name.ends_with(".env") {
+        // Example files are templates, never real values.
+        if name.ends_with(".example") {
+            return false;
+        }
+        return true;
+    }
+    false
+}
+
+/// Recursively find env files under `root`, no depth cap. Skips ignored
+/// directories (`.git`, `node_modules`, `target`, ...). Returns sorted
+/// canonicalized absolute paths.
+pub fn discover_env_files(root: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let mut out = Vec::new();
+    let mut stack = vec![root.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        let entries = match std::fs::read_dir(&dir) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().to_string();
+            if path.is_dir() {
+                if IGNORED_DIRS.contains(&name.as_str()) || name.starts_with(".envoy") {
+                    continue;
+                }
+                stack.push(path);
+            } else if path.is_file() && is_env_filename(&name) {
+                let abs =
+                    std::fs::canonicalize(&path).unwrap_or_else(|_| path.clone());
+                if !out.contains(&abs) {
+                    out.push(abs);
+                }
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
+/// Repo-relative posix path of `file` against `root` (the link dir).
+/// Errors when `file` is outside the root so pull writes back to the
+/// same place push read from.
+pub fn relative_file_path(
+    root: &std::path::Path,
+    file: &std::path::Path,
+) -> anyhow::Result<String> {
+    let canon_root = std::fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
+    let canon_file = std::fs::canonicalize(file).unwrap_or_else(|_| {
+        if file.is_absolute() {
+            file.to_path_buf()
+        } else {
+            root.join(file)
+        }
+    });
+    let rel = canon_file.strip_prefix(&canon_root).map_err(|_| {
+        anyhow::anyhow!(
+            "file '{}' is outside the linked directory '{}'",
+            file.display(),
+            root.display()
+        )
+    })?;
+    if rel.as_os_str().is_empty() {
+        anyhow::bail!("cannot resolve file path for '{}'", file.display());
+    }
+    let rel = rel.to_string_lossy().replace('\\', "/");
+    let rel = rel.trim_start_matches("./").to_string();
+    if rel.split('/').any(|s| s == "..") {
+        anyhow::bail!(
+            "file '{}' is outside the linked directory '{}'",
+            file.display(),
+            root.display()
+        );
+    }
+    envoy_shared::validation::validate_file_path(&rel)
+        .map_err(|e| anyhow::anyhow!(e))?;
+    Ok(rel)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -401,5 +500,37 @@ mod tests {
     fn sanitize_filename_replaces_unsafe_chars() {
         assert_eq!(sanitize_filename("Prod-1"), "prod-1");
         assert_eq!(sanitize_filename("my env/prod"), "my_env_prod");
+    }
+
+    #[test]
+    fn discover_finds_nested_envs_skips_ignored_and_examples() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path();
+        fs::create_dir_all(root.join("server")).expect("server dir");
+        fs::create_dir_all(root.join("client")).expect("client dir");
+        fs::create_dir_all(root.join("node_modules")).expect("nm dir");
+        fs::write(root.join("server/.env"), "A=1\n").expect("write");
+        fs::write(root.join("client/.env.production"), "B=2\n").expect("write");
+        fs::write(root.join("node_modules/.env"), "X=9\n").expect("write");
+        fs::write(root.join(".env.example"), "E=1\n").expect("write");
+        let found = discover_env_files(root);
+        let rels: Vec<String> = found
+            .iter()
+            .map(|p| {
+                relative_file_path(root, p).expect("relative")
+            })
+            .collect();
+        assert_eq!(rels, vec!["client/.env.production", "server/.env"]);
+    }
+
+    #[test]
+    fn relative_path_rejects_outside_root() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let root = dir.path().join("proj");
+        fs::create_dir_all(&root).expect("proj dir");
+        let outside = dir.path().join("other.env");
+        fs::write(&outside, "A=1\n").expect("write");
+        let err = relative_file_path(&root, &outside).expect_err("must reject outside");
+        assert!(err.to_string().contains("outside"), "names escape: {err}");
     }
 }

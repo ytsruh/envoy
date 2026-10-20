@@ -86,6 +86,8 @@ pub struct VariableResponse {
     pub key: String,
     pub value: String,
     pub description: Option<String>,
+    #[serde(default)]
+    pub file_path: String,
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
 }

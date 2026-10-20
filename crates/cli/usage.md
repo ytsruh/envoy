@@ -4,7 +4,7 @@
 
 ```
 envoy manage ...   # server, auth, projects, envs, invites, members, links, status
-envoy vars ...     # daily variables: pull, push, set, get, unset, list
+envoy vars ...     # daily variables: pull, push (files only)
 envoy link         # link this directory (defaults env to `dev`)
 envoy use <env>    # switch default environment (switch-only)
 envoy unlink       # remove link for cwd
@@ -52,13 +52,17 @@ With a link in place, daily commands just work against `dev` — no `use` needed
 ## Daily variables (`envoy vars ...`)
 
 ```bash
-envoy vars push [--env dev] [-f .env]
-envoy vars pull [--env dev]            # -> .env.<env> by default, -f to override
-envoy vars set API_KEY secret [--env dev]
-envoy vars get API_KEY [--env dev]    # prints value only (script-friendly)
-envoy vars unset API_KEY [--env dev] [--yes]
-envoy vars list [--env dev]           # KEY=VALUE lines
+envoy vars push [--env dev] [-f server/.env]   # scans linked dir for env files by default
+envoy vars pull [--env dev] [-f single.env]    # writes each stored file_path by default
 ```
+
+Files are the interface: `push` scans the linked directory subtree (no depth
+cap, skipping `.git/`, `node_modules/`, `target/`, etc.) for `.env`,
+`.env.*`, and `*.env` (excluding `*.example`), uploads each with its
+repo-relative path (`server/.env`), and fails if the same key appears in two
+files of one environment. `pull` groups by stored `file_path` and writes each
+file back under the link dir. `-f` is a one-off single-file override in both
+directions and does not change tracking.
 
 Mutating commands print the resolved `project/env` target
 (e.g. `Pushed to 'demo/dev'`).
@@ -113,7 +117,7 @@ envoy vars push --env prod -f .env
 Misspelled names fail closed with a suggestion:
 
 ```bash
-$ envoy vars list --env prdo
+$ envoy vars pull --env prdo
 Error: environment 'prdo' not found. Did you mean 'prod'? — run 'envoy manage envs list' to see available environments
 ```
 
@@ -135,5 +139,3 @@ list + match.
 
 1. `envoy manage status` first when something looks wrong (server/link/login for cwd).
 2. Use `--project/--env` in CI; use `link`/`use` locally.
-3. `get` prints only the value, so `export KEY=$(envoy vars get KEY --env prod)` works.
-4. `list` prints `KEY=VALUE` lines, safe to pipe to files.

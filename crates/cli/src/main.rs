@@ -52,7 +52,7 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum VarsCmd {
-    /// Download variables to a .env file.
+    /// Download variables, grouping by stored file path.
     Pull {
         /// Environment to use (defaults to this directory's environment).
         #[arg(long, short = 'e')]
@@ -60,13 +60,13 @@ enum VarsCmd {
         /// Project to use (defaults to this directory's project).
         #[arg(long, short = 'p')]
         project: Option<String>,
-        /// Output file (defaults to `.env.<env>`).
+        /// Output file override (writes all variables to one file).
         #[arg(short, long)]
         file: Option<String>,
     },
-    /// Upload a .env file.
+    /// Upload env files found under the linked directory.
     #[command(
-        long_about = "Upload a .env file, creating or overwriting matching keys. Never creates environments: a misspelled --env fails instead."
+        long_about = "Scan the linked directory for env files and upload each, tracking its repo-relative path. Never creates environments: a misspelled --env fails instead."
     )]
     Push {
         /// Environment to use (defaults to this directory's environment).
@@ -75,61 +75,9 @@ enum VarsCmd {
         /// Project to use (defaults to this directory's project).
         #[arg(long, short = 'p')]
         project: Option<String>,
-        /// Input file to upload.
-        #[arg(short, long, default_value = ".env")]
-        file: String,
-    },
-    /// Set a variable.
-    Set {
-        /// Variable key (e.g. API_KEY).
-        key: String,
-        /// Variable value.
-        value: String,
-        /// Environment to use (defaults to this directory's environment).
-        #[arg(long, short = 'e')]
-        env: Option<String>,
-        /// Project to use (defaults to this directory's project).
-        #[arg(long, short = 'p')]
-        project: Option<String>,
-    },
-    /// Print a variable's value.
-    #[command(long_about = "Prints only the value, so it can be used in scripts.")]
-    Get {
-        /// Variable key (e.g. API_KEY).
-        key: String,
-        /// Environment to use (defaults to this directory's environment).
-        #[arg(long, short = 'e')]
-        env: Option<String>,
-        /// Project to use (defaults to this directory's project).
-        #[arg(long, short = 'p')]
-        project: Option<String>,
-    },
-    /// Delete a variable.
-    #[command(
-        long_about = "Delete a variable by key. Asks for confirmation unless --yes is given."
-    )]
-    Unset {
-        /// Variable key (e.g. API_KEY).
-        key: String,
-        /// Environment to use (defaults to this directory's environment).
-        #[arg(long, short = 'e')]
-        env: Option<String>,
-        /// Project to use (defaults to this directory's project).
-        #[arg(long, short = 'p')]
-        project: Option<String>,
-        /// Skip the confirmation prompt.
-        #[arg(long)]
-        yes: bool,
-    },
-    /// List variables.
-    #[command(long_about = "List variables as KEY=VALUE lines. Safe to pipe to files.")]
-    List {
-        /// Environment to use (defaults to this directory's environment).
-        #[arg(long, short = 'e')]
-        env: Option<String>,
-        /// Project to use (defaults to this directory's project).
-        #[arg(long, short = 'p')]
-        project: Option<String>,
+        /// Input file to upload (one-off override; scans when omitted).
+        #[arg(short, long)]
+        file: Option<String>,
     },
 }
 
@@ -519,64 +467,183 @@ async fn main() {
         Commands::Vars { cmd } => match cmd {
             VarsCmd::Pull { env, project, file } => {
                 let client = Client::require_token().unwrap_or_else(err);
-                let (_proj, env_res) = resolve_ctx(&client, project, env).await;
-                let out = file.unwrap_or_else(|| {
-                    format!(".env.{}", envfile::sanitize_filename(&env_res.name))
-                });
+                let (proj, env_res) = resolve_ctx(&client, project, env).await;
                 let vars = client.list_variables(&env_res.id).await.unwrap_or_else(err);
                 if vars.is_empty() {
                     println!("No variables to export");
                     return;
                 }
-                if std::path::Path::new(&out).exists() {
-                    eprintln!("Warning: File '{out}' already exists in current directory");
-                    let ok = prompts::confirm("Overwrite existing file?")
-                        .unwrap_or_else(|e| fail(&e.to_string()));
-                    if !ok {
-                        println!("Export cancelled");
-                        return;
+                let root = config::link_root_for_cwd();
+                // Single-file override: legacy behavior, everything to one file.
+                if let Some(out) = file {
+                    if std::path::Path::new(&out).exists() {
+                        eprintln!("Warning: File '{out}' already exists in current directory");
+                        let ok = prompts::confirm("Overwrite existing file?")
+                            .unwrap_or_else(|e| fail(&e.to_string()));
+                        if !ok {
+                            println!("Export cancelled");
+                            return;
+                        }
                     }
+                    let map: BTreeMap<String, String> =
+                        vars.into_iter().map(|v| (v.key, v.value)).collect();
+                    let n = map.len();
+                    if let Err(e) = envfile::write_env_file(&out, &map) {
+                        fail(&format!("Failed to write file '{out}': {e}"));
+                    }
+                    println!("Pulled {n} variable(s) to {out}");
+                    return;
                 }
-                let map: BTreeMap<String, String> =
-                    vars.into_iter().map(|v| (v.key, v.value)).collect();
-                let n = map.len();
-                if let Err(e) = envfile::write_env_file(&out, &map) {
-                    fail(&format!("Failed to write file '{out}': {e}"));
+                // Group by stored repo-relative path; legacy '' rows go to
+                // the historical default so old projects still pull.
+                let mut groups: BTreeMap<String, BTreeMap<String, String>> =
+                    BTreeMap::new();
+                for v in vars {
+                    let fp = if v.file_path.is_empty() {
+                        format!(".env.{}", envfile::sanitize_filename(&env_res.name))
+                    } else {
+                        v.file_path.clone()
+                    };
+                    groups.entry(fp).or_default().insert(v.key, v.value);
                 }
-                println!("Pulled {n} variable(s) to {out}");
+                let mut files = 0;
+                let mut total = 0;
+                for (rel, map) in &groups {
+                    let abs = root.join(rel);
+                    if let Some(parent) = abs.parent() {
+                        if let Err(e) = std::fs::create_dir_all(parent) {
+                            fail(&format!("Failed to create dir '{}': {e}", parent.display()));
+                        }
+                    }
+                    if abs.exists() {
+                        eprintln!("Warning: File '{}' already exists", abs.display());
+                        let ok = prompts::confirm("Overwrite existing file?")
+                            .unwrap_or_else(|e| fail(&e.to_string()));
+                        if !ok {
+                            println!("Skipped {}", abs.display());
+                            continue;
+                        }
+                    }
+                    let n = map.len();
+                    if let Err(e) = envfile::write_env_file(
+                        &abs.to_string_lossy().to_string(),
+                        map,
+                    ) {
+                        fail(&format!("Failed to write file '{}': {e}", abs.display()));
+                    }
+                    println!("Pulled {n} variable(s) to {}", abs.display());
+                    files += 1;
+                    total += n;
+                }
+                println!(
+                    "Pulled {total} variable(s) in {files} file(s) from '{}/{}'",
+                    proj.name, env_res.name
+                );
             }
             VarsCmd::Push { env, project, file } => {
                 let client = Client::require_token().unwrap_or_else(err);
                 let (proj, env_res) = resolve_ctx(&client, project, env).await;
-                if std::path::Path::new(&file).metadata().is_err() {
-                    fail(&format!("File '{file}' not found"));
+                let root = config::link_root_for_cwd();
+                // Collect (abs_path, rel_path, vars) tuples.
+                let mut targets: Vec<(String, String, BTreeMap<String, String>)> =
+                    Vec::new();
+                if let Some(single) = file {
+                    if std::path::Path::new(&single).metadata().is_err() {
+                        fail(&format!("File '{single}' not found"));
+                    }
+                    let vars =
+                        envfile::parse_env_file(&single).unwrap_or_else(|e| fail(&e.to_string()));
+                    if vars.is_empty() {
+                        println!("No variables found in {single}");
+                        return;
+                    }
+                    // Resolve relative `-f` against cwd (not the link root)
+                    // so `cd server && push -f .env` maps to `server/.env`.
+                    let single_path = std::path::PathBuf::from(&single);
+                    let abs_single = if single_path.is_absolute() {
+                        single_path
+                    } else {
+                        std::env::current_dir()
+                            .unwrap_or_else(|_| std::path::PathBuf::from("."))
+                            .join(&single_path)
+                    };
+                    let rel = envfile::relative_file_path(&root, &abs_single)
+                        .unwrap_or_else(|e| fail(&e.to_string()));
+                    targets.push((single, rel, vars));
+                } else {
+                    let found = envfile::discover_env_files(&root);
+                    if found.is_empty() {
+                        fail(&format!(
+                            "No env files found under '{}'",
+                            root.display()
+                        ));
+                    }
+                    for abs in found {
+                        let vars = envfile::parse_env_file(
+                            &abs.to_string_lossy().to_string(),
+                        )
+                        .unwrap_or_else(|e| fail(&e.to_string()));
+                        if vars.is_empty() {
+                            println!("Skipped {} (no variables)", abs.display());
+                            continue;
+                        }
+                        let rel = envfile::relative_file_path(&root, &abs)
+                            .unwrap_or_else(|e| fail(&e.to_string()));
+                        targets.push((
+                            abs.to_string_lossy().to_string(),
+                            rel,
+                            vars,
+                        ));
+                    }
+                    if targets.is_empty() {
+                        println!("No variables found");
+                        return;
+                    }
                 }
-                let vars = envfile::parse_env_file(&file).unwrap_or_else(|e| fail(&e.to_string()));
-                if vars.is_empty() {
-                    println!("No variables found in {file}");
-                    return;
+                // Same key in two files of one env must fail, not last-win.
+                {
+                    let mut seen: BTreeMap<&String, &String> = BTreeMap::new();
+                    for (_, rel, vars) in &targets {
+                        for k in vars.keys() {
+                            if let Some(prev) = seen.get(k) {
+                                fail(&format!(
+                                    "key '{k}' appears in both '{prev}' and '{rel}': same key in two files of one environment is not allowed"
+                                ));
+                            }
+                            seen.insert(k, rel);
+                        }
+                    }
                 }
                 let existing = client.list_variables(&env_res.id).await.unwrap_or_else(err);
                 let mut created = 0;
                 let mut updated = 0;
                 let mut failed = 0;
-                for (k, v) in &vars {
-                    match existing.iter().find(|e| e.key == *k) {
-                        Some(cur) if cur.value == *v => {}
-                        Some(cur) => match client.update_variable(&cur.id, k, v).await {
-                            Ok(_) => updated += 1,
-                            Err(e) => {
-                                failed += 1;
-                                eprintln!("Failed to update {k}: {e}");
-                            }
-                        },
-                        None => match client.create_variable(&env_res.id, k, v).await {
-                            Ok(_) => created += 1,
-                            Err(e) => {
-                                failed += 1;
-                                eprintln!("Failed to create {k}: {e}");
-                            }
-                        },
+                for (_, rel, vars) in &targets {
+                    for (k, v) in vars {
+                        match existing.iter().find(|e| e.key == *k) {
+                            Some(cur)
+                                if cur.value == *v && cur.file_path == *rel => {}
+                            Some(cur) => match client
+                                .update_variable(&cur.id, k, v, rel)
+                                .await
+                            {
+                                Ok(_) => updated += 1,
+                                Err(e) => {
+                                    failed += 1;
+                                    eprintln!("Failed to update {k} ({rel}): {e}");
+                                }
+                            },
+                            None => match client
+                                .create_variable(&env_res.id, k, v, rel)
+                                .await
+                            {
+                                Ok(_) => created += 1,
+                                Err(e) => {
+                                    failed += 1;
+                                    eprintln!("Failed to create {k} ({rel}): {e}");
+                                }
+                            },
+                        }
                     }
                 }
                 if failed > 0 {
@@ -586,82 +653,11 @@ async fn main() {
                     ));
                 }
                 println!(
-                    "Pushed to '{}/{}': {created} created, {updated} updated",
-                    proj.name, env_res.name
+                    "Pushed to '{}/{}': {created} created, {updated} updated in {} file(s)",
+                    proj.name,
+                    env_res.name,
+                    targets.len()
                 );
-            }
-            VarsCmd::Set {
-                key,
-                value,
-                env,
-                project,
-            } => {
-                let client = Client::require_token().unwrap_or_else(err);
-                let (_proj, env_res) = resolve_ctx(&client, project, env).await;
-                if key.trim().is_empty() || value.is_empty() {
-                    fail("key and value are required");
-                }
-                let existing = client.list_variables(&env_res.id).await.unwrap_or_else(err);
-                match existing.iter().find(|v| v.key == key) {
-                    Some(cur) => match client.update_variable(&cur.id, &key, &value).await {
-                        Ok(v) => println!("Updated {}={} in '{}'", v.key, v.value, env_res.name),
-                        Err(e) => err(e),
-                    },
-                    None => match client.create_variable(&env_res.id, &key, &value).await {
-                        Ok(v) => println!("Set {}={} in '{}'", v.key, v.value, env_res.name),
-                        Err(e) => err(e),
-                    },
-                }
-            }
-            VarsCmd::Get { key, env, project } => {
-                let client = Client::require_token().unwrap_or_else(err);
-                let (_proj, env_res) = resolve_ctx(&client, project, env).await;
-                match client.resolve_variable(&env_res.id, &key).await {
-                    Ok(v) => println!("{}", v.value),
-                    Err(e) => err(e),
-                }
-            }
-            VarsCmd::Unset {
-                key,
-                env,
-                project,
-                yes,
-            } => {
-                let client = Client::require_token().unwrap_or_else(err);
-                let (_proj, env_res) = resolve_ctx(&client, project, env).await;
-                let cur = client
-                    .resolve_variable(&env_res.id, &key)
-                    .await
-                    .unwrap_or_else(err);
-                if !yes {
-                    println!("Delete '{key}' from '{}'?", env_res.name);
-                    let ok = prompts::confirm("This action cannot be undone")
-                        .unwrap_or_else(|e| fail(&e.to_string()));
-                    if !ok {
-                        println!("Operation cancelled");
-                        return;
-                    }
-                }
-                match client.delete_variable(&cur.id).await {
-                    Ok(()) => println!("Deleted '{key}'"),
-                    Err(e) => err(e),
-                }
-            }
-            VarsCmd::List { env, project } => {
-                let client = Client::require_token().unwrap_or_else(err);
-                let (_proj, env_res) = resolve_ctx(&client, project, env).await;
-                match client.list_variables(&env_res.id).await {
-                    Ok(list) => {
-                        if list.is_empty() {
-                            println!("No variables found");
-                        } else {
-                            for v in list {
-                                println!("{}={}", v.key, v.value);
-                            }
-                        }
-                    }
-                    Err(e) => err(e),
-                }
             }
         },
         Commands::Unlink => match config::remove_link() {

@@ -1,6 +1,6 @@
 # Envoy CLI Usage Guide
 
-## Command groups (5 top-level)
+## Command groups (6 top-level)
 
 ```
 envoy manage ...   # server, auth, projects, envs, invites, members, links, status
@@ -8,6 +8,7 @@ envoy vars ...     # daily variables: pull, push (files only)
 envoy link         # link this directory (defaults env to `dev`)
 envoy use <env>    # switch default environment (switch-only)
 envoy unlink       # remove link for cwd
+envoy list         # read-only inventory: envs + keys + file paths
 ```
 
 Everything is stored in one global file, `~/.envoy/config.json`
@@ -66,6 +67,18 @@ directions and does not change tracking.
 
 Mutating commands print the resolved `project/env` target
 (e.g. `Pushed to 'demo/dev'`).
+
+## Read-only inventory (`envoy list`)
+
+```bash
+envoy list [--project demo] [--env prod] [--show-values]
+```
+
+Lists every environment in the project with keys grouped by stored
+`file_path`. Values are hidden by default (safe to share); pass
+`--show-values` to print `KEY=VALUE`. Read-only: only `GET
+/projects/{id}/environments` and `GET /environments/{id}/variables`
+(viewer role suffices).
 
 ### `.env` file format
 

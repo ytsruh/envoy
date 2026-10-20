@@ -48,6 +48,18 @@ enum Commands {
     },
     /// Disconnect this directory from its project.
     Unlink,
+    /// List environments and variable keys (read-only; values hidden unless --show-values).
+    List {
+        /// Project to use (defaults to this directory's project).
+        #[arg(long, short = 'p')]
+        project: Option<String>,
+        /// Only show this environment (defaults to all environments).
+        #[arg(long, short = 'e')]
+        env: Option<String>,
+        /// Show secret values (default hides them).
+        #[arg(long)]
+        show_values: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -273,8 +285,7 @@ async fn resolve_project_ctx(
                     // report them, don't mask as a selection problem.
                     match &e {
                         ClientError::Server(msg)
-                            if msg.contains("not found")
-                                || msg.contains("access denied") =>
+                            if msg.contains("not found") || msg.contains("access denied") =>
                         {
                             // Fall through to name resolution / stale-link error below.
                             if link.project_name.is_empty() {
@@ -292,17 +303,15 @@ async fn resolve_project_ctx(
         if !link.project_name.is_empty() {
             match client.resolve_project(&link.project_name).await {
                 Ok(p) => return p,
-                Err(e) => {
-                    match &e {
-                        ClientError::Server(msg) if msg.contains("not found") => {
-                            fail(&format!(
+                Err(e) => match &e {
+                    ClientError::Server(msg) if msg.contains("not found") => {
+                        fail(&format!(
                                 "linked project '{}' is no longer accessible: {e}. Run 'envoy unlink' then 'envoy link'",
                                 link.project_name
                             ));
-                        }
-                        _ => err(e),
                     }
-                }
+                    _ => err(e),
+                },
             }
         }
     }
@@ -496,8 +505,7 @@ async fn main() {
                 }
                 // Group by stored repo-relative path; legacy '' rows go to
                 // the historical default so old projects still pull.
-                let mut groups: BTreeMap<String, BTreeMap<String, String>> =
-                    BTreeMap::new();
+                let mut groups: BTreeMap<String, BTreeMap<String, String>> = BTreeMap::new();
                 for v in vars {
                     let fp = if v.file_path.is_empty() {
                         format!(".env.{}", envfile::sanitize_filename(&env_res.name))
@@ -525,9 +533,7 @@ async fn main() {
                         }
                     }
                     let n = map.len();
-                    if let Err(e) =
-                        envfile::write_env_file(&abs.to_string_lossy(), map)
-                    {
+                    if let Err(e) = envfile::write_env_file(&abs.to_string_lossy(), map) {
                         fail(&format!("Failed to write file '{}': {e}", abs.display()));
                     }
                     println!("Pulled {n} variable(s) to {}", abs.display());
@@ -544,8 +550,7 @@ async fn main() {
                 let (proj, env_res) = resolve_ctx(&client, project, env).await;
                 let root = config::link_root_for_cwd();
                 // Collect (abs_path, rel_path, vars) tuples.
-                let mut targets: Vec<(String, String, BTreeMap<String, String>)> =
-                    Vec::new();
+                let mut targets: Vec<(String, String, BTreeMap<String, String>)> = Vec::new();
                 if let Some(single) = file {
                     if std::path::Path::new(&single).metadata().is_err() {
                         fail(&format!("File '{single}' not found"));
@@ -572,10 +577,7 @@ async fn main() {
                 } else {
                     let found = envfile::discover_env_files(&root);
                     if found.is_empty() {
-                        fail(&format!(
-                            "No env files found under '{}'",
-                            root.display()
-                        ));
+                        fail(&format!("No env files found under '{}'", root.display()));
                     }
                     for abs in found {
                         let vars = envfile::parse_env_file(&abs.to_string_lossy())
@@ -586,11 +588,7 @@ async fn main() {
                         }
                         let rel = envfile::relative_file_path(&root, &abs)
                             .unwrap_or_else(|e| fail(&e.to_string()));
-                        targets.push((
-                            abs.to_string_lossy().to_string(),
-                            rel,
-                            vars,
-                        ));
+                        targets.push((abs.to_string_lossy().to_string(), rel, vars));
                     }
                     if targets.is_empty() {
                         println!("No variables found");
@@ -618,22 +616,15 @@ async fn main() {
                 for (_, rel, vars) in &targets {
                     for (k, v) in vars {
                         match existing.iter().find(|e| e.key == *k) {
-                            Some(cur)
-                                if cur.value == *v && cur.file_path == *rel => {}
-                            Some(cur) => match client
-                                .update_variable(&cur.id, k, v, rel)
-                                .await
-                            {
+                            Some(cur) if cur.value == *v && cur.file_path == *rel => {}
+                            Some(cur) => match client.update_variable(&cur.id, k, v, rel).await {
                                 Ok(_) => updated += 1,
                                 Err(e) => {
                                     failed += 1;
                                     eprintln!("Failed to update {k} ({rel}): {e}");
                                 }
                             },
-                            None => match client
-                                .create_variable(&env_res.id, k, v, rel)
-                                .await
-                            {
+                            None => match client.create_variable(&env_res.id, k, v, rel).await {
                                 Ok(_) => created += 1,
                                 Err(e) => {
                                     failed += 1;
@@ -662,6 +653,55 @@ async fn main() {
             Ok(false) => println!("Not linked here"),
             Err(e) => fail(&e.to_string()),
         },
+        Commands::List {
+            project,
+            env,
+            show_values,
+        } => {
+            let client = Client::require_token().unwrap_or_else(err);
+            let proj = resolve_project_ctx(&client, project).await;
+            let envs = if let Some(filter) = env.filter(|v| !v.trim().is_empty()) {
+                vec![client
+                    .resolve_environment(&proj.id, &filter)
+                    .await
+                    .unwrap_or_else(err)]
+            } else {
+                client.list_environments(&proj.id).await.unwrap_or_else(err)
+            };
+            if envs.is_empty() {
+                println!("No environments in '{}'", proj.name);
+                return;
+            }
+            println!("Project '{}':\n", proj.name);
+            for env_res in envs {
+                let vars = client.list_variables(&env_res.id).await.unwrap_or_else(err);
+                println!("Env '{}' ({}):", env_res.name, env_res.id);
+                if vars.is_empty() {
+                    println!("  (no variables)");
+                } else {
+                    let mut groups: BTreeMap<String, Vec<&_>> = BTreeMap::new();
+                    for v in &vars {
+                        let fp = if v.file_path.is_empty() {
+                            "(legacy)".to_string()
+                        } else {
+                            v.file_path.clone()
+                        };
+                        groups.entry(fp).or_default().push(v);
+                    }
+                    for (fp, vs) in &groups {
+                        println!("  {fp}:");
+                        for v in vs {
+                            if show_values {
+                                println!("    {}={}", v.key, v.value);
+                            } else {
+                                println!("    {}", v.key);
+                            }
+                        }
+                    }
+                }
+                println!();
+            }
+        }
         Commands::Manage { cmd } => match cmd {
             ManageCmd::Connect { url } => {
                 let url = match url {

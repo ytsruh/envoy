@@ -525,10 +525,9 @@ async fn main() {
                         }
                     }
                     let n = map.len();
-                    if let Err(e) = envfile::write_env_file(
-                        &abs.to_string_lossy().to_string(),
-                        map,
-                    ) {
+                    if let Err(e) =
+                        envfile::write_env_file(&abs.to_string_lossy(), map)
+                    {
                         fail(&format!("Failed to write file '{}': {e}", abs.display()));
                     }
                     println!("Pulled {n} variable(s) to {}", abs.display());
@@ -579,10 +578,8 @@ async fn main() {
                         ));
                     }
                     for abs in found {
-                        let vars = envfile::parse_env_file(
-                            &abs.to_string_lossy().to_string(),
-                        )
-                        .unwrap_or_else(|e| fail(&e.to_string()));
+                        let vars = envfile::parse_env_file(&abs.to_string_lossy())
+                            .unwrap_or_else(|e| fail(&e.to_string()));
                         if vars.is_empty() {
                             println!("Skipped {} (no variables)", abs.display());
                             continue;

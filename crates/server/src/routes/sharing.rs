@@ -24,7 +24,7 @@ pub async fn add_member(
     let role = Role::parse(&req.role)
         .filter(|r| r.is_assignable())
         .ok_or_else(|| ApiError::bad("role must be one of: viewer, editor"))?;
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     crate::access::require_owner(&conn, &project_id, &user.user_id)
         .await
         .map_err(|_| ApiError::forbidden("only project owners can add users"))?;
@@ -61,7 +61,7 @@ pub async fn list_members(
     _user: AuthUser,
     Path(project_id): Path<String>,
 ) -> Result<Json<Vec<ProjectMemberResponse>>, ApiError> {
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     let mut rows = conn
         .query(
             "SELECT user_id, role, created_at FROM project_users WHERE project_id = ?1",
@@ -73,8 +73,8 @@ pub async fn list_members(
     while let Some(row) = rows.next().await.map_err(|e| ApiError::Internal(e.into()))? {
         let created: Option<String> = row.get(2).map_err(|e| ApiError::Internal(e.into()))?;
         out.push(ProjectMemberResponse {
-            user_id: get_string(&row, 0).map_err(|e| ApiError::Internal(e.into()))?,
-            role: get_string(&row, 1).map_err(|e| ApiError::Internal(e.into()))?,
+            user_id: get_string(&row, 0).map_err(ApiError::Internal)?,
+            role: get_string(&row, 1).map_err(ApiError::Internal)?,
             created_at: created.unwrap_or_default(),
         });
     }
@@ -93,7 +93,7 @@ pub async fn update_member_role(
     let role = Role::parse(&req.role)
         .filter(|r| r.is_assignable())
         .ok_or_else(|| ApiError::bad("role must be one of: viewer, editor"))?;
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     crate::access::require_owner(&conn, &project_id, &user.user_id)
         .await
         .map_err(|_| ApiError::forbidden("only project owners can update user roles"))?;
@@ -114,7 +114,7 @@ pub async fn remove_member(
     if member_id.is_empty() {
         return Err(ApiError::bad("invalid user ID"));
     }
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     crate::access::require_owner(&conn, &project_id, &user.user_id)
         .await
         .map_err(|_| ApiError::forbidden("only project owners can remove users"))?;

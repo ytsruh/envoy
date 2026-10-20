@@ -39,7 +39,7 @@ pub async fn create_invite(
         .db
         .conn()
         .await
-        .map_err(|e| ApiError::Internal(e.into()))?;
+        .map_err(ApiError::Internal)?;
     crate::access::require_admin(&conn, &user.user_id).await?;
 
     let mut dup = conn
@@ -102,7 +102,7 @@ pub async fn list_invites(
         .db
         .conn()
         .await
-        .map_err(|e| ApiError::Internal(e.into()))?;
+        .map_err(ApiError::Internal)?;
     crate::access::require_admin(&conn, &user.user_id).await?;
     let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
     let mut rows = conn
@@ -147,7 +147,7 @@ pub async fn revoke_invite(
         .db
         .conn()
         .await
-        .map_err(|e| ApiError::Internal(e.into()))?;
+        .map_err(ApiError::Internal)?;
     crate::access::require_admin(&conn, &user.user_id).await?;
     conn.execute(
         "DELETE FROM invites WHERE id = ?1",

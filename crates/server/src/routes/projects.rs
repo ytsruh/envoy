@@ -39,7 +39,7 @@ pub async fn create_project(
     validation::validate_name(&req.name).map_err(ApiError::bad)?;
     validation::validate_description(&req.description).map_err(ApiError::bad)?;
     validation::validate_git_repo(&req.git_repo).map_err(ApiError::bad)?;
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     if !req.git_repo.is_empty() {
         let mut rows = conn
             .query(
@@ -100,7 +100,7 @@ pub async fn list_projects(
     State(state): State<AppState>,
     AuthUser(user): AuthUser,
 ) -> Result<Json<Vec<ProjectResponse>>, ApiError> {
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     let mut rows = conn
         .query(
             &format!("{SELECT} AND (owner_id = ?1 OR id IN (SELECT project_id FROM project_users WHERE user_id = ?1)) ORDER BY created_at DESC"),
@@ -110,7 +110,7 @@ pub async fn list_projects(
         .map_err(|e| ApiError::Internal(e.into()))?;
     let mut out = Vec::new();
     while let Some(row) = rows.next().await.map_err(|e| ApiError::Internal(e.into()))? {
-        out.push(row_to_project(&row).map_err(|e| ApiError::Internal(e.into()))?);
+        out.push(row_to_project(&row).map_err(ApiError::Internal)?);
     }
     Ok(Json(out))
 }
@@ -127,7 +127,7 @@ pub async fn get_project(
     AuthUser(user): AuthUser,
     Path(id): Path<String>,
 ) -> Result<Json<ProjectResponse>, ApiError> {
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     let mut rows = conn
         .query(
             &format!("{SELECT} AND id = ?1 AND (owner_id = ?2 OR id IN (SELECT project_id FROM project_users WHERE user_id = ?2))"),
@@ -140,7 +140,7 @@ pub async fn get_project(
         .await
         .map_err(|e| ApiError::Internal(e.into()))?
         .ok_or_else(|| ApiError::not_found("project not found or access denied"))?;
-    Ok(Json(row_to_project(&row).map_err(|e| ApiError::Internal(e.into()))?))
+    Ok(Json(row_to_project(&row).map_err(ApiError::Internal)?))
 }
 
 pub async fn update_project(
@@ -152,7 +152,7 @@ pub async fn update_project(
     validation::validate_name(&req.name).map_err(ApiError::bad)?;
     validation::validate_description(&req.description).map_err(ApiError::bad)?;
     validation::validate_git_repo(&req.git_repo).map_err(ApiError::bad)?;
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     crate::access::require_editor(&conn, &id, &user.user_id).await?;
     let mut rows = conn
         .query(
@@ -204,7 +204,7 @@ pub async fn delete_project(
     AuthUser(user): AuthUser,
     Path(id): Path<String>,
 ) -> Result<Json<envoy_shared::responses::MessageBody>, ApiError> {
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     crate::access::require_owner(&conn, &id, &user.user_id).await.map_err(|_| {
         ApiError::forbidden("only project owners can delete projects")
     })?;

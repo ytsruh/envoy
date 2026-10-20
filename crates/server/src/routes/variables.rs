@@ -69,11 +69,11 @@ async fn fetch_var_with_project(
         .ok_or_else(|| ApiError::not_found("environment variable not found or access denied"))?;
     let project_id: String = row.get(8).map_err(|e| ApiError::Internal(e.into()))?;
     let var = VariableResponse {
-        id: get_string(&row, 0).map_err(|e| ApiError::Internal(e.into()))?,
-        environment_id: get_string(&row, 1).map_err(|e| ApiError::Internal(e.into()))?,
-        key: get_string(&row, 2).map_err(|e| ApiError::Internal(e.into()))?,
-        value: get_string(&row, 3).map_err(|e| ApiError::Internal(e.into()))?,
-        description: get_opt_string(&row, 4).map_err(|e| ApiError::Internal(e.into()))?,
+        id: get_string(&row, 0).map_err(ApiError::Internal)?,
+        environment_id: get_string(&row, 1).map_err(ApiError::Internal)?,
+        key: get_string(&row, 2).map_err(ApiError::Internal)?,
+        value: get_string(&row, 3).map_err(ApiError::Internal)?,
+        description: get_opt_string(&row, 4).map_err(ApiError::Internal)?,
         file_path: row
             .get::<Option<String>>(5)
             .map_err(|e| ApiError::Internal(e.into()))?
@@ -98,7 +98,7 @@ pub async fn create_variable(
     }
     validation::validate_description(&req.description).map_err(ApiError::bad)?;
     validation::validate_file_path(&req.file_path).map_err(ApiError::bad)?;
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     let project_id = project_id_for_env(&conn, &env_id).await?;
     crate::access::require_editor(&conn, &project_id, &user.user_id).await?;
     let id = Uuid::new_v4().to_string();
@@ -145,7 +145,7 @@ pub async fn list_variables(
     AuthUser(user): AuthUser,
     Path(env_id): Path<String>,
 ) -> Result<Json<Vec<VariableResponse>>, ApiError> {
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     let project_id = project_id_for_env(&conn, &env_id).await?;
     crate::access::require_viewer(&conn, &project_id, &user.user_id).await?;
     let mut rows = conn
@@ -157,7 +157,7 @@ pub async fn list_variables(
         .map_err(|e| ApiError::Internal(e.into()))?;
     let mut out = Vec::new();
     while let Some(row) = rows.next().await.map_err(|e| ApiError::Internal(e.into()))? {
-        out.push(row_to_var(&row).map_err(|e| ApiError::Internal(e.into()))?);
+        out.push(row_to_var(&row).map_err(ApiError::Internal)?);
     }
     Ok(Json(out))
 }
@@ -167,7 +167,7 @@ pub async fn get_variable(
     AuthUser(user): AuthUser,
     Path(var_id): Path<String>,
 ) -> Result<Json<VariableResponse>, ApiError> {
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     let (var, project_id) = fetch_var_with_project(&conn, &var_id).await?;
     crate::access::require_viewer(&conn, &project_id, &user.user_id).await?;
     Ok(Json(var))
@@ -187,7 +187,7 @@ pub async fn update_variable(
     }
     validation::validate_description(&req.description).map_err(ApiError::bad)?;
     validation::validate_file_path(&req.file_path).map_err(ApiError::bad)?;
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     let (existing, project_id) = fetch_var_with_project(&conn, &var_id).await?;
     crate::access::require_editor(&conn, &project_id, &user.user_id).await?;
     let desc: Option<String> = if req.description.is_empty() {
@@ -226,7 +226,7 @@ pub async fn delete_variable(
     AuthUser(user): AuthUser,
     Path(var_id): Path<String>,
 ) -> Result<Json<envoy_shared::responses::MessageBody>, ApiError> {
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     let (_, project_id) = fetch_var_with_project(&conn, &var_id).await?;
     crate::access::require_editor(&conn, &project_id, &user.user_id).await?;
     conn.execute(

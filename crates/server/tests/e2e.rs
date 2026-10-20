@@ -377,16 +377,17 @@ async fn full_e2e_flow() {
     .await;
     assert_eq!(s, StatusCode::OK);
 
-    // variables CRUD
+    // variables CRUD (file_path tracks the source env file)
     let (s, v) = call(
         &mut app,
         "POST",
         &format!("/environments/{eid}/variables"),
         Some(&token_a),
-        Some(json!({"key": "API_KEY", "value": "secret", "description": ""})),
+        Some(json!({"key": "API_KEY", "value": "secret", "description": "", "file_path": "server/.env"})),
     )
     .await;
     assert_eq!(s, StatusCode::CREATED, "{v}");
+    assert_eq!(v["file_path"], "server/.env");
     let vid = v["id"].as_str().unwrap().to_string();
     let (s, v) = call(
         &mut app,
@@ -398,6 +399,7 @@ async fn full_e2e_flow() {
     .await;
     assert_eq!(s, StatusCode::OK);
     assert_eq!(v.as_array().unwrap().len(), 1);
+    assert_eq!(v[0]["file_path"], "server/.env");
     let (s, _) = call(
         &mut app,
         "GET",
@@ -412,11 +414,33 @@ async fn full_e2e_flow() {
         "PUT",
         &format!("/variables/{vid}"),
         Some(&token_a),
-        Some(json!({"key": "API_KEY", "value": "rotated", "description": ""})),
+        Some(json!({"key": "API_KEY", "value": "rotated", "description": "", "file_path": "server/.env"})),
     )
     .await;
     assert_eq!(s, StatusCode::OK, "{v}");
     assert_eq!(v["value"], "rotated");
+    // Same key twice in one env must fail, even from another file.
+    let (s, _) = call(
+        &mut app,
+        "POST",
+        &format!("/environments/{eid}/variables"),
+        Some(&token_a),
+        Some(json!({"key": "API_KEY", "value": "other", "description": "", "file_path": "client/.env"})),
+    )
+    .await;
+    assert_eq!(s, StatusCode::CONFLICT);
+    // Absolute and parent-escaping paths are rejected.
+    for bad in ["/abs/.env", "../escape.env"] {
+        let (s, _) = call(
+            &mut app,
+            "POST",
+            &format!("/environments/{eid}/variables"),
+            Some(&token_a),
+            Some(json!({"key": "BAD_KEY", "value": "x", "description": "", "file_path": bad})),
+        )
+        .await;
+        assert_eq!(s, StatusCode::BAD_REQUEST, "{bad}");
+    }
 
     // RBAC: downgrade Bob to viewer, check write denied
     let (s, _) = call(

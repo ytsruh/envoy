@@ -36,7 +36,7 @@ pub async fn create_environment(
 ) -> Result<(StatusCode, Json<EnvironmentResponse>), ApiError> {
     validation::validate_name(&req.name).map_err(ApiError::bad)?;
     validation::validate_description(&req.description).map_err(ApiError::bad)?;
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     crate::access::require_editor(&conn, &project_id, &user.user_id).await?;
     let id = Uuid::new_v4().to_string();
     let now = envoy_shared::types::sqlite_now();
@@ -77,7 +77,7 @@ pub async fn list_environments(
     AuthUser(user): AuthUser,
     Path(project_id): Path<String>,
 ) -> Result<Json<Vec<EnvironmentResponse>>, ApiError> {
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     crate::access::require_viewer(&conn, &project_id, &user.user_id).await?;
     let mut rows = conn
         .query(
@@ -88,7 +88,7 @@ pub async fn list_environments(
         .map_err(|e| ApiError::Internal(e.into()))?;
     let mut out = Vec::new();
     while let Some(row) = rows.next().await.map_err(|e| ApiError::Internal(e.into()))? {
-        out.push(row_to_env(&row, &project_id).map_err(|e| ApiError::Internal(e.into()))?);
+        out.push(row_to_env(&row, &project_id).map_err(ApiError::Internal)?);
     }
     Ok(Json(out))
 }
@@ -110,9 +110,9 @@ async fn fetch_env(
         .map_err(|e| ApiError::Internal(e.into()))?
         .ok_or_else(|| ApiError::not_found("environment not found or access denied"))?;
     Ok(EnvironmentResponse {
-        id: get_string(&row, 0).map_err(|e| ApiError::Internal(e.into()))?,
-        project_id: get_string(&row, 1).map_err(|e| ApiError::Internal(e.into()))?,
-        name: get_string(&row, 2).map_err(|e| ApiError::Internal(e.into()))?,
+        id: get_string(&row, 0).map_err(ApiError::Internal)?,
+        project_id: get_string(&row, 1).map_err(ApiError::Internal)?,
+        name: get_string(&row, 2).map_err(ApiError::Internal)?,
         description: {
             let v: Option<String> = row.get(3).map_err(|e| ApiError::Internal(e.into()))?;
             v.filter(|s| !s.is_empty())
@@ -127,7 +127,7 @@ pub async fn get_environment(
     AuthUser(user): AuthUser,
     Path(env_id): Path<String>,
 ) -> Result<Json<EnvironmentResponse>, ApiError> {
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     let env = fetch_env(&conn, &env_id).await?;
     crate::access::require_viewer(&conn, &env.project_id, &user.user_id).await?;
     Ok(Json(env))
@@ -141,7 +141,7 @@ pub async fn update_environment(
 ) -> Result<Json<EnvironmentResponse>, ApiError> {
     validation::validate_name(&req.name).map_err(ApiError::bad)?;
     validation::validate_description(&req.description).map_err(ApiError::bad)?;
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     let existing = fetch_env(&conn, &env_id).await?;
     crate::access::require_editor(&conn, &existing.project_id, &user.user_id).await?;
     let desc: Option<String> = if req.description.is_empty() {
@@ -175,7 +175,7 @@ pub async fn delete_environment(
     AuthUser(user): AuthUser,
     Path(env_id): Path<String>,
 ) -> Result<Json<envoy_shared::responses::MessageBody>, ApiError> {
-    let conn = state.db.conn().await.map_err(|e| ApiError::Internal(e.into()))?;
+    let conn = state.db.conn().await.map_err(ApiError::Internal)?;
     let existing = fetch_env(&conn, &env_id).await?;
     crate::access::require_editor(&conn, &existing.project_id, &user.user_id).await?;
     conn.execute(

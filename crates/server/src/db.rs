@@ -61,11 +61,12 @@ CREATE TABLE IF NOT EXISTS environment_variables (
   key TEXT NOT NULL,
   value TEXT NOT NULL,
   description TEXT,
+  file_path TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (environment_id) REFERENCES environments(id) ON DELETE CASCADE
 );
-"#;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_vars_env_key ON environment_variables(environment_id, key);"#;
 
 #[derive(Clone)]
 pub struct Db {
@@ -120,6 +121,27 @@ impl Db {
                 return Err(e.into());
             }
         }
+        // Backfill for databases created before file_path existed: each
+        // variable keeps its value, legacy rows read as '' (single-file).
+        if let Err(e) = conn
+            .execute(
+                "ALTER TABLE environment_variables ADD COLUMN file_path TEXT NOT NULL DEFAULT ''",
+                libsql::params![],
+            )
+            .await
+        {
+            let msg = e.to_string();
+            if !msg.contains("duplicate column") && !msg.contains("already exists") {
+                return Err(e.into());
+            }
+        }
+        // Same key in two files of one env must fail instead of forking.
+        // Fails loudly here if an old DB already has duplicates.
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_vars_env_key ON environment_variables(environment_id, key)",
+            libsql::params![],
+        )
+        .await?;
         Ok(())
     }
 }

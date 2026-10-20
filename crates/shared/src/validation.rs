@@ -27,6 +27,28 @@ pub fn validate_git_repo(value: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Repo-relative posix path of the source env file (e.g. `server/.env`).
+/// Empty is allowed for legacy rows. Otherwise 1-500 chars, no absolute
+/// paths, no `..` escapes, no backslashes.
+pub fn validate_file_path(value: &str) -> Result<(), String> {
+    if value.is_empty() {
+        return Ok(());
+    }
+    if value.len() > 500 {
+        return Err("file_path must be at most 500 characters".to_string());
+    }
+    if value.starts_with('/') {
+        return Err("file_path must be relative, not absolute".to_string());
+    }
+    if value.contains('\\') {
+        return Err("file_path must use '/' separators".to_string());
+    }
+    if value.split('/').any(|s| s == "..") {
+        return Err("file_path must not contain '..'".to_string());
+    }
+    Ok(())
+}
+
 pub fn validate_register(name: &str, email: &str, password: &str) -> Result<(), String> {
     if name.is_empty() || name.len() > 50 {
         return Err("name must be between 1 and 50 characters".to_string());

@@ -121,6 +121,12 @@ fn cwd_key() -> String {
 
 /// Find the link for cwd, walking up parents so subdirs inherit.
 pub fn link_for_cwd() -> anyhow::Result<Option<LinkEntry>> {
+    Ok(link_dir_for_cwd()?.map(|(_, e)| e))
+}
+
+/// Find the link for cwd, walking up parents so subdirs inherit.
+/// Returns the link directory and entry.
+pub fn link_dir_for_cwd() -> anyhow::Result<Option<(PathBuf, LinkEntry)>> {
     let cfg = load()?;
     if cfg.links.is_empty() {
         return Ok(None);
@@ -130,11 +136,22 @@ pub fn link_for_cwd() -> anyhow::Result<Option<LinkEntry>> {
     let mut cur: Option<&std::path::Path> = Some(&canon);
     while let Some(p) = cur {
         if let Some(e) = cfg.links.get(&p.to_string_lossy().to_string()) {
-            return Ok(Some(e.clone()));
+            return Ok(Some((p.to_path_buf(), e.clone())));
         }
         cur = p.parent();
     }
     Ok(None)
+}
+
+/// Link root for file-path resolution: nearest linked dir, else cwd.
+pub fn link_root_for_cwd() -> PathBuf {
+    match link_dir_for_cwd() {
+        Ok(Some((dir, _))) => dir,
+        _ => {
+            let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            std::fs::canonicalize(&cwd).unwrap_or(cwd)
+        }
+    }
 }
 
 pub fn set_link(entry: &LinkEntry) -> anyhow::Result<String> {

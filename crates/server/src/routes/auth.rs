@@ -52,7 +52,7 @@ pub async fn setup(
         .db
         .conn()
         .await
-        .map_err(|e| ApiError::Internal(e.into()))?;
+        .map_err(ApiError::Internal)?;
 
     if user_count(&conn).await? > 0 {
         return Err(ApiError::forbidden(
@@ -76,7 +76,7 @@ pub async fn setup(
         return Err(ApiError::conflict("user with this email already exists"));
     }
 
-    let hash = auth::hash_password(&req.password).map_err(|e| ApiError::Internal(e.into()))?;
+    let hash = auth::hash_password(&req.password).map_err(ApiError::Internal)?;
     let id = Uuid::new_v4().to_string();
     let now = envoy_shared::types::sqlite_now();
     conn.execute(
@@ -87,7 +87,7 @@ pub async fn setup(
     .map_err(|e| ApiError::Internal(e.into()))?;
 
     let token = auth::generate_jwt(&id, &req.email, &state.jwt_secret)
-        .map_err(|e| ApiError::Internal(e.into()))?;
+        .map_err(ApiError::Internal)?;
     Ok((
         StatusCode::CREATED,
         Json(AuthResponse {
@@ -114,7 +114,7 @@ pub async fn accept_invite(
         .db
         .conn()
         .await
-        .map_err(|e| ApiError::Internal(e.into()))?;
+        .map_err(ApiError::Internal)?;
 
     let hash = invite_token_hash(&req.token);
     let mut rows = conn
@@ -166,7 +166,7 @@ pub async fn accept_invite(
         return Err(ApiError::conflict("user with this email already exists"));
     }
 
-    let pw_hash = auth::hash_password(&req.password).map_err(|e| ApiError::Internal(e.into()))?;
+    let pw_hash = auth::hash_password(&req.password).map_err(ApiError::Internal)?;
     let id = Uuid::new_v4().to_string();
     conn.execute(
         "INSERT INTO users (id, name, email, password, is_admin, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, 0, ?5, ?5)",
@@ -182,7 +182,7 @@ pub async fn accept_invite(
     .map_err(|e| ApiError::Internal(e.into()))?;
 
     let token = auth::generate_jwt(&id, &email, &state.jwt_secret)
-        .map_err(|e| ApiError::Internal(e.into()))?;
+        .map_err(ApiError::Internal)?;
     Ok((
         StatusCode::CREATED,
         Json(AuthResponse {
@@ -206,7 +206,7 @@ pub async fn login(
         .db
         .conn()
         .await
-        .map_err(|e| ApiError::Internal(e.into()))?;
+        .map_err(ApiError::Internal)?;
     let mut rows = conn
         .query(
             "SELECT id, name, email, password, created_at FROM users WHERE email = ?1 AND deleted_at IS NULL",
@@ -219,16 +219,16 @@ pub async fn login(
         .await
         .map_err(|e| ApiError::Internal(e.into()))?
         .ok_or_else(|| ApiError::unauthorized("invalid email or password"))?;
-    let id = get_string(&row, 0).map_err(|e| ApiError::Internal(e.into()))?;
-    let name = get_string(&row, 1).map_err(|e| ApiError::Internal(e.into()))?;
-    let email = get_string(&row, 2).map_err(|e| ApiError::Internal(e.into()))?;
-    let hash = get_string(&row, 3).map_err(|e| ApiError::Internal(e.into()))?;
+    let id = get_string(&row, 0).map_err(ApiError::Internal)?;
+    let name = get_string(&row, 1).map_err(ApiError::Internal)?;
+    let email = get_string(&row, 2).map_err(ApiError::Internal)?;
+    let hash = get_string(&row, 3).map_err(ApiError::Internal)?;
     let created: Option<String> = row.get(4).map_err(|e| ApiError::Internal(e.into()))?;
     if !auth::verify_password(&req.password, &hash) {
         return Err(ApiError::unauthorized("invalid email or password"));
     }
     let token = auth::generate_jwt(&id, &email, &state.jwt_secret)
-        .map_err(|e| ApiError::Internal(e.into()))?;
+        .map_err(ApiError::Internal)?;
     Ok(Json(AuthResponse {
         token,
         user: RegisteredUser {
@@ -267,7 +267,7 @@ pub async fn search_users(
         .db
         .conn()
         .await
-        .map_err(|e| ApiError::Internal(e.into()))?;
+        .map_err(ApiError::Internal)?;
     let pattern = format!("%{needle}%");
     let mut rows = conn
         .query(
@@ -283,9 +283,9 @@ pub async fn search_users(
         .map_err(|e| ApiError::Internal(e.into()))?
     {
         out.push(UserSearchResponse {
-            user_id: get_string(&row, 0).map_err(|e| ApiError::Internal(e.into()))?,
-            name: get_string(&row, 1).map_err(|e| ApiError::Internal(e.into()))?,
-            email: get_string(&row, 2).map_err(|e| ApiError::Internal(e.into()))?,
+            user_id: get_string(&row, 0).map_err(ApiError::Internal)?,
+            name: get_string(&row, 1).map_err(ApiError::Internal)?,
+            email: get_string(&row, 2).map_err(ApiError::Internal)?,
         });
     }
     Ok(Json(out))

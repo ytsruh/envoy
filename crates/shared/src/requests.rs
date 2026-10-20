@@ -30,6 +30,10 @@ pub struct CreateVariableRequest {
     pub value: String,
     #[serde(default)]
     pub description: String,
+    /// Repo-relative posix path of the source env file (e.g. `server/.env`).
+    /// Empty means legacy single-file row.
+    #[serde(default)]
+    pub file_path: String,
 }
 
 pub type UpdateVariableRequest = CreateVariableRequest;

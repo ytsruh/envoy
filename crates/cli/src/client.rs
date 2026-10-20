@@ -55,12 +55,6 @@ fn closest_name(input: &str, names: &[String]) -> Option<String> {
 
 impl Client {
     pub fn new() -> anyhow::Result<Self> {
-        // Missing .env is normal; only warn when one exists but fails to parse.
-        if std::path::Path::new(".env").exists() {
-            if let Err(e) = dotenvy::dotenv() {
-                eprintln!("Warning: failed to parse .env: {e}");
-            }
-        }
         Ok(Self {
             base: config::server_url()?,
             token: config::get_token()?,
@@ -323,8 +317,10 @@ impl Client {
         env_id: &str,
         key: &str,
         value: &str,
+        file_path: &str,
     ) -> Result<envoy_shared::responses::VariableResponse, ClientError> {
-        let body = serde_json::json!({"key": key, "value": value, "description": ""});
+        let body =
+            serde_json::json!({"key": key, "value": value, "description": "", "file_path": file_path});
         self.request(
             reqwest::Method::POST,
             &format!("/environments/{env_id}/variables"),
@@ -342,21 +338,15 @@ impl Client {
             .await
     }
 
-    #[allow(dead_code)]
-    pub async fn get_variable(
-        &self,
-        var_id: &str,
-    ) -> Result<envoy_shared::responses::VariableResponse, ClientError> {
-        self.get(&format!("/variables/{var_id}"), true).await
-    }
-
     pub async fn update_variable(
         &self,
         var_id: &str,
         key: &str,
         value: &str,
+        file_path: &str,
     ) -> Result<envoy_shared::responses::VariableResponse, ClientError> {
-        let body = serde_json::json!({"key": key, "value": value, "description": ""});
+        let body =
+            serde_json::json!({"key": key, "value": value, "description": "", "file_path": file_path});
         self.request(
             reqwest::Method::PUT,
             &format!("/variables/{var_id}"),
@@ -364,18 +354,6 @@ impl Client {
             true,
         )
         .await
-    }
-
-    pub async fn delete_variable(&self, var_id: &str) -> Result<(), ClientError> {
-        let _: serde_json::Value = self
-            .request(
-                reqwest::Method::DELETE,
-                &format!("/variables/{var_id}"),
-                None,
-                true,
-            )
-            .await?;
-        Ok(())
     }
 
     // --- name-or-id resolution (client-side, via list + match) ---
@@ -415,17 +393,6 @@ impl Client {
             msg.push_str(" — run 'envoy manage envs list' to see available environments");
         }
         Err(ClientError::Server(msg))
-    }
-
-    pub async fn resolve_variable(
-        &self,
-        env_id: &str,
-        key_or_id: &str,
-    ) -> Result<envoy_shared::responses::VariableResponse, ClientError> {
-        let vars = self.list_variables(env_id).await?;
-        vars.into_iter()
-            .find(|v| v.id == key_or_id || v.key == key_or_id)
-            .ok_or_else(|| ClientError::Server(format!("variable '{key_or_id}' not found")))
     }
 
     // --- admin / invites ---

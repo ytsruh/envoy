@@ -8,10 +8,17 @@ use client::{Client, ClientError};
 use prompts::print_client_error;
 use std::collections::BTreeMap;
 
+/// Binary version. Release workflow stamps `ENVOY_VERSION` from the git
+/// tag at compile time; falls back to `CARGO_PKG_VERSION` for local builds.
+const VERSION: &str = match option_env!("ENVOY_VERSION") {
+    Some(v) => v,
+    None => env!("CARGO_PKG_VERSION"),
+};
+
 #[derive(Parser)]
 #[command(
     name = "envoy",
-    version,
+    version = VERSION,
     about = "Envoy CLI - secure environment variables"
 )]
 struct Cli {
